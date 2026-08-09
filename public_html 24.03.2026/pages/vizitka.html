@@ -1,0 +1,453 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
+    <title>PRO Камень | Визитка</title>
+
+    <link rel="icon" type="image/x-icon" href="/assets/images/ui/favicon.ico" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+
+    <style>
+      :root {
+        /* Премиальная светлая палитра */
+        --bg-color: #f9fafb;
+        --text-main: #1f2937; /* Темный графит */
+        --text-muted: #6b7280;
+        --gold-start: #d4af37;
+        --gold-end: #c5a028;
+
+        /* Эффект матового стекла */
+        --glass-bg: rgba(255, 255, 255, 0.75);
+        --glass-border: rgba(255, 255, 255, 0.8);
+        --shadow-soft: 0 10px 40px -10px rgba(0, 0, 0, 0.08);
+
+        --radius: 24px;
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+      }
+
+      body {
+        font-family: "Manrope", sans-serif;
+        background-color: var(--bg-color);
+        /* Светлая подложка поверх картинки */
+        background-image:
+          linear-gradient(rgba(249, 250, 251, 0.9), rgba(249, 250, 251, 0.9)),
+          url("/assets/images/ui/hero-bg.webp");
+        background-size: cover;
+        background-position: center;
+        background-attachment: fixed;
+        min-height: 100vh;
+        display: flex;
+        justify-content: center;
+        padding: 40px 20px;
+        color: var(--text-main);
+      }
+
+      .container {
+        width: 100%;
+        max-width: 400px;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        z-index: 2;
+      }
+
+      /* --- ЛОГОТИП (БЕЗ ФОНА И ОБВОДОК, СВЕРХУ ПО ЦЕНТРУ) --- */
+      .logo-wrapper {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 24px;
+        width: 100%;
+      }
+
+      .logo-inner {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 120px;
+        height: 120px;
+      }
+
+      .logo-img {
+        width: 100%;
+        height: auto;
+        object-fit: contain;
+      }
+
+      .header {
+        text-align: center;
+        margin-bottom: 10px;
+        animation: fadeIn 0.8s ease-out;
+      }
+      h1 {
+        font-size: 26px;
+        font-weight: 800;
+        margin-bottom: 6px;
+        letter-spacing: -0.02em;
+      }
+      .subtitle {
+        font-size: 15px;
+        color: var(--text-muted);
+        line-height: 1.5;
+        font-weight: 500;
+      }
+
+      /* --- КАРТОЧКИ --- */
+      .card {
+        background: var(--glass-bg);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border: 1px solid var(--glass-border);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow-soft);
+        padding: 24px;
+        animation: slideUp 0.6s ease-out backwards;
+      }
+
+      .section-title {
+        font-size: 12px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        color: var(--text-muted);
+        margin: 10px 0 10px 10px;
+      }
+
+      /* --- КНОПКИ --- */
+      .btn-gold {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        width: 100%;
+        padding: 18px;
+        background: linear-gradient(135deg, var(--gold-start), var(--gold-end));
+        color: #fff;
+        font-weight: 700;
+        font-size: 16px;
+        border-radius: 18px;
+        text-decoration: none;
+        box-shadow: 0 10px 25px -5px rgba(212, 175, 55, 0.4);
+        transition: transform 0.2s;
+      }
+      .btn-gold:active {
+        transform: scale(0.98);
+      }
+
+      /* Сетка соцсетей */
+      .social-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+      }
+      .social-btn {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 16px;
+        background: #fff;
+        border-radius: 16px;
+        text-decoration: none;
+        border: 1px solid rgba(0, 0, 0, 0.03);
+        transition: all 0.2s;
+      }
+      .social-btn:active {
+        background: #f5f5f5;
+      }
+      .social-label {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--text-main);
+        margin-top: 8px;
+      }
+
+      /* Контакты */
+      .contact-row {
+        display: flex;
+        align-items: center;
+        padding: 12px 0;
+        text-decoration: none;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+      }
+      .contact-row:last-child {
+        border-bottom: none;
+      }
+
+      .icon-circle {
+        width: 40px;
+        height: 40px;
+        background: rgba(212, 175, 55, 0.1);
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--gold-start);
+        margin-right: 15px;
+        font-size: 18px;
+      }
+      .contact-data {
+        display: flex;
+        flex-direction: column;
+      }
+      .contact-val {
+        color: var(--text-main);
+        font-weight: 700;
+        font-size: 16px;
+      }
+      .contact-lbl {
+        color: var(--text-muted);
+        font-size: 12px;
+      }
+
+      /* Локации */
+      .loc-card {
+        background: #fff;
+        border-radius: 16px;
+        padding: 16px;
+        margin-bottom: 12px;
+        border: 1px solid rgba(0, 0, 0, 0.04);
+      }
+      .loc-head {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 8px;
+      }
+      .loc-name {
+        font-weight: 800;
+        font-size: 15px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .loc-tag {
+        font-size: 10px;
+        font-weight: 700;
+        text-transform: uppercase;
+        padding: 4px 8px;
+        border-radius: 6px;
+        background: #f3f4f6;
+        color: #666;
+      }
+      .loc-tag.prod {
+        background: rgba(212, 175, 55, 0.15);
+        color: #b49020;
+      }
+
+      .btn-map {
+        display: block;
+        margin-top: 12px;
+        padding: 10px;
+        text-align: center;
+        background: #f3f4f6;
+        color: var(--text-main);
+        font-size: 13px;
+        font-weight: 600;
+        text-decoration: none;
+        border-radius: 10px;
+      }
+
+      /* SVG */
+      svg {
+        width: 24px;
+        height: 24px;
+        fill: currentColor;
+      }
+      .social-btn.tg {
+        color: #229ed9;
+      }
+      .social-btn.wa {
+        color: #25d366;
+      }
+      .social-btn.vb {
+        color: #7360f2;
+      }
+      .social-btn.in {
+        color: #e1306c;
+      }
+
+      footer {
+        text-align: center;
+        margin-top: 30px;
+        font-size: 12px;
+        color: #9ca3af;
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+        }
+        to {
+          opacity: 1;
+        }
+      }
+      @keyframes slideUp {
+        from {
+          opacity: 0;
+          transform: translateY(20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <header class="header">
+        <div class="logo-wrapper">
+          <div class="logo-inner">
+            <img
+              src="/assets/images/ui/logo.svg"
+              alt="PRO Kamen"
+              class="logo-img"
+            />
+          </div>
+        </div>
+        <h1>PRO Камень</h1>
+        <p class="subtitle">
+          занимаемся обработкой и продажей <br />натурального и искусственного
+          камня.
+        </p>
+      </header>
+
+      <a href="https://prokamen.by" class="btn-gold">
+        <svg viewBox="0 0 24 24">
+          <path
+            d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-1.07 3.97-2.9 5.06z"
+          />
+        </svg>
+        Перейти на сайт
+      </a>
+
+      <div class="section-title">Связаться</div>
+      <div class="social-grid" id="socialGrid"></div>
+
+      <div class="card" style="padding: 10px 20px">
+        <div id="phoneList"></div>
+        <a href="mailto:prokamen22@yandex.by" class="contact-row">
+          <div class="icon-circle">✉️</div>
+          <div class="contact-data">
+            <span class="contact-val" style="font-size: 15px">Email</span>
+            <span class="contact-lbl">prokamen22@yandex.by</span>
+          </div>
+        </a>
+      </div>
+
+      <div class="section-title">Локации</div>
+      <div id="locationsList"></div>
+
+      <footer>© 2026 PRO Камень</footer>
+    </div>
+
+    <script>
+      /* --- ДАННЫЕ (ЗАПОЛНИ АДРЕС МАГАЗИНА) --- */
+      const DATA = {
+        phones: ["+375 29 396-15-58", "+375 29 322-04-38"],
+        socials: [
+          {
+            id: "tg",
+            label: "Telegram",
+            url: "https://t.me/prokamenbobr",
+            iconPath:
+              "M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 11.944 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z",
+          },
+          {
+            id: "wa",
+            label: "WhatsApp",
+            url: "https://wa.me/79262451742",
+            iconPath:
+              "M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.008-.57-.008-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z",
+          },
+          {
+            id: "vb",
+            label: "Viber",
+            url: "viber://chat?number=%2B79262451742",
+            iconPath:
+              "M21.751 16.59c-.27-.78-1.55-1.52-2.73-1.74-.82-.16-1.85.03-2.31 1.05-.18.42-.36.78-.53.79-.53.05-1.93-1-3.6-2.67-1.67-1.67-2.72-3.06-2.67-3.59.01-.17.38-.36.8-0.53 1.02-.46 1.2-1.49 1.05-2.31-.22-1.18-.97-2.47-1.74-2.74-1.12-.39-2.22.08-2.64.49C6.54 6.18 5.4 8.01 7.23 11.7c2.62 5.29 6.81 8.87 11.66 10.38 2.45 0.77 3.99-0.08 4.38-0.48.41-.42.88-1.52.48-2.64v0.01z M22.25 10.8c0-5.31-4.22-9.62-9.45-9.67C7.62 1.08 3.51 5.09 3.01 10.15c-0.04.42 0.27 0.8 0.69 0.84 0.42 0.04 0.8-0.27 0.84-0.69 0.42-4.24 3.86-7.59 8.16-7.54 4.37 0.05 7.9 3.65 7.9 8.04 0 0.42 0.34 0.76 0.76 0.76s0.76-0.34 0.76-0.76H22.12z M18.9 10.8c0-3.41-2.73-6.19-6.1-6.22-3.32-0.03-6.03 2.62-6.06 5.94-0.01.42 0.33 0.77 0.75 0.77 0.42 0.01 0.77-0.33 0.77-0.75 0.02-2.48 2.05-4.47 4.54-4.44 2.53 0.03 4.57 2.11 4.57 4.65 0 0.42 0.34 0.76 0.76 0.76s0.76-0.34 0.76-0.76v0.05z",
+          },
+          {
+            id: "in",
+            label: "Instagram",
+            url: "https://www.instagram.com/pro_kamen.bobr?igsh=MXBuaWM4OGJpZWloOQ%3D%3D&utm_source=qr",
+            iconPath:
+              "M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 1 0 0 12.324 6.162 6.162 0 0 0 0-12.324zM12 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6.406-11.845a1.44 1.44 0 1 0 0 2.881 1.44 1.44 0 0 0 0-2.881z",
+          },
+        ],
+        locations: [
+          {
+            type: "shop",
+            title: "Шоурум",
+            badge: "Магазин",
+            address: "г. Бобруйск, Минская 123Б",
+            time: "будни 10:00-19:00, выходные 10:00-17:00",
+            link: "https://yandex.by/maps/-/CPQqeT~2",
+          },
+          {
+            type: "prod",
+            title: "Производство",
+            badge: "Офис",
+            address: "г. Бобруйск, ул. Новошоссейная 47А/3",
+            link: "https://yandex.ru/maps/org/2841722067",
+          },
+        ],
+      };
+
+      /* РЕНДЕРИНГ */
+      document.getElementById("socialGrid").innerHTML = DATA.socials
+        .map(
+          (s) => `
+            <a href="${s.url}" class="social-btn ${s.id}" target="_blank">
+                <svg><path d="${s.iconPath}"/></svg>
+                <span class="social-label">${s.label}</span>
+            </a>
+        `,
+        )
+        .join("");
+
+      document.getElementById("phoneList").innerHTML = DATA.phones
+        .map(
+          (phone) => `
+            <a href="tel:${phone.replace(/\D/g, "")}" class="contact-row">
+                <div class="icon-circle">📞</div>
+                <div class="contact-data">
+                    <span class="contact-val">${phone}</span>
+                    <span class="contact-lbl">Позвонить</span>
+                </div>
+            </a>
+        `,
+        )
+        .join("");
+
+      document.getElementById("locationsList").innerHTML = DATA.locations
+        .map(
+          (loc) => `
+            <div class="loc-card">
+                <div class="loc-head">
+                    <div class="loc-name">${loc.type === "shop" ? "💎" : "🏭"} ${loc.title}</div>
+                    <span class="loc-tag ${loc.type}">${loc.badge}</span>
+                </div>
+                <div style="font-size:14px; margin-bottom:6px;">${loc.address}</div>
+                ${loc.time ? `<div style="font-size:12px; color:#6B7280;">🕒 ${loc.time}</div>` : ""}
+                <a href="${loc.link}" target="_blank" class="btn-map">Открыть на карте</a>
+            </div>
+        `,
+        )
+        .join("");
+    </script>
+  </body>
+</html>

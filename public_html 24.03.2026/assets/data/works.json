@@ -1,0 +1,274 @@
+[
+  {
+    "id": "w-001",
+    "material": "quartz",
+    "materialRu": "кварцевый агломерат",
+    "title": "Кварцевый подоконник в доме и на улице",
+    "location": "Бобруйск",
+    "desc": "Подоконники из кварцевого агломерата одинаково уверенно работают в интерьере и на фасаде. Поверхность не впитывает влагу, выдерживает перепады температуры и надолго сохраняет геометрию.",
+    "images": [
+      "/assets/images/works/w-2025-001/1.jpg",
+      "/assets/images/works/w-2025-001/2.jpg",
+      "/assets/images/works/w-2025-001/3.jpg",
+      "/assets/images/works/w-2025-001/4.jpg",
+      "/assets/images/works/w-2025-001/5.jpg"
+    ]
+  },
+  {
+    "id": "w-002",
+    "material": "quartz",
+    "materialRu": "кварцевый агломерат",
+    "title": "Столешница для ванной комнаты",
+    "location": "д. Подлужье, Могилевская область",
+    "desc": "Компактная столешница из кварцевого агломерата создана для влажной зоны ванной. Материал не разбухает, легко отмывается от косметики и ежедневно держит идеальный блеск.",
+    "images": [
+      "/assets/images/works/w-2025-002/1.jpg",
+      "/assets/images/works/w-2025-002/2.jpg",
+      "/assets/images/works/w-2025-002/3.jpg"
+    ]
+  },
+  {
+    "id": "w-003",
+    "material": "quartz",
+    "materialRu": "кварцевый агломерат",
+    "title": "Столешница для ванной комнаты",
+    "location": "Минск",
+    "desc": "Белая столешница из кварцевого агломерата поддерживает минималистичный интерьер квартиры в Минске. Поверхность устойчива к влаге и бытовой химии, поэтому остаётся безупречной каждый день.",
+    "images": [
+      "/assets/images/works/w-2025-003/1.jpg",
+      "/assets/images/works/w-2025-003/2.jpg",
+      "/assets/images/works/w-2025-003/3.jpg"
+    ]
+  },
+  {
+    "id": "w-004",
+    "material": "quartz",
+    "materialRu": "кварцевый агломерат",
+    "title": "Кварцевый подоконник",
+    "location": "Бобруйск",
+    "desc": "Кварцевый подоконник в частном доме в Бобруйске выдерживает прямое солнце и конденсат. Плотный камень не выцветает, не царапается и визуально собирает оконный проём.",
+    "images": [
+      "/assets/images/works/w-2025-004/1.jpg",
+      "/assets/images/works/w-2025-004/2.jpg",
+      "/assets/images/works/w-2025-004/3.jpg"
+    ]
+  },
+  {
+    "id": "w-005",
+    "material": "quartz",
+    "materialRu": "кварцевый агломерат",
+    "title": "Каминная полка из кварцевого агломерата",
+    "location": "д. Дубовка, Могилевская область",
+    "desc": "Каминная полка из кварцевого агломерата оформляет зону отдыха в Дубовке. Жаростойкий материал не боится углей и копоти, а матовый финиш добавляет интерьеру графичности.",
+    "images": [
+      "/assets/images/works/w-2025-005/1.jpg",
+      "/assets/images/works/w-2025-005/2.jpg",
+      "/assets/images/works/w-2025-005/3.jpg"
+    ]
+  },
+  {
+    "id": "w-006",
+    "material": "granite",
+    "materialRu": "гранит",
+    "title": "Столешница для журнального столика",
+    "location": "Бобруйск",
+    "desc": "Журнальный столик с гранитной столешницей делает гостиную функциональной и нарядной. Натуральный камень устойчив к ударам, горячим чашкам и мелким царапинам.",
+    "images": [
+      "/assets/images/works/w-2025-006/1.jpg",
+      "/assets/images/works/w-2025-006/2.jpg"
+    ]
+  },
+  {
+    "id": "w-007",
+    "material": "quartz",
+    "materialRu": "кварцевый агломерат",
+    "title": "Столешница для обеденного столика",
+    "location": "Бобруйск",
+    "desc": "Столешница из кварцевого агломерата для обеденного столика создана для ежедневного использования. Поверхность легко очищается, не впитывает напитки и сохраняет насыщенный оттенок.",
+    "images": [
+      "/assets/images/works/w-2025-007/1.jpg",
+      "/assets/images/works/w-2025-007/2.jpg",
+      "/assets/images/works/w-2025-007/3.jpg",
+      "/assets/images/works/w-2025-007/4.jpg",
+      "/assets/images/works/w-2025-007/5.jpg"
+    ]
+  },
+  {
+    "id": "w-008",
+    "material": ["quartz", "granite"],
+    "materialRu": "кварцевый агломерат и гранит",
+    "title": "Столешница в уличной беседке с барбекю",
+    "location": "Бобруйск",
+    "desc": "Уличная столешница в беседке объединяет кварцевый агломерат и гранит для зоны барбекю. Комбинация материалов выдерживает жар, осадки и частые встречи на свежем воздухе.",
+    "images": [
+      "/assets/images/works/w-2025-008/1.jpg",
+      "/assets/images/works/w-2025-008/2.jpg"
+    ]
+  },
+  {
+    "id": "w-009",
+    "material": "quartz",
+    "materialRu": "кварцевый агломерат",
+    "title": "Столешница из Avarus R122 \"Алмазы Якутии\"",
+    "location": "Бобруйск",
+    "desc": "Столешница Avarus R122 \"Алмазы Якутии\" наполняет кухню мерцанием мелких кристаллов. Кварцевый агломерат не боится влаги, высоких температур и сохраняет полированный блеск многие годы.",
+    "images": [
+      "/assets/images/works/w-2025-009/1.JPG",
+      "/assets/images/works/w-2025-009/2.JPG",
+      "/assets/images/works/w-2025-009/3.JPG",
+      "/assets/images/works/w-2025-009/4.JPG",
+      "/assets/images/works/w-2025-009/5.JPG"
+    ]
+  },
+  {
+    "id": "w-010",
+    "material": "granite",
+    "materialRu": "гранит",
+    "title": "Уличный комплекс из Дымовского гранита",
+    "location": "Бобруйск",
+    "desc": "Уличный комплекс с барбекю в кирпичном стиле Розенберг дополняет столешница из дымовского гранита. Камень толщиной 30 мм выдерживает огонь и мороз, а команда PRO Камень выполнила замер, изготовление и монтаж под ключ.",
+    "images": [
+      "/assets/images/works/w-2025-010/1.jpg",
+      "/assets/images/works/w-2025-010/2.jpg",
+      "/assets/images/works/w-2025-010/3.jpg",
+      "/assets/images/works/w-2025-010/4.jpg",
+      "/assets/images/works/w-2025-010/5.jpg",
+      "/assets/images/works/w-2025-010/6.jpg",
+      "/assets/images/works/w-2025-010/7.jpg"
+    ]
+  },
+  {
+    "id": "w-011",
+    "material": "quartz",
+    "materialRu": "кварцевый агломерат",
+    "title": "Столешница STRATOS C1005 Milky White",
+    "location": "Бобруйск",
+    "desc": "Белоснежная столешница STRATOS C1005 Milky White делает ванную просторнее и светлее. Камень от Кварц.Бел устойчив к влаге, легко убирается и сочетается с мебелью, выполненной партнёрами mebel.andari.",
+    "images": [
+      "/assets/images/works/w-2025-011/1.jpg",
+      "/assets/images/works/w-2025-011/2.jpg",
+      "/assets/images/works/w-2025-011/4.jpg",
+      "/assets/images/works/w-2025-011/5.jpg",
+      "/assets/images/works/w-2025-011/6.jpg",
+      "/assets/images/works/w-2025-011/7.jpg"
+    ]
+  },
+  {
+    "id": "w-012",
+    "material": "granite",
+    "materialRu": "гранит",
+    "title": "Уличный комплекс из габбро-диабаза",
+    "location": "Бобруйск",
+    "desc": "Гранит габбро-диабаз подчёркивает статус уличного комплекса и не боится стихии. Камень с глубокой чёрной текстурой выдерживает влагу, мороз и любые механические нагрузки десятилетиями.",
+    "images": [
+      "/assets/images/works/w-2025-012/1.jpg",
+      "/assets/images/works/w-2025-012/2.jpg",
+      "/assets/images/works/w-2025-012/3.jpg"
+    ]
+  },
+  {
+    "id": "w-013",
+    "material": "quartz",
+    "materialRu": "кварцевый агломерат",
+    "title": "Столешницы Avarus R677 \"Московская ночь\"",
+    "location": "Бобруйск",
+    "desc": "Кварцевый агломерат Avarus R677 \"Московская ночь\" объединяет прочность и эстетику. Толстые столешницы 40 мм с врезной мойкой и отдельным обеденным столом дополняют уличный комплекс в тёмных тонах.",
+    "images": [
+      "/assets/images/works/w-2025-013/1.jpg",
+      "/assets/images/works/w-2025-013/2.jpg",
+      "/assets/images/works/w-2025-013/3.jpg",
+      "/assets/images/works/w-2025-013/4.jpg",
+      "/assets/images/works/w-2025-013/5.jpg",
+      "/assets/images/works/w-2025-013/6.jpg"
+    ]
+  },
+  {
+    "id": "w-014",
+    "material": "quartz",
+    "materialRu": "кварцевый агломерат",
+    "title": "cтупенька входной группы и журнальный столик на металлическом основании",
+    "location": "Бобруйск",
+    "desc": "Technistone NOBLE PERLATO LUNA — эстетика мягкого света в интерьере и экстерьере. Оба объекта выполнены из одного и того же камня — и прекрасно показывают, насколько по-разному NOBLE PERLATO LUNA раскрывается в разных пространствах.",
+    "images": [
+      "/assets/images/works/w-2025-014/1.jpg",
+      "/assets/images/works/w-2025-014/2.jpg",
+      "/assets/images/works/w-2025-014/3.jpg",
+      "/assets/images/works/w-2025-014/4.jpg",
+      "/assets/images/works/w-2025-014/5.jpg"
+    ]
+  },
+  {
+    "id": "w-015",
+    "material": "granite",
+    "materialRu": "гранит",
+    "title": "Столешница из натурального гранита Kimen Red для уличной кухни. Для фартука выбран финский гранит Aurora.",
+    "location": "Бобруйск",
+    "desc": "Классический финский темно‑красный гранит с крупным зерном поддерживает цвет кирпича и дерева, поэтому пространство выглядит цельным и уютным.",
+    "images": [
+      "/assets/images/works/w-2025-015/1.jpg",
+      "/assets/images/works/w-2025-015/2.jpg",
+      "/assets/images/works/w-2025-015/3.jpg",
+      "/assets/images/works/w-2025-015/4.jpg",
+      "/assets/images/works/w-2025-015/5.jpg",
+      "/assets/images/works/w-2025-015/6.jpg",
+      "/assets/images/works/w-2025-015/7.jpg"
+    ]
+  },
+  {
+    "id": "w-016",
+    "material": "quartz",
+    "materialRu": "кварцевый агломерат",
+    "title": "Q757 Calacatta Aurum от Noblle Quartz — воплощение роскоши на вашей кухне",
+    "location": "Москва",
+    "desc": "Белоснежный фон с золотистыми прожилками калакатта создаёт эффект натурального мрамора, но без его капризов — прочная, гигиеничная поверхность глянцевого типа.",
+    "images": [
+      "/assets/images/works/w-2025-016/1.jpg",
+      "/assets/images/works/w-2025-016/2.jpg",
+      "/assets/images/works/w-2025-016/3.jpg",
+      "/assets/images/works/w-2025-016/4.jpg",
+      "/assets/images/works/w-2025-016/5.jpg",
+      "/assets/images/works/w-2025-016/6.jpg"
+    ]
+  },
+  {
+    "id": "w-017",
+    "material": "marble",
+    "materialRu": "мрамор",
+    "title": "Мрамор Daino Reale (Италия) — это уникальное сочетание простоты и роскоши.",
+    "location": "Бобруйск",
+    "desc": "Мрамор Daino Reale с его тёплым бежевым фоном и изящными прожилками создаёт атмосферу уюта и элегантности. Этот камень идеально подходит для создания стильных интерьеров, добавляя нотки роскоши и природной красоты в любое пространство.",
+    "images": [
+      "/assets/images/works/w-2025-017/1.jpg",
+      "/assets/images/works/w-2025-017/2.jpg",
+      "/assets/images/works/w-2025-017/3.jpg",
+      "/assets/images/works/w-2025-017/4.jpg",
+      "/assets/images/works/w-2025-017/5.jpg",
+      "/assets/images/works/w-2025-017/6.jpg",
+      "/assets/images/works/w-2025-017/7.jpg",
+      "/assets/images/works/w-2025-017/8.jpg",
+      "/assets/images/works/w-2025-017/9.jpg",
+      "/assets/images/works/w-2025-017/10.jpg",
+      "/assets/images/works/w-2025-017/11.jpg",
+      "/assets/images/works/w-2025-017/12.jpg",
+      "/assets/images/works/w-2025-017/13.jpg",
+      "/assets/images/works/w-2025-017/14.jpg",
+      "/assets/images/works/w-2025-017/15.jpg",
+      "/assets/images/works/w-2025-017/16.jpg",
+      "/assets/images/works/w-2025-017/17.jpg"
+    ]
+  },
+  {
+    "id": "w-018",
+    "material": "quartz",
+    "materialRu": "кварцит",
+    "title": "Кварцит Taj Mahal. Это уникальный природный камень, который выглядит как благородный мрамор (глубокий, полупрозрачный, с мягкими прожилками), но по твердости превосходит даже гранит! ",
+    "location": "Бобруйск",
+    "desc": "Кварцит Taj Mahal обладает уникальной структурой и красивым внешним видом. Его глубокий цвет и мягкие прожилки создают эффект роскоши и изысканности, а высокая твердость делает его идеальным выбором для кухонных столешниц.",
+    "images": [
+      "/assets/images/works/w-2025-018/1.jpg",
+      "/assets/images/works/w-2025-018/2.jpg",
+      "/assets/images/works/w-2025-018/3.jpg",
+      "/assets/images/works/w-2025-018/4.jpg"
+    ]
+  }
+]

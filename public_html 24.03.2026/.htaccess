@@ -1,0 +1,20 @@
+DirectoryIndex index.html
+
+# Корректные страницы ошибок (путь — URL, не файловая система)
+ErrorDocument 404 /404.html
+ErrorDocument 403 /404.html
+
+# Безопасный дефолт для статического сайта: ничего не переписываем для существующих файлов
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+  RewriteCond %{REQUEST_FILENAME} -f [OR]
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteRule ^ - [L]
+  # ЧПУ-правила: перенаправляем человеко-понятные адреса на файлы
+  RewriteRule ^catalog/?$ /pages/catalog.html [L]
+  RewriteRule ^services/?$ /pages/services.html [L]
+  RewriteRule ^works/?$ /pages/works.html [L]
+  RewriteRule ^about/?$ /pages/about.html [L]
+  RewriteRule ^contacts/?$ /pages/contacts.html [L]
+</IfModule>

@@ -1,0 +1,14 @@
+User-agent: *
+Allow: /
+
+# Запрет индексации служебных директорий
+Disallow: /js/
+Disallow: /css/
+Disallow: /php/
+Disallow: /assets/data/
+
+# Указываем карту сайта
+Sitemap: https://prokamen.by/sitemap.xml
+
+# Задержка между запросами (чтобы не перегружать сервер)
+Crawl-delay: 5

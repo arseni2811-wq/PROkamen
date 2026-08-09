@@ -1,0 +1,804 @@
+/* ==========================================================================
+   Buttons
+   ========================================================================== */
+/* Кнопка: базовый вид и анимации взаимодействия */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 20px;
+  border-radius: 12px;
+  border: 1px solid var(--text);
+  background: var(--text);
+  color: #fff;
+  box-shadow: var(--shadow-sm);
+  text-decoration: none;
+  line-height: 1.2;
+  cursor: pointer;
+  min-height: 44px;
+  min-width: 44px;
+  transition:
+    transform 0.06s ease,
+    background 0.2s ease,
+    color 0.2s ease,
+    border-color 0.2s ease;
+}
+/* Лёгкий подъём при наведении */
+.btn:hover {
+  transform: translateY(-1px);
+}
+/* Сброс сдвига при активном нажатии */
+.btn:active {
+  transform: translateY(0);
+}
+/* Доступность: чёткая рамка фокуса клавиатурой */
+.btn:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+/* Неактивное состояние кнопки */
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* Варианты кнопок */
+/* Светлая кнопка с обводкой */
+.btn--outline {
+  background: #fff;
+  color: var(--text);
+  border-color: var(--border);
+}
+/* Светлая заливка без контраста текста */
+.btn--light {
+  background: #f3f4f6;
+  color: var(--text);
+  border-color: #e5e7eb;
+}
+/* Тёмная вторичная кнопка */
+.btn--secondary {
+  background: #334155;
+  border-color: #334155;
+  color: #fff;
+}
+/* Главная кнопка (если используется модификатор) */
+.btn--primary {
+  background: var(--primary, var(--text));
+  border-color: var(--primary, var(--text));
+  color: #fff;
+}
+
+/* Анимация без движения для prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  .btn {
+    transition: none;
+  }
+  .btn:hover {
+    transform: none;
+  }
+}
+
+/* ==========================================================================
+   Chips & Badges
+   ========================================================================== */
+/* Контейнер для группы чипсов/бейджей */
+.chips {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+/* Базовый стиль чипа и бейджа */
+.chip,
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: #fff;
+  font-size: 13px;
+  line-height: 1.2;
+  min-height: 40px;
+}
+/* Активный чип: инверсия цветов */
+.chip.active {
+  background: #111;
+  color: #fff;
+  border-color: #111;
+}
+
+/* ==========================================================================
+   Cards
+   ========================================================================== */
+/* Карточки (общий контейнер и эффект наведения) */
+.card,
+.work-card {
+  border: 1px solid var(--border);
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: var(--shadow-sm);
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+/* Мягкий подъём и усиление тени при наведении */
+.card:hover,
+.work-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+.card {
+  padding: clamp(16px, 2.4vw, 24px);
+}
+
+/* Превью медиа с фиксированным соотношением сторон */
+.media {
+  aspect-ratio: 3/2;
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 12px;
+  background: #f3f4f6;
+}
+/* Изображение заполняет контейнер, не искажаясь */
+.media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Work card */
+/* Внутренние отступы карточки работы */
+.work-card__body {
+  padding: 12px;
+}
+/* Размер шрифта заголовка карточки */
+.work-card__title {
+  margin: 0 0 8px;
+  font-size: var(--fs-600);
+}
+
+/* ==========================================================================
+   Carousel (для работ)
+   ========================================================================== */
+/* Обёртка карусели: фикс. соотношение, центрирование содержимого */
+.carousel {
+  position: relative;
+  overflow: hidden;
+  border-radius: 8px;
+  background: #f3f4f6;
+  aspect-ratio: 3 / 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+/* Слайды скрыты по умолчанию */
+.carousel .slide {
+  display: none;
+}
+/* Отображение только активного слайда */
+.carousel .slide.active {
+  display: block;
+}
+/* Изображение вписывается внутрь без обрезки */
+.carousel img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+/* Кнопки переключения слайдов */
+.carousel .prev,
+.carousel .next {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(0, 0, 0, 0.5);
+  color: #fff;
+  border: none;
+  padding: 8px 12px;
+  cursor: pointer;
+  border-radius: 50%;
+}
+/* Левая кнопка */
+.carousel .prev {
+  left: 10px;
+}
+/* Правая кнопка */
+.carousel .next {
+  right: 10px;
+}
+
+/* ==========================================================================
+   Grids
+   ========================================================================== */
+/* Сетка работ: 2 колонки на десктопе */
+.grid-works {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-4, 16px);
+}
+@media (max-width: 768px) {
+  /* На мобильных: одна колонка */
+  .grid-works {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ==========================================================================
+   Forms
+   ========================================================================== */
+/* Подпись к полю формы как блочный элемент */
+.label {
+  display: block;
+}
+/* Базовые поля ввода: размер, отступы, обводка */
+.input,
+select,
+textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: #fff;
+}
+/* Контрастная рамка при фокусе для доступности */
+.input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 2px;
+}
+/* Сетка строк формы */
+.form-row {
+  display: grid;
+  gap: 12px;
+}
+/* По умолчанию одна колонка */
+.form-row.cols-2 {
+  grid-template-columns: 1fr;
+}
+@media (min-width: 768px) {
+  /* На планшете и выше — две колонки */
+  .form-row.cols-2 {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* ==========================================================================
+   Breadcrumbs
+   ========================================================================== */
+/* Контейнер хлебных крошек */
+.breadcrumbs__list,
+.nav__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.breadcrumbs {
+  padding-block: 12px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg, #fff);
+}
+/* Список ссылок-навигаторов */
+.breadcrumbs__list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  color: var(--muted, #6b7280);
+  font-size: 0.95rem;
+}
+/* Разделитель между пунктами */
+.breadcrumbs__list li + li::before {
+  content: "/";
+  opacity: 0.6;
+  margin: 0 6px;
+}
+.breadcrumbs a {
+  color: inherit;
+}
+.breadcrumbs a:hover {
+  text-decoration: underline;
+}
+/* Общие правила для ссылок крошек и пунктов меню */
+.breadcrumbs a,
+.nav__item a {
+  text-decoration: none;
+}
+
+/* ==========================================================================
+   Hero
+   ========================================================================== */
+/* Герой-секция: крупные отступы и фон с изображением */
+.hero {
+  padding: 80px 20px;
+  text-align: center;
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.89)),
+    url("/assets/images/ui/hero-bg.webp") no-repeat center/cover;
+}
+/* Центрирование и ограничение ширины */
+.hero .container {
+  max-width: 900px;
+  margin: 0 auto;
+}
+/* Ряд CTA-кнопок под заголовком */
+.hero__actions {
+  margin-top: 20px;
+}
+
+/* ==========================================================================
+   Footer
+   ========================================================================== */
+/* Нижний колонтитул: тёмный фон, светлый текст */
+.footer {
+  background: #0b1220;
+  color: #cbd5e1;
+  padding: 28px 0 16px;
+  text-align: center;
+}
+/* Внутреннее выравнивание элементов футера */
+.footer__inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+/* Брендинг в футере */
+.footer__brand {
+  font-weight: 700;
+  font-size: clamp(18px, 2.2vw, 20px);
+}
+/* Тонкая разделительная линия и отступы снизу */
+.footer__bottom {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+/* Иконки соцсетей в ряд */
+.social-icons {
+  display: flex;
+  gap: 12px;
+}
+/* Стилистика иконок: инверсия и лёгкая анимация */
+.social-icons img {
+  width: 22px;
+  height: 22px;
+  filter: invert(1) grayscale(1) brightness(1.4);
+  opacity: 0.9;
+  transition:
+    opacity 0.2s,
+    transform 0.12s;
+}
+/* Ховер по ссылке соцсети: ярче и немного выше */
+.social-icons a:hover img {
+  opacity: 1;
+  transform: translateY(-1px);
+  filter: invert(1) grayscale(0) brightness(1.8);
+}
+
+/* ==========================================================================
+   Utilities
+   ========================================================================== */
+/* Общая разметка для горизонтальных наборов CTA/кнопок */
+.cta-center,
+.hero__actions {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+/* Центровка текста для утилиты и заголовков с id */
+.text-center,
+#catalog-title,
+#benefits-title {
+  text-align: center;
+}
+/* Центровка набора CTA-кнопок */
+.cta-center {
+  margin-top: var(--space-3, 16px);
+}
+/* Первая строка абзаца с отступом */
+.indent {
+  text-indent: 1.25em;
+}
+/* Компактный список спецификаций */
+.spec {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+  font-size: 14px;
+  color: var(--muted);
+}
+/* Выделение ключей в списке спецификаций */
+.spec b {
+  color: var(--text);
+  font-weight: 600;
+}
+
+/* Общие утилиты для изображений внутри карточек/каруселей */
+.media img,
+.carousel img,
+.partner img,
+#worksTeaser .work-card__media img {
+  display: block;
+}
+
+/* ==========================================================================
+   About page / Works page custom tweaks
+   ========================================================================== */
+/* Лого/герой на about: уменьшение и мягкая прозрачность по краям */
+.page-about .about-hero-logo {
+  display: block;
+  margin-inline: auto; /* центрируем саму картинку */
+  transform: scale(0.8);
+  transform-origin: center;
+  /* Плавная прозрачность по прямоугольному контуру */
+  --feather: 28px;
+  /* Две перпендикулярные линейные маски: горизонтальная и вертикальная */
+  -webkit-mask-image:
+    linear-gradient(
+      to right,
+      transparent 0,
+      #000 var(--feather),
+      #000 calc(100% - var(--feather)),
+      transparent 100%
+    ),
+    linear-gradient(
+      to bottom,
+      transparent 0,
+      #000 var(--feather),
+      #000 calc(100% - var(--feather)),
+      transparent 100%
+    );
+  mask-image:
+    linear-gradient(
+      to right,
+      transparent 0,
+      #000 var(--feather),
+      #000 calc(100% - var(--feather)),
+      transparent 100%
+    ),
+    linear-gradient(
+      to bottom,
+      transparent 0,
+      #000 var(--feather),
+      #000 calc(100% - var(--feather)),
+      transparent 100%
+    );
+  -webkit-mask-repeat: no-repeat, no-repeat;
+  mask-repeat: no-repeat, no-repeat;
+  -webkit-mask-size:
+    100% 100%,
+    100% 100%;
+  mask-size:
+    100% 100%,
+    100% 100%;
+  /* Пересечение масок: поддержка браузеров */
+  mask-composite: intersect;
+  -webkit-mask-composite: source-in;
+}
+
+/* Центрирование контейнеров для надёжности */
+.page-about .hero__media,
+.page-about .about-hero-img {
+  display: grid;
+  place-items: center;
+}
+/* Секция героя на странице работ с уменьшенными отступами */
+.page-works .section-hero {
+  padding: 24px 0;
+}
+/* Фильтры работ: компактные отступы */
+.page-works .section-filters {
+  margin-bottom: 12px;
+  padding: 0;
+}
+/* Секция списка работ ближе к предыдущему блоку */
+.page-works .section-works-list {
+  margin-top: 0;
+  padding-top: 0;
+}
+/* Превью карточки в тизере работ: фикс. пропорции и скругления */
+#worksTeaser .work-card__media {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 3 / 2;
+  overflow: hidden;
+  border-radius: 8px;
+  background: #f3f4f6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+/* Картинка заполняет превью */
+#worksTeaser .work-card__media img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+/* Заголовки секций каталога/преимуществ по центру */
+#catalog-title,
+#benefits-title {
+  margin-bottom: 20px;
+}
+
+/* ==========================================================================
+   Partners
+   ========================================================================== */
+/* Контейнер сетки партнёров */
+.partners {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 24px;
+  margin: 24px 0;
+}
+/* Карточка партнёра */
+.partner {
+  text-align: center;
+  transition: transform 0.2s ease;
+}
+/* Логотип: лёгкая десатурация и анимация */
+.partner img {
+  width: 100px;
+  height: auto;
+  margin: 0 auto 8px;
+  filter: grayscale(20%) contrast(1.1);
+  transition:
+    transform 0.3s ease,
+    filter 0.3s ease;
+}
+/* При наведении логотип становится ярче и крупнее */
+.partner:hover img {
+  transform: scale(1.1);
+  filter: none;
+}
+/* Подпись под логотипом */
+.partner p {
+  font-size: 14px;
+  color: var(--text, #111);
+  margin: 0;
+}
+
+/* ==========================================================================
+   Navigation
+   ========================================================================== */
+/* Контейнер шапки: логотип, навигация и переключатель */
+.header__inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+/* Группа логотипа/знака */
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+/* Мобильное меню: выпадающее, скрыто по умолчанию */
+.nav {
+  display: none; /* скрыто по умолчанию */
+  flex-direction: column;
+  gap: 12px;
+  position: absolute;
+  top: calc(100% + 12px);
+  right: 0;
+  left: 0;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 20px clamp(16px, 4vw, 24px);
+  z-index: 1000;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.18);
+}
+/* Открытое состояние меню с анимацией выпадения */
+.nav.nav--open {
+  display: flex;
+  animation: dropdown 0.25s ease forwards;
+}
+/* Вертикальный список пунктов меню */
+.nav__list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+/* Ссылки меню: умеренная жирность и плавная смена цвета */
+.nav__item a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  width: 100%;
+  color: var(--text);
+  font-weight: 600;
+  font-size: 15px;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  padding: 12px 16px;
+  border-radius: 12px;
+  min-height: 48px;
+  border-bottom: none;
+  transition:
+    background 0.2s ease,
+    color 0.2s ease;
+}
+.nav__item a:hover {
+  background: var(--bg-soft);
+  color: var(--accent);
+}
+
+/* Кнопка-бургер: без стилей, только размер */
+.nav-toggle {
+  display: block;
+  background: none;
+  border: none;
+  cursor: pointer;
+  width: 48px;
+  height: 48px;
+  margin-left: 8px;
+  color: var(--text);
+  border-radius: 12px;
+}
+.nav-toggle--active {
+  background: var(--bg-soft);
+}
+.nav-toggle:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+/* Иконка бургера/креста */
+.nav-toggle svg {
+  width: 100%;
+  height: 100%;
+}
+
+/* Анимация выпадения */
+/* Нежная анимация появления меню сверху */
+@keyframes dropdown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* --------- Десктоп: горизонтальное меню, без бургера --------- */
+@media (min-width: 768px) {
+  .nav-toggle {
+    display: none;
+  }
+  .nav {
+    position: static;
+    display: flex;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    padding: 0;
+    box-shadow: none;
+    align-items: center;
+  }
+  .nav__list {
+    flex-direction: row;
+    gap: clamp(12px, 2.4vw, 28px);
+  }
+  .nav__item a {
+    min-height: 44px;
+    border-radius: 0;
+    padding: 12px 4px;
+    font-size: 13px;
+    letter-spacing: 0.04em;
+    opacity: 0.85;
+    border-bottom: 2px solid transparent;
+  }
+  .nav__item a:hover {
+    background: transparent;
+    opacity: 1;
+    color: var(--text);
+  }
+}
+
+/* ==========================================================================
+   Contacts page helpers
+   ========================================================================== */
+.contact-map {
+  min-height: clamp(280px, 50vw, 360px);
+  border-radius: 16px;
+  background: #e5e7eb;
+  overflow: hidden;
+}
+
+.contact-messengers {
+  margin-top: var(--space-4);
+  display: grid;
+  gap: var(--space-3);
+}
+
+@media (min-width: 520px) {
+  .contact-messengers {
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  }
+}
+
+.messenger-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 16px 18px;
+  border-radius: 16px;
+  font-weight: 600;
+  text-decoration: none;
+  color: #fff;
+  min-height: 56px;
+  box-shadow: var(--shadow-sm);
+  transition:
+    transform 0.12s ease,
+    box-shadow 0.2s ease,
+    filter 0.2s ease;
+}
+
+.messenger-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md, 0 20px 40px rgba(15, 23, 42, 0.16));
+}
+
+.messenger-btn:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 3px;
+}
+
+.messenger-btn__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.messenger-btn__icon svg,
+.messenger-btn__icon img {
+  width: 28px;
+  height: 28px;
+  display: block;
+}
+
+.messenger-btn--telegram {
+  background: linear-gradient(135deg, #2aabee, #2293d7);
+}
+
+.messenger-btn--instagram {
+  background: linear-gradient(
+    135deg,
+    #f58529,
+    #dd2a7b 50%,
+    #8134af 75%,
+    #515bd4
+  );
+}
+
+.messenger-btn--viber {
+  background: linear-gradient(135deg, #7f4da0, #5c2b83);
+}
+
+.messenger-btn--whatsapp {
+  background: linear-gradient(135deg, #25d366, #1ebe5d);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .messenger-btn {
+    transition: none;
+  }
+  .messenger-btn:hover {
+    transform: none;
+  }
+}

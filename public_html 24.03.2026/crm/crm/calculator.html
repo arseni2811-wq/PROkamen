@@ -1,0 +1,641 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Умный Калькулятор - PRO Камень</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      input[type="number"]::-webkit-inner-spin-button,
+      input[type="number"]::-webkit-outer-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+      }
+    </style>
+  </head>
+  <body class="bg-[#F8F9FA] text-gray-800 antialiased pb-24">
+    <div class="bg-[#212529] text-white py-4 px-6 sticky top-0 z-50 shadow-md">
+      <div
+        class="max-w-6xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-4"
+      >
+        <h1 class="text-xl font-bold flex items-center gap-2 text-[#D4AF37]">
+          <span>🧮</span> Интеллектуальный расчет стоимости
+        </h1>
+        <div class="flex items-center gap-4">
+          <div
+            class="flex items-center gap-2 bg-gray-700 px-3 py-1.5 rounded-lg border border-gray-600"
+          >
+            <span class="text-xs text-gray-300 uppercase font-bold"
+              >Курс USD:</span
+            >
+            <input
+              type="number"
+              id="exchangeRate"
+              value="3.2"
+              step="0.01"
+              class="w-16 bg-transparent text-white font-bold text-center border-b border-gray-500 focus:border-[#D4AF37] outline-none"
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="max-w-6xl mx-auto px-4 py-8">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <div class="lg:col-span-8 space-y-6">
+          <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+            <div class="flex justify-between items-center mb-4 border-b pb-2">
+              <h2 class="text-lg font-bold text-gray-800">
+                1. Габариты изделия
+              </h2>
+              <span
+                class="text-xs text-emerald-600 font-bold bg-emerald-50 px-2 py-1 rounded"
+                >В миллиметрах</span
+              >
+            </div>
+            <div class="grid grid-cols-2 gap-4 mb-6">
+              <div>
+                <label
+                  class="block text-xs font-bold text-gray-600 uppercase mb-1"
+                  >Длина (L), мм</label
+                >
+                <input
+                  type="number"
+                  id="calcL"
+                  value="2900"
+                  class="w-full bg-blue-50 border-blue-200 rounded p-3 text-lg font-bold text-blue-900 focus:ring-blue-500 outline-none transition calc-trigger"
+                />
+              </div>
+              <div>
+                <label
+                  class="block text-xs font-bold text-gray-600 uppercase mb-1"
+                  >Глубина (W), мм</label
+                >
+                <input
+                  type="number"
+                  id="calcW"
+                  value="600"
+                  class="w-full bg-blue-50 border-blue-200 rounded p-3 text-lg font-bold text-blue-900 focus:ring-blue-500 outline-none transition calc-trigger"
+                />
+              </div>
+            </div>
+
+            <div
+              class="grid grid-cols-1 md:grid-cols-2 gap-6 bg-gray-50 p-4 rounded-lg border border-gray-100"
+            >
+              <div>
+                <div class="flex justify-between items-center mb-2">
+                  <label class="block text-xs font-bold text-gray-600 uppercase"
+                    >Где делаем фаску?</label
+                  >
+                  <label
+                    class="flex items-center gap-2 text-xs font-bold text-red-600 bg-red-50 px-2 py-1 rounded cursor-pointer border border-red-200"
+                  >
+                    <input
+                      type="checkbox"
+                      id="calcIsThick"
+                      class="calc-trigger w-3 h-3"
+                    />
+                    СКЛЕЙКА (40мм)
+                  </label>
+                </div>
+                <div class="space-y-2">
+                  <label class="flex items-center gap-2 text-sm"
+                    ><input
+                      type="checkbox"
+                      id="cEF"
+                      checked
+                      class="calc-trigger rounded"
+                    />
+                    Спереди (по длине)</label
+                  >
+                  <label class="flex items-center gap-2 text-sm"
+                    ><input
+                      type="checkbox"
+                      id="cEL"
+                      checked
+                      class="calc-trigger rounded"
+                    />
+                    Слева (по глубине)</label
+                  >
+                  <label class="flex items-center gap-2 text-sm"
+                    ><input
+                      type="checkbox"
+                      id="cER"
+                      checked
+                      class="calc-trigger rounded"
+                    />
+                    Справа (по глубине)</label
+                  >
+                </div>
+                <div
+                  class="mt-3 text-xs bg-white p-2 rounded border text-gray-600"
+                >
+                  Авто-расчет: Прямой рез
+                  <span class="text-gray-400"
+                    >($<span id="lblCutS">5</span>/м)</span
+                  >:
+                  <span id="outCutS" class="font-bold text-blue-600">0</span> м
+                  <br />
+                  Рез 45°
+                  <span class="text-gray-400"
+                    >($<span id="lblCut45">10</span>/м)</span
+                  >:
+                  <span id="outCut45" class="font-bold text-blue-600">0</span> м
+                  <br />
+                  Кромка:
+                  <span id="outEdge" class="font-bold text-blue-600">0</span> м
+                </div>
+              </div>
+              <div>
+                <label
+                  class="block text-xs font-bold text-gray-600 uppercase mb-2"
+                  >Где ставим плинтус?
+                  <span class="text-gray-400 normal-case"
+                    >($<span id="lblPlinth">10</span>/м)</span
+                  ></label
+                >
+                <div class="space-y-2">
+                  <label class="flex items-center gap-2 text-sm"
+                    ><input
+                      type="checkbox"
+                      id="cPB"
+                      checked
+                      class="calc-trigger rounded"
+                    />
+                    Сзади (у стены)</label
+                  >
+                  <label class="flex items-center gap-2 text-sm"
+                    ><input
+                      type="checkbox"
+                      id="cPL"
+                      class="calc-trigger rounded"
+                    />
+                    Слева (у стены)</label
+                  >
+                  <label class="flex items-center gap-2 text-sm"
+                    ><input
+                      type="checkbox"
+                      id="cPR"
+                      class="calc-trigger rounded"
+                    />
+                    Справа (у стены)</label
+                  >
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+            <h2 class="text-lg font-bold text-gray-800 mb-4 border-b pb-2">
+              2. Выбор материала
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label
+                  class="block text-xs font-bold text-gray-600 uppercase mb-1"
+                  >Каталог камня</label
+                >
+                <select
+                  id="cStone"
+                  class="w-full bg-gray-50 border-gray-300 rounded p-2.5 text-sm border focus:ring-[#D4AF37] outline-none calc-trigger"
+                ></select>
+              </div>
+              <div>
+                <label
+                  class="flex justify-between items-center text-xs font-bold text-gray-600 uppercase mb-1"
+                >
+                  <span>Расход слэбов (шт)</span>
+                  <label
+                    class="flex items-center gap-1 text-blue-600 normal-case cursor-pointer"
+                    ><input
+                      type="checkbox"
+                      id="calcAutoSlab"
+                      checked
+                      class="calc-trigger w-3 h-3"
+                    />
+                    Авторасчет</label
+                  >
+                </label>
+                <input
+                  type="number"
+                  id="cSlab"
+                  step="0.5"
+                  min="0"
+                  value="0.5"
+                  disabled
+                  class="w-full bg-gray-100 text-gray-500 border border-gray-300 font-bold rounded p-2.5 text-sm outline-none calc-trigger"
+                />
+              </div>
+            </div>
+            <div
+              id="cCustomWrap"
+              class="hidden mt-4 bg-blue-50 p-4 rounded-lg border border-blue-200"
+            >
+              <label
+                class="block text-xs font-bold text-blue-800 uppercase mb-1"
+                >Цена за 1 ЦЕЛЫЙ слэб ($)</label
+              >
+              <input
+                type="number"
+                id="cCustomP"
+                value="0"
+                class="w-full border-blue-300 rounded p-2.5 text-sm font-bold text-blue-900 outline-none calc-trigger"
+              />
+            </div>
+          </div>
+
+          <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+            <h2 class="text-lg font-bold text-gray-800 mb-4 border-b pb-2">
+              3. Вырезы и усложнения
+            </h2>
+            <div class="space-y-3">
+              <div
+                class="flex items-center justify-between bg-blue-50 p-3 rounded-lg border border-blue-100"
+              >
+                <div>
+                  <span class="text-sm font-bold text-blue-900 block"
+                    >Мойка (подклейка снизу)</span
+                  ><span class="text-[10px] text-blue-600"
+                    >($<span id="lblSinkU">85</span>/шт)</span
+                  >
+                </div>
+                <input
+                  type="number"
+                  id="cSinkU"
+                  min="0"
+                  value="0"
+                  class="w-16 border border-blue-300 rounded p-1.5 text-center text-sm font-bold calc-trigger outline-none"
+                />
+              </div>
+              <div
+                class="flex items-center justify-between p-2 hover:bg-gray-50 rounded"
+              >
+                <span class="text-sm font-medium text-gray-700"
+                  >Мойка (накладная) / Варочная
+                  <span class="text-[10px] text-gray-400"
+                    >($<span id="lblSinkT">40</span>/шт)</span
+                  ></span
+                >
+                <input
+                  type="number"
+                  id="cSinkT"
+                  min="0"
+                  value="0"
+                  class="w-16 border border-gray-300 rounded p-1.5 text-center text-sm calc-trigger outline-none"
+                />
+              </div>
+              <div
+                class="flex items-center justify-between p-2 hover:bg-gray-50 rounded"
+              >
+                <span class="text-sm font-medium text-gray-700"
+                  >Сверление (кран, розетка)
+                  <span class="text-[10px] text-gray-400"
+                    >($<span id="lblHole">10</span>/шт)</span
+                  ></span
+                >
+                <input
+                  type="number"
+                  id="cHole"
+                  min="0"
+                  value="0"
+                  class="w-16 border border-gray-300 rounded p-1.5 text-center text-sm calc-trigger outline-none"
+                />
+              </div>
+              <div
+                class="flex items-center justify-between p-2 hover:bg-gray-50 rounded"
+              >
+                <span class="text-sm font-medium text-gray-700"
+                  >Стык / Склейка деталей
+                  <span class="text-[10px] text-gray-400"
+                    >($<span id="lblJoint">40</span>/шт)</span
+                  ></span
+                >
+                <input
+                  type="number"
+                  id="cJoint"
+                  min="0"
+                  value="0"
+                  class="w-16 border border-gray-300 rounded p-1.5 text-center text-sm calc-trigger outline-none"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+            <h2 class="text-lg font-bold text-gray-800 mb-4 border-b pb-2">
+              4. Логистика и Монтаж
+            </h2>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              <div>
+                <label
+                  class="block text-xs font-bold text-gray-600 uppercase mb-1"
+                  >Доставка (BYN)</label
+                ><input
+                  type="number"
+                  id="cDel"
+                  min="0"
+                  value="150"
+                  class="w-full border-gray-300 rounded p-3 text-lg font-bold border calc-trigger"
+                />
+              </div>
+              <div>
+                <label
+                  class="block text-xs font-bold text-gray-600 uppercase mb-1"
+                  >Монтаж (BYN)</label
+                ><input
+                  type="number"
+                  id="cInst"
+                  min="0"
+                  value="300"
+                  class="w-full border-gray-300 rounded p-3 text-lg font-bold border calc-trigger"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="lg:col-span-4">
+          <div
+            class="sticky top-[100px] bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden flex flex-col max-h-[85vh]"
+          >
+            <div class="bg-gray-800 p-4 text-center shrink-0">
+              <h3 class="text-lg font-bold text-white uppercase tracking-wider">
+                Детализация сметы
+              </h3>
+            </div>
+
+            <div class="p-6 flex-1 overflow-y-auto">
+              <div
+                id="detailedReceipt"
+                class="space-y-4 text-sm text-gray-700 mb-6 border-b pb-4"
+              ></div>
+
+              <div
+                class="pt-4 bg-yellow-50 rounded-lg p-4 border border-yellow-200 shrink-0"
+              >
+                <div
+                  class="text-xs font-bold text-yellow-800 uppercase mb-1 text-center"
+                >
+                  Общая стоимость заказа
+                </div>
+                <div class="text-4xl font-black text-center text-yellow-900">
+                  <span id="outTotal">0</span> <span class="text-lg">BYN</span>
+                </div>
+                <div class="text-center text-xs text-yellow-700 mt-1">
+                  ~ $<span id="outTotalUSD">0</span>
+                </div>
+              </div>
+
+              <button
+                id="exportBtn"
+                class="w-full mt-4 bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-3 rounded-lg border border-gray-300 transition shadow-sm text-sm shrink-0"
+              >
+                📋 Скопировать смету
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const DEFAULT_PRICES = {
+        cutStraight: 5,
+        cut45: 10,
+        edge20: 20,
+        edge40: 40,
+        sinkUnder: 85,
+        sinkTop: 40,
+        hole: 10,
+        joint: 40,
+        plinth: 10,
+      };
+      const PRICES =
+        JSON.parse(localStorage.getItem("crm_services_prices")) ||
+        DEFAULT_PRICES;
+
+      const DEFAULT_CATALOG = [
+        {
+          id: "ava-r522",
+          title: "Аварус R522 (Золотое кольцо)",
+          half: 460,
+          full: 920,
+        },
+        {
+          id: "qnt-4561",
+          title: "Quantra Capuccino Froth",
+          half: 407,
+          full: 785,
+        },
+        { id: "qnt-2898", title: "Quantra Aquamarine", half: 437, full: 845 },
+        { id: "vic-200", title: "Vicostone Artic Snow", half: 360, full: 720 },
+        {
+          id: "vic-8820",
+          title: "Vicostone Misterio Gold",
+          half: 550,
+          full: 1100,
+        },
+        { id: "g-g101", title: "Гранит G101 (Габбро)", half: 150, full: 300 },
+      ];
+
+      function initCatalog() {
+        // Обновляем ценники в лейблах HTML
+        document.getElementById("lblCutS").textContent = PRICES.cutStraight;
+        document.getElementById("lblCut45").textContent = PRICES.cut45;
+        document.getElementById("lblPlinth").textContent = PRICES.plinth;
+        document.getElementById("lblSinkU").textContent = PRICES.sinkUnder;
+        document.getElementById("lblSinkT").textContent = PRICES.sinkTop;
+        document.getElementById("lblHole").textContent = PRICES.hole;
+        document.getElementById("lblJoint").textContent = PRICES.joint;
+
+        const select = document.getElementById("cStone");
+        select.innerHTML =
+          '<option value="0" data-half="0" data-full="0">--- Выберите камень ---</option>';
+
+        const rawCatalog = JSON.parse(localStorage.getItem("crm_catalog"));
+        const STONE_CATALOG =
+          rawCatalog && rawCatalog.length > 0
+            ? rawCatalog.map((s) => ({
+                id: s.id,
+                title: s.title,
+                half: s.priceUsdHalf || 0,
+                full: s.priceUsdFull || 0,
+              }))
+            : DEFAULT_CATALOG;
+
+        STONE_CATALOG.forEach((s) => {
+          const opt = document.createElement("option");
+          opt.value = s.id;
+          opt.dataset.half = s.half;
+          opt.dataset.full = s.full;
+          opt.textContent = `${s.title} (0.5: $${s.half} / 1: $${s.full})`;
+          select.appendChild(opt);
+        });
+        select.innerHTML += `<option value="custom">✏️ Свой камень (Указать цену вручную)</option>`;
+      }
+
+      function calculate() {
+        // Защита от деления на ноль: берем минимум 0.01
+        const rate = Math.max(
+          Number(document.getElementById("exchangeRate").value) || 3.2,
+          0.01,
+        );
+
+        const L = (Number(document.getElementById("calcL").value) || 0) / 1000;
+        const W = (Number(document.getElementById("calcW").value) || 0) / 1000;
+        const isThick = document.getElementById("calcIsThick").checked;
+
+        let edgeM = 0;
+        if (document.getElementById("cEF").checked) edgeM += L;
+        if (document.getElementById("cEL").checked) edgeM += W;
+        if (document.getElementById("cER").checked) edgeM += W;
+
+        let plinthM = 0;
+        if (document.getElementById("cPB").checked) plinthM += L;
+        if (document.getElementById("cPL").checked) plinthM += W;
+        if (document.getElementById("cPR").checked) plinthM += W;
+
+        let cutStraightM = 0;
+        let cut45M = 0;
+        if (isThick) {
+          cut45M = edgeM;
+          cutStraightM = (L + W) * 2 + edgeM;
+        } else {
+          cutStraightM = (L + W) * 2;
+        }
+
+        document.getElementById("outCutS").textContent =
+          cutStraightM.toFixed(1);
+        document.getElementById("outCut45").textContent = cut45M.toFixed(1);
+        document.getElementById("outEdge").textContent = edgeM.toFixed(1);
+
+        const autoSlabCb = document.getElementById("calcAutoSlab");
+        const slabInput = document.getElementById("cSlab");
+        slabInput.disabled = autoSlabCb.checked;
+        if (autoSlabCb.checked) {
+          slabInput.classList.add("bg-gray-100", "text-gray-500");
+          slabInput.classList.remove("bg-yellow-50");
+          slabInput.value =
+            L > 0 && W > 0 ? Math.ceil(L / 3.1) * Math.ceil(W / 0.7) * 0.5 : 0;
+        } else {
+          slabInput.classList.remove("bg-gray-100", "text-gray-500");
+          slabInput.classList.add("bg-yellow-50", "border-yellow-400");
+        }
+
+        const slabAmt = Number(slabInput.value) || 0;
+        let matUSD = 0;
+        const stoneSel = document.getElementById("cStone");
+        document
+          .getElementById("cCustomWrap")
+          .classList.toggle("hidden", stoneSel.value !== "custom");
+
+        let stoneNameForReceipt = "Не выбран";
+        if (stoneSel.value === "custom") {
+          matUSD =
+            (Number(document.getElementById("cCustomP").value) || 0) * slabAmt;
+          stoneNameForReceipt = "Свой материал";
+        } else if (stoneSel.value !== "0") {
+          const opt = stoneSel.options[stoneSel.selectedIndex];
+          stoneNameForReceipt = opt.text.split("(")[0].trim();
+          const pF = Number(opt.dataset.full);
+          const pH = Number(opt.dataset.half);
+          if (slabAmt === 0.5) matUSD = pH;
+          else matUSD = pF * slabAmt;
+        }
+
+        // Работы
+        const pCutStr = cutStraightM * PRICES.cutStraight;
+        const pCut45 = cut45M * PRICES.cut45;
+        const edgePricePerM = isThick ? PRICES.edge40 : PRICES.edge20;
+        const pEdge = edgeM * edgePricePerM;
+        const pPlinth = plinthM * PRICES.plinth;
+
+        const qSinkU = Number(document.getElementById("cSinkU").value) || 0;
+        const pSinkU = qSinkU * PRICES.sinkUnder;
+        const qSinkT = Number(document.getElementById("cSinkT").value) || 0;
+        const pSinkT = qSinkT * PRICES.sinkTop;
+        const qJoint = Number(document.getElementById("cJoint").value) || 0;
+        const pJoint = qJoint * PRICES.joint;
+        const qHole = Number(document.getElementById("cHole").value) || 0;
+        const pHole = qHole * PRICES.hole;
+
+        const prodUSD =
+          pCutStr + pCut45 + pEdge + pPlinth + pSinkU + pSinkT + pJoint + pHole;
+
+        const delBYN = Number(document.getElementById("cDel").value) || 0;
+        const instBYN = Number(document.getElementById("cInst").value) || 0;
+        const srvBYN = delBYN + instBYN;
+
+        const totalUSD = matUSD + prodUSD + srvBYN / rate;
+        const totalBYN = totalUSD * rate;
+
+        // --- ГЕНЕРАЦИЯ ДЕТАЛЬНОГО ЧЕКА ---
+        let receiptHTML = "";
+
+        // Материал
+        receiptHTML += `<div class="mb-3"><div class="font-bold border-b pb-1 mb-2 text-xs uppercase tracking-wider text-gray-500">Материал</div>`;
+        receiptHTML += `<div class="flex justify-between items-center"><span class="flex-1">${stoneNameForReceipt} (${slabAmt} шт):</span><span class="font-bold">$${matUSD.toFixed(1)}</span></div></div>`;
+
+        // Работы
+        receiptHTML += `<div class="mb-3"><div class="font-bold border-b pb-1 mb-2 text-xs uppercase tracking-wider text-gray-500">Работы цеха</div>`;
+        if (cutStraightM > 0)
+          receiptHTML += `<div class="flex justify-between text-xs mb-1"><span>Прямой рез (${cutStraightM.toFixed(1)}м x $${PRICES.cutStraight}):</span><span class="font-bold">$${pCutStr.toFixed(1)}</span></div>`;
+        if (cut45M > 0)
+          receiptHTML += `<div class="flex justify-between text-xs mb-1"><span>Рез 45° (${cut45M.toFixed(1)}м x $${PRICES.cut45}):</span><span class="font-bold">$${pCut45.toFixed(1)}</span></div>`;
+        if (edgeM > 0)
+          receiptHTML += `<div class="flex justify-between text-xs mb-1"><span>Торец ${isThick ? "40" : "20"}мм (${edgeM.toFixed(1)}м x $${edgePricePerM}):</span><span class="font-bold">$${pEdge.toFixed(1)}</span></div>`;
+        if (plinthM > 0)
+          receiptHTML += `<div class="flex justify-between text-xs mb-1"><span>Плинтус (${plinthM.toFixed(1)}м x $${PRICES.plinth}):</span><span class="font-bold">$${pPlinth.toFixed(1)}</span></div>`;
+
+        if (qSinkU > 0)
+          receiptHTML += `<div class="flex justify-between text-xs mb-1"><span>Мойка подклейка (${qSinkU}шт x $${PRICES.sinkUnder}):</span><span class="font-bold">$${pSinkU.toFixed(1)}</span></div>`;
+        if (qSinkT > 0)
+          receiptHTML += `<div class="flex justify-between text-xs mb-1"><span>Мойка накладная (${qSinkT}шт x $${PRICES.sinkTop}):</span><span class="font-bold">$${pSinkT.toFixed(1)}</span></div>`;
+        if (qJoint > 0)
+          receiptHTML += `<div class="flex justify-between text-xs mb-1"><span>Стыки (${qJoint}шт x $${PRICES.joint}):</span><span class="font-bold">$${pJoint.toFixed(1)}</span></div>`;
+        if (qHole > 0)
+          receiptHTML += `<div class="flex justify-between text-xs mb-1"><span>Отверстия (${qHole}шт x $${PRICES.hole}):</span><span class="font-bold">$${pHole.toFixed(1)}</span></div>`;
+        receiptHTML += `</div>`;
+
+        // Услуги
+        if (delBYN > 0 || instBYN > 0) {
+          receiptHTML += `<div class="mb-2"><div class="font-bold border-b pb-1 mb-2 text-xs uppercase tracking-wider text-gray-500">Логистика и Монтаж</div>`;
+          if (delBYN > 0)
+            receiptHTML += `<div class="flex justify-between text-xs mb-1 text-blue-800"><span>Доставка:</span><span class="font-bold">${delBYN} BYN</span></div>`;
+          if (instBYN > 0)
+            receiptHTML += `<div class="flex justify-between text-xs mb-1 text-blue-800"><span>Монтаж:</span><span class="font-bold">${instBYN} BYN</span></div>`;
+          receiptHTML += `</div>`;
+        }
+
+        document.getElementById("detailedReceipt").innerHTML = receiptHTML;
+        document.getElementById("outTotalUSD").textContent =
+          totalUSD.toFixed(1);
+        document.getElementById("outTotal").textContent =
+          Math.round(totalBYN).toLocaleString("ru-RU");
+      }
+
+      document.getElementById("exportBtn").addEventListener("click", () => {
+        const text = document
+          .getElementById("detailedReceipt")
+          .innerText.replace(/\n\n/g, "\n");
+        const total = document.getElementById("outTotal").textContent;
+        navigator.clipboard
+          .writeText(`Детализация заказа:\n${text}\n---\nИТОГО: ${total} BYN`)
+          .then(() => alert("Смета скопирована!"));
+      });
+
+      document.addEventListener("DOMContentLoaded", () => {
+        initCatalog();
+        document.getElementById("exchangeRate").value =
+          (JSON.parse(localStorage.getItem("crm_settings")) || {})
+            .exchangeRate || 3.2;
+        document.querySelectorAll(".calc-trigger").forEach((i) => {
+          i.addEventListener("input", calculate);
+          i.addEventListener("change", calculate);
+        });
+        calculate();
+      });
+    </script>
+  </body>
+</html>

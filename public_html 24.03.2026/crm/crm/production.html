@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PRO Камень - Производство</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body class="bg-gray-100 text-gray-800 antialiased pb-12">
+    <header class="bg-gray-900 text-white sticky top-0 z-50 shadow-md">
+      <div
+        class="px-6 py-4 flex items-center justify-between max-w-7xl mx-auto"
+      >
+        <div class="flex items-center gap-4">
+          <div class="text-xl font-black text-yellow-500 tracking-wider">
+            PRO-КАМЕНЬ <span class="text-white font-light">| ЦЕХ</span>
+          </div>
+        </div>
+        <div class="flex items-center gap-4">
+          <span class="text-sm text-gray-400 hidden sm:inline"
+            >Мастер: <span id="userName" class="font-bold text-white"></span
+          ></span>
+          <button
+            id="logoutBtn"
+            class="bg-gray-800 hover:bg-gray-700 px-4 py-2 rounded text-sm transition"
+          >
+            Выход
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
+      <div class="mb-6 admin-only hidden">
+        <a
+          href="dashboard.html"
+          class="text-blue-600 hover:underline text-sm font-bold flex items-center gap-1"
+        >
+          &larr; Вернуться в CRM (Канбан)
+        </a>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div
+          class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col h-[80vh]"
+        >
+          <div class="bg-amber-100 p-4 border-b border-amber-200 shrink-0">
+            <h2
+              class="text-lg font-black text-amber-800 flex items-center gap-2"
+            >
+              <span>⏳</span> ОЧЕРЕДЬ (ОЖИДАНИЕ МАТЕРИАЛА)
+              <span
+                id="queueCount"
+                class="bg-amber-500 text-white text-xs px-2 py-1 rounded-full ml-auto"
+                >0</span
+              >
+            </h2>
+          </div>
+          <div
+            id="queueContainer"
+            class="p-4 flex-1 overflow-y-auto space-y-4 bg-gray-50"
+          ></div>
+        </div>
+
+        <div
+          class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col h-[80vh]"
+        >
+          <div class="bg-blue-100 p-4 border-b border-blue-200 shrink-0">
+            <h2
+              class="text-lg font-black text-blue-800 flex items-center gap-2"
+            >
+              <span>⚙️</span> В ПРОЦЕССЕ ИЗГОТОВЛЕНИЯ
+              <span
+                id="inWorkCount"
+                class="bg-blue-500 text-white text-xs px-2 py-1 rounded-full ml-auto"
+                >0</span
+              >
+            </h2>
+          </div>
+          <div
+            id="inWorkContainer"
+            class="p-4 flex-1 overflow-y-auto space-y-4 bg-gray-50"
+          ></div>
+        </div>
+      </div>
+    </div>
+
+    <div
+      id="filesModal"
+      class="fixed inset-0 bg-black bg-opacity-80 z-[100] hidden flex items-center justify-center p-4"
+    >
+      <div
+        class="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden"
+      >
+        <div
+          class="p-4 bg-gray-900 text-white flex justify-between items-center"
+        >
+          <h3 class="font-bold">Прикрепленные файлы</h3>
+          <button
+            id="closeFilesBtn"
+            class="text-gray-400 hover:text-white text-2xl leading-none"
+          >
+            &times;
+          </button>
+        </div>
+        <div
+          id="modalFilesList"
+          class="p-6 overflow-y-auto space-y-3 bg-gray-50 flex-1"
+        ></div>
+      </div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script src="js/production.js"></script>
+  </body>
+</html>

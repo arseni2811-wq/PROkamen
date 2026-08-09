@@ -1,0 +1,947 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Admin Panel — PRO Камень</title>
+    <link rel="stylesheet" href="/css/base.css" />
+    <link rel="stylesheet" href="/css/layout.css" />
+    <link rel="stylesheet" href="/css/components.css" />
+    <style>
+      .admin-wrapper {
+        display: none;
+        min-height: 100vh;
+        background: #f5f5f5;
+      }
+
+      .admin-wrapper.show {
+        display: block;
+      }
+
+      .admin-header {
+        background: white;
+        padding: 20px 0;
+        border-bottom: 1px solid #e0e0e0;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+
+      .admin-header .container {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .admin-header h1 {
+        margin: 0;
+        font-size: 28px;
+        color: #333;
+      }
+
+      .logout-btn {
+        background: #e74c3c;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+        transition: background 0.3s;
+      }
+
+      .logout-btn:hover {
+        background: #c0392b;
+      }
+
+      .admin-content {
+        padding: 30px 0;
+      }
+
+      .tabs {
+        display: flex;
+        background: white;
+        border-bottom: 2px solid #e0e0e0;
+        margin-bottom: 0;
+        position: sticky;
+        top: 0;
+        z-index: 100;
+      }
+
+      .tab-button {
+        flex: 1;
+        padding: 15px;
+        text-align: center;
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-size: 16px;
+        font-weight: 500;
+        color: #999;
+        transition: all 0.3s;
+        border-bottom: 3px solid transparent;
+      }
+
+      .tab-button.active {
+        color: #2c3e50;
+        border-bottom-color: #3498db;
+      }
+
+      .tab-button:hover {
+        color: #2c3e50;
+        background: #f9f9f9;
+      }
+
+      .tab-content {
+        display: none;
+      }
+
+      .tab-content.active {
+        display: block;
+      }
+
+      .form-group {
+        margin-bottom: 20px;
+      }
+
+      .form-group label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 500;
+        color: #333;
+      }
+
+      .form-group input,
+      .form-group textarea,
+      .form-group select {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-family: inherit;
+        font-size: 14px;
+      }
+
+      .form-group textarea {
+        resize: vertical;
+        min-height: 100px;
+      }
+
+      .form-group input:focus,
+      .form-group textarea:focus,
+      .form-group select:focus {
+        outline: none;
+        border-color: #3498db;
+        box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+      }
+
+      .form-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+      }
+
+      @media (max-width: 768px) {
+        .form-row {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      .form-section {
+        background: white;
+        padding: 30px;
+        border-radius: 8px;
+        margin-bottom: 30px;
+      }
+
+      .form-section h2 {
+        margin-top: 0;
+        color: #2c3e50;
+        border-bottom: 2px solid #e0e0e0;
+        padding-bottom: 15px;
+        margin-bottom: 20px;
+      }
+
+      .btn {
+        padding: 12px 24px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 500;
+        transition: all 0.3s;
+      }
+
+      .btn-primary {
+        background: #3498db;
+        color: white;
+      }
+
+      .btn-primary:hover {
+        background: #2980b9;
+      }
+
+      .btn-danger {
+        background: #e74c3c;
+        color: white;
+      }
+
+      .btn-danger:hover {
+        background: #c0392b;
+      }
+
+      .btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+
+      .alert {
+        padding: 15px;
+        border-radius: 4px;
+        margin-bottom: 20px;
+        animation: slideIn 0.3s ease;
+      }
+
+      @keyframes slideIn {
+        from {
+          opacity: 0;
+          transform: translateY(-10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .alert-success {
+        background: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+      }
+
+      .alert-error {
+        background: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+      }
+
+      .alert-info {
+        background: #d1ecf1;
+        color: #0c5460;
+        border: 1px solid #bee5eb;
+      }
+
+      .table {
+        width: 100%;
+        border-collapse: collapse;
+        background: white;
+        margin-bottom: 30px;
+      }
+
+      .table th {
+        background: #f8f9fa;
+        padding: 12px;
+        text-align: left;
+        font-weight: 600;
+        border-bottom: 2px solid #dee2e6;
+        color: #333;
+      }
+
+      .table td {
+        padding: 12px;
+        border-bottom: 1px solid #dee2e6;
+      }
+
+      .table tr:hover {
+        background: #f9f9f9;
+      }
+
+      .table img {
+        max-width: 50px;
+        max-height: 50px;
+        border-radius: 4px;
+      }
+
+      .action-buttons {
+        display: flex;
+        gap: 10px;
+      }
+
+      .action-buttons button {
+        padding: 6px 12px;
+        font-size: 12px;
+      }
+
+      .modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 1000;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .modal.show {
+        display: flex;
+      }
+
+      .modal-content {
+        background: white;
+        padding: 40px;
+        border-radius: 8px;
+        max-width: 400px;
+        width: 90%;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+        animation: slideIn 0.3s ease;
+      }
+
+      .modal-content h2 {
+        margin-top: 0;
+        text-align: center;
+        color: #2c3e50;
+      }
+
+      .password-input {
+        margin-bottom: 20px;
+      }
+
+      .button-group {
+        display: flex;
+        gap: 10px;
+        justify-content: center;
+      }
+
+      .button-group button {
+        flex: 1;
+      }
+
+      .loading {
+        display: inline-block;
+        width: 4px;
+        height: 4px;
+        border-radius: 50%;
+        background: currentColor;
+        margin-left: 4px;
+        animation: pulse 1.5s infinite;
+      }
+
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 0.3;
+        }
+        50% {
+          opacity: 1;
+        }
+      }
+
+      .file-input-wrapper {
+        position: relative;
+        display: inline-block;
+      }
+
+      .file-input-label {
+        display: block;
+        padding: 10px 15px;
+        background: #ecf0f1;
+        border: 1px dashed #bdc3c7;
+        border-radius: 4px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.3s;
+      }
+
+      .file-input-label:hover {
+        background: #d9ddde;
+        border-color: #95a5a6;
+      }
+
+      .file-input-wrapper input[type="file"] {
+        display: none;
+      }
+
+      .file-name {
+        margin-top: 8px;
+        font-size: 12px;
+        color: #7f8c8d;
+      }
+
+      .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        color: #999;
+      }
+
+      .empty-state p {
+        margin: 0 0 20px 0;
+      }
+
+      .no-data {
+        background: white;
+        padding: 30px;
+        text-align: center;
+        color: #999;
+        border-radius: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Модальное окно для ввода пароля -->
+    <div class="modal show" id="passwordModal">
+      <div class="modal-content">
+        <h2>🔐 Доступ к панели</h2>
+        <form id="loginForm" onsubmit="checkPassword(event)">
+          <div class="form-group password-input">
+            <input
+              type="password"
+              id="password"
+              placeholder="Введите пароль"
+              autocomplete="off"
+              required
+            />
+          </div>
+          <div class="button-group">
+            <button type="submit" class="btn btn-primary">Вход</button>
+          </div>
+          <div
+            id="passwordError"
+            style="
+              color: #e74c3c;
+              font-size: 12px;
+              margin-top: 10px;
+              text-align: center;
+            "
+          ></div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Основная панель -->
+    <div class="admin-wrapper" id="adminPanel">
+      <header class="admin-header">
+        <div class="container">
+          <h1>PRO Камень — Admin Panel</h1>
+          <button class="logout-btn" onclick="logout()">Выход</button>
+        </div>
+      </header>
+
+      <div class="admin-content">
+        <div class="container">
+          <!-- Табы -->
+          <div class="tabs">
+            <button class="tab-button active" onclick="switchTab('catalog')">
+              📦 Каталог материалов
+            </button>
+            <button class="tab-button" onclick="switchTab('works')">
+              🖼️ Наши работы
+            </button>
+          </div>
+
+          <!-- Вкладка Каталог -->
+          <div class="tab-content active" id="catalogTab">
+            <div class="form-section">
+              <h2>Добавить материал</h2>
+              <form id="catalogForm" onsubmit="submitCatalogForm(event)">
+                <div class="form-group">
+                  <label for="catalog_title">Название материала *</label>
+                  <input
+                    type="text"
+                    id="catalog_title"
+                    placeholder="Например: Nero Assoluto"
+                    required
+                  />
+                </div>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="catalog_material">Материал *</label>
+                    <select id="catalog_material" required>
+                      <option value="">Выберите материал</option>
+                      <option value="granite">Гранит</option>
+                      <option value="marble">Мрамор</option>
+                      <option value="composite">Кварцевый агломерат</option>
+                      <option value="other">Прочее</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label for="catalog_type">Тип *</label>
+                    <select id="catalog_type" required>
+                      <option value="">Выберите тип</option>
+                      <option value="polished">Полированный</option>
+                      <option value="matte">Матовый</option>
+                      <option value="flamed">Обожженный</option>
+                      <option value="brushed">Шлифованный</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label for="catalog_fabricator">Производитель</label>
+                  <input
+                    type="text"
+                    id="catalog_fabricator"
+                    placeholder="Например: Brasil"
+                  />
+                </div>
+                <div class="form-group">
+                  <label for="catalog_size">Размер плиты (мм)</label>
+                  <input
+                    type="text"
+                    id="catalog_size"
+                    placeholder="Например: 3050x1500"
+                  />
+                </div>
+                <div class="form-group">
+                  <label for="catalog_image">Фото материала *</label>
+                  <div class="file-input-wrapper">
+                    <label class="file-input-label" for="catalogImage">
+                      📁 Выберите фото (JPG, PNG, WebP)
+                    </label>
+                    <input
+                      type="file"
+                      id="catalogImage"
+                      accept="image/jpeg,image/png,image/webp"
+                      required
+                    />
+                    <div class="file-name" id="catalogFileName"></div>
+                  </div>
+                </div>
+                <button type="submit" class="btn btn-primary">
+                  Добавить материал
+                </button>
+              </form>
+            </div>
+
+            <div id="catalogList"></div>
+          </div>
+
+          <!-- Вкладка Работы -->
+          <div class="tab-content" id="worksTab">
+            <div class="form-section">
+              <h2>Добавить проект</h2>
+              <form id="worksForm" onsubmit="submitWorksForm(event)">
+                <div class="form-group">
+                  <label for="works_title">Название проекта *</label>
+                  <input
+                    type="text"
+                    id="works_title"
+                    placeholder="Например: Столешница в офисе"
+                    required
+                  />
+                </div>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="works_material">Материал *</label>
+                    <select id="works_material" required>
+                      <option value="">Выберите материал</option>
+                      <option value="granite">Гранит</option>
+                      <option value="marble">Мрамор</option>
+                      <option value="composite">Кварцевый агломерат</option>
+                      <option value="other">Прочее</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label for="works_location">Локация</label>
+                    <input
+                      type="text"
+                      id="works_location"
+                      placeholder="Бобруйск, офис"
+                    />
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label for="works_description">Описание</label>
+                  <textarea
+                    id="works_description"
+                    placeholder="Описание проекта"
+                  ></textarea>
+                </div>
+                <div class="form-group">
+                  <label for="works_images"
+                    >Фото проекта (можно несколько) *</label
+                  >
+                  <div class="file-input-wrapper">
+                    <label class="file-input-label" for="worksImages">
+                      📁 Выберите фото (JPG, PNG, WebP)
+                    </label>
+                    <input
+                      type="file"
+                      id="worksImages"
+                      multiple
+                      accept="image/jpeg,image/png,image/webp"
+                      required
+                    />
+                    <div class="file-name" id="worksFileName"></div>
+                  </div>
+                </div>
+                <button type="submit" class="btn btn-primary">
+                  Добавить проект
+                </button>
+              </form>
+            </div>
+
+            <div id="worksList"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Контейнер оповещений -->
+    <div id="alerts"></div>
+
+    <script>
+      const STORAGE_KEY = "admin_session";
+      const API_ENDPOINT = "/php/admin_handler.php";
+
+      // ========== АУТЕНТИФИКАЦИЯ ==========
+      function checkPassword(event) {
+        event.preventDefault();
+        const password = document.getElementById("password").value;
+        const errorDiv = document.getElementById("passwordError");
+        errorDiv.textContent = "";
+
+        const btn = event.target.querySelector('button[type="submit"]');
+        btn.disabled = true;
+        btn.textContent = "Проверка" + '<span class="loading"></span>';
+
+        fetch(API_ENDPOINT, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "login", password }),
+        })
+          .then((r) => r.json())
+          .then((data) => {
+            if (data.success) {
+              sessionStorage.setItem(
+                STORAGE_KEY,
+                JSON.stringify({ token: data.token, time: Date.now() }),
+              );
+              showPanel();
+            } else {
+              errorDiv.textContent = "Неверный пароль";
+              btn.disabled = false;
+              btn.textContent = "Вход";
+            }
+          })
+          .catch((err) => {
+            console.error(err);
+            errorDiv.textContent = "Ошибка сервера";
+            btn.disabled = false;
+            btn.textContent = "Вход";
+          });
+      }
+
+      function showPanel() {
+        document.getElementById("passwordModal").classList.remove("show");
+        document.getElementById("adminPanel").classList.add("show");
+        loadCatalog();
+        loadWorks();
+      }
+
+      function logout() {
+        sessionStorage.removeItem(STORAGE_KEY);
+        location.reload();
+      }
+
+      function isAuthenticated() {
+        const session = sessionStorage.getItem(STORAGE_KEY);
+        return !!session;
+      }
+
+      // ========== НАВИГАЦИЯ ПО ТАБАМ ==========
+      function switchTab(tab) {
+        document
+          .querySelectorAll(".tab-content")
+          .forEach((t) => t.classList.remove("active"));
+        document
+          .querySelectorAll(".tab-button")
+          .forEach((b) => b.classList.remove("active"));
+        document.getElementById(tab + "Tab").classList.add("active");
+        event.target.classList.add("active");
+      }
+
+      // ========== ОПОВЕЩЕНИЯ ==========
+      function showAlert(message, type = "info") {
+        const alertsDiv = document.getElementById("alerts");
+        const alert = document.createElement("div");
+        alert.className = `alert alert-${type}`;
+        alert.textContent = message;
+        alertsDiv.appendChild(alert);
+        setTimeout(() => alert.remove(), 4000);
+      }
+
+      // ========== КАТАЛОГ ==========
+      async function loadCatalog() {
+        try {
+          const response = await fetch("/assets/data/catalog.json");
+          const items = response.ok ? await response.json() : [];
+
+          const listDiv = document.getElementById("catalogList");
+          if (!items.length) {
+            listDiv.innerHTML =
+              '<div class="no-data">Материалы не добавлены</div>';
+            return;
+          }
+
+          let html =
+            '<h2>Материалы</h2><table class="table"><thead><tr><th>Фото</th><th>Название</th><th>Материал</th><th>Производитель</th><th>Действия</th></tr></thead><tbody>';
+          items.forEach((item) => {
+            html += `
+                        <tr>
+                            <td><img src="${escape(item.image)}" alt="${escape(item.title)}"></td>
+                            <td>${escape(item.title)}</td>
+                            <td>${escape(item.material)}</td>
+                            <td>${escape(item.fabricator || "—")}</td>
+                            <td>
+                                <div class="action-buttons">
+                                    <button class="btn btn-danger" onclick="deleteCatalogItem('${escape(item.id)}')">
+                                        Удалить
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+          });
+          html += "</tbody></table>";
+          listDiv.innerHTML = html;
+        } catch (err) {
+          console.error(err);
+          document.getElementById("catalogList").innerHTML =
+            '<div class="no-data">Ошибка загрузки</div>';
+        }
+      }
+
+      async function submitCatalogForm(e) {
+        e.preventDefault();
+        if (!isAuthenticated()) {
+          showAlert("Сессия истекла. Переавторизуйтесь.", "error");
+          logout();
+          return;
+        }
+
+        const form = new FormData();
+        form.append("action", "add_catalog");
+        form.append("title", document.getElementById("catalog_title").value);
+        form.append(
+          "material",
+          document.getElementById("catalog_material").value,
+        );
+        form.append("type", document.getElementById("catalog_type").value);
+        form.append(
+          "fabricator",
+          document.getElementById("catalog_fabricator").value,
+        );
+        form.append("size", document.getElementById("catalog_size").value);
+        form.append("image", document.getElementById("catalogImage").files[0]);
+
+        const btn = e.target.querySelector('button[type="submit"]');
+        btn.disabled = true;
+        btn.textContent = "Добавление...";
+
+        try {
+          const response = await fetch(API_ENDPOINT, {
+            method: "POST",
+            body: form,
+          });
+          const data = await response.json();
+
+          if (data.success) {
+            showAlert("Материал добавлен", "success");
+            e.target.reset();
+            document.getElementById("catalogFileName").textContent = "";
+            loadCatalog();
+          } else {
+            showAlert(
+              "Ошибка: " + (data.error || "неизвестная ошибка"),
+              "error",
+            );
+          }
+        } catch (err) {
+          console.error(err);
+          showAlert("Ошибка при отправке", "error");
+        } finally {
+          btn.disabled = false;
+          btn.textContent = "Добавить материал";
+        }
+      }
+
+      async function deleteCatalogItem(id) {
+        if (!confirm("Удалить материал?")) return;
+
+        try {
+          const response = await fetch(API_ENDPOINT, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: "delete_catalog", id }),
+          });
+          const data = await response.json();
+
+          if (data.success) {
+            showAlert("Материал удален", "success");
+            loadCatalog();
+          } else {
+            showAlert("Ошибка удаления", "error");
+          }
+        } catch (err) {
+          console.error(err);
+          showAlert("Ошибка при удалении", "error");
+        }
+      }
+
+      // ========== РАБОТЫ ==========
+      async function loadWorks() {
+        try {
+          const response = await fetch("/assets/data/works.json");
+          const items = response.ok ? await response.json() : [];
+
+          const listDiv = document.getElementById("worksList");
+          if (!items.length) {
+            listDiv.innerHTML =
+              '<div class="no-data">Проекты не добавлены</div>';
+            return;
+          }
+
+          let html =
+            '<h2>Проекты</h2><table class="table"><thead><tr><th>Фото</th><th>Название</th><th>Материал</th><th>Локация</th><th>Действия</th></tr></thead><tbody>';
+          items.forEach((item) => {
+            const images = Array.isArray(item.images)
+              ? item.images
+              : item.image
+                ? [item.image]
+                : [];
+            const firstImage = images[0] || "/assets/images/ui/ph-3x2.webp";
+            html += `
+                        <tr>
+                            <td><img src="${escape(firstImage)}" alt="${escape(item.title)}"></td>
+                            <td>${escape(item.title)}</td>
+                            <td>${escape(item.material || "—")}</td>
+                            <td>${escape(item.location || "—")}</td>
+                            <td>
+                                <div class="action-buttons">
+                                    <button class="btn btn-danger" onclick="deleteWork('${escape(item.id)}')">
+                                        Удалить
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+          });
+          html += "</tbody></table>";
+          listDiv.innerHTML = html;
+        } catch (err) {
+          console.error(err);
+          document.getElementById("worksList").innerHTML =
+            '<div class="no-data">Ошибка загрузки</div>';
+        }
+      }
+
+      async function submitWorksForm(e) {
+        e.preventDefault();
+        if (!isAuthenticated()) {
+          showAlert("Сессия истекла. Переавторизуйтесь.", "error");
+          logout();
+          return;
+        }
+
+        const form = new FormData();
+        form.append("action", "add_work");
+        form.append("title", document.getElementById("works_title").value);
+        form.append(
+          "material",
+          document.getElementById("works_material").value,
+        );
+        form.append(
+          "description",
+          document.getElementById("works_description").value,
+        );
+        form.append(
+          "location",
+          document.getElementById("works_location").value,
+        );
+
+        const files = document.getElementById("worksImages").files;
+        for (let i = 0; i < files.length; i++) {
+          form.append("images[]", files[i]);
+        }
+
+        const btn = e.target.querySelector('button[type="submit"]');
+        btn.disabled = true;
+        btn.textContent = "Добавление...";
+
+        try {
+          const response = await fetch(API_ENDPOINT, {
+            method: "POST",
+            body: form,
+          });
+          const data = await response.json();
+
+          if (data.success) {
+            showAlert("Проект добавлен", "success");
+            e.target.reset();
+            document.getElementById("worksFileName").textContent = "";
+            loadWorks();
+          } else {
+            showAlert(
+              "Ошибка: " + (data.error || "неизвестная ошибка"),
+              "error",
+            );
+          }
+        } catch (err) {
+          console.error(err);
+          showAlert("Ошибка при отправке", "error");
+        } finally {
+          btn.disabled = false;
+          btn.textContent = "Добавить проект";
+        }
+      }
+
+      async function deleteWork(id) {
+        if (!confirm("Удалить проект и все его файлы?")) return;
+
+        try {
+          const response = await fetch(API_ENDPOINT, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: "delete_work", id }),
+          });
+          const data = await response.json();
+
+          if (data.success) {
+            showAlert("Проект удален", "success");
+            loadWorks();
+          } else {
+            showAlert("Ошибка удаления", "error");
+          }
+        } catch (err) {
+          console.error(err);
+          showAlert("Ошибка при удалении", "error");
+        }
+      }
+
+      // ========== УЛУЧШЕНИЯ UI ==========
+      document
+        .getElementById("catalogImage")
+        .addEventListener("change", (e) => {
+          const name = e.target.files[0]?.name || "";
+          document.getElementById("catalogFileName").textContent = name
+            ? "✓ " + name
+            : "";
+        });
+
+      document.getElementById("worksImages").addEventListener("change", (e) => {
+        const count = e.target.files.length;
+        const text = count ? `✓ Выбрано ${count} файл(ов)` : "";
+        document.getElementById("worksFileName").textContent = text;
+      });
+
+      // Проверка сессии при загрузке
+      window.addEventListener("load", () => {
+        if (!isAuthenticated()) {
+          document.getElementById("passwordModal").classList.add("show");
+        } else {
+          showPanel();
+        }
+      });
+    </script>
+  </body>
+</html>

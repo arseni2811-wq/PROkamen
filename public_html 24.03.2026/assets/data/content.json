@@ -1,0 +1,45 @@
+{
+  "project": {
+    "name": "PRO Камень",
+    "logo": "/assets/images/ui/logo.svg",
+    "address": "г. Бобруйск, Минская 123Б"
+  },
+  "contacts": {
+    "phones": ["+375 29 396-15-58", "+375 29 322-04-38"],
+    "email": "prokamen22@yandex.by"
+  },
+  "social": {
+    "telegram": "https://t.me/prokamenbobr",
+    "instagram": "https://www.instagram.com/pro_kamen.bobr?igsh=MXBuaWM4OGJpZWloOQ%3D%3D&utm_source=qr",
+    "whatsapp": "https://wa.me/79262451742",
+    "viber": "viber://chat?number=%2B79262451742"
+  },
+  "locations": [
+    {
+      "type": "shop",
+      "title": "Шоурум",
+      "badge": "Магазин",
+      "address": "г. Бобруйск, Минская 123Б",
+      "time": "будни 10:00-19:00, выходные 10:00-17:00",
+      "link": "https://yandex.by/maps/-/CPQqeT~2",
+      "lat": 53.140799,
+      "lng": 29.186585
+    },
+    {
+      "type": "prod",
+      "title": "Производство",
+      "badge": "Офис",
+      "address": "г. Бобруйск, ул. Новошоссейная 47А/3",
+      "link": "https://yandex.ru/maps/org/2841722067",
+      "lat": 53.138,
+      "lng": 29.2214
+    }
+  ],
+  "map": {
+    "lat": 53.1394,
+    "lng": 29.2039,
+    "zoom": 13,
+    "placemark": "PRO Камень",
+    "mapUrl": "https://yandex.by/maps/-/CPQqeT~2"
+  }
+}

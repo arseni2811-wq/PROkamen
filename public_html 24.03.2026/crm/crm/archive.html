@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PRO-Management - Архив заказов</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body class="bg-[#F8F9FA] text-gray-800 antialiased pb-12">
+    <header class="bg-[#212529] text-white sticky top-0 z-50 shadow-md">
+      <div
+        class="px-6 py-4 flex items-center justify-between max-w-7xl mx-auto"
+      >
+        <div class="flex items-center gap-4">
+          <div class="text-xl font-bold text-[#D4AF37]">PRO-Management</div>
+          <span
+            class="bg-gray-600 text-white text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider"
+            >Архив и Аналитика</span
+          >
+        </div>
+        <div class="flex items-center gap-6">
+          <span class="text-sm text-gray-300"
+            >Пользователь:
+            <span id="userName" class="font-bold text-white"></span
+          ></span>
+          <button
+            id="logoutBtn"
+            class="text-gray-300 hover:text-white text-sm font-medium transition"
+          >
+            Выйти
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
+      <div class="mb-6 flex items-center justify-between">
+        <a
+          href="dashboard.html"
+          class="text-blue-600 hover:text-blue-800 font-medium text-sm flex items-center gap-1 transition-colors"
+        >
+          <span>&larr;</span> Назад на доску
+        </a>
+        <h1 class="text-2xl font-bold text-gray-800">
+          Архив завершенных сделок
+        </h1>
+      </div>
+
+      <div id="archiveStats"></div>
+
+      <div
+        class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden"
+      >
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr
+                class="bg-gray-100 text-gray-500 text-xs uppercase tracking-wider"
+              >
+                <th class="p-4 font-medium">ID Заказа</th>
+                <th class="p-4 font-medium">Дата закрытия</th>
+                <th class="p-4 font-medium">Клиент</th>
+                <th class="p-4 font-medium">Изделие</th>
+                <th class="p-4 font-medium">Материал</th>
+                <th class="p-4 font-medium">Статус</th>
+                <th class="p-4 font-medium text-right">Сумма (BYN)</th>
+              </tr>
+            </thead>
+            <tbody
+              id="archiveTableBody"
+              class="divide-y divide-gray-100 bg-white"
+            ></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script src="js/archive.js"></script>
+  </body>
+</html>

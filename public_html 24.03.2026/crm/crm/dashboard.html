@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PRO-Management - Канбан Доска</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body
+    class="bg-[#F8F9FA] text-gray-800 antialiased h-screen flex flex-col overflow-hidden"
+  >
+    <header
+      class="bg-[#212529] text-white sticky top-0 z-50 shadow-md shrink-0"
+    >
+      <div
+        class="px-6 py-4 flex items-center justify-between max-w-full mx-auto"
+      >
+        <div class="flex items-center gap-4">
+          <div class="text-xl font-bold text-[#D4AF37] tracking-wide">
+            PRO-Management
+          </div>
+          <span
+            class="bg-blue-600 text-white text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider hidden sm:inline-block"
+            >Главная доска (Канбан)</span
+          >
+        </div>
+        <div class="flex items-center gap-6">
+          <span class="text-sm text-gray-300 hidden sm:inline-block"
+            >Пользователь:
+            <span id="userName" class="font-bold text-white"></span
+          ></span>
+          <button
+            id="logoutBtn"
+            class="text-gray-300 hover:text-white text-sm font-medium transition"
+          >
+            Выйти
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="bg-white border-b border-gray-200 z-40 shadow-sm shrink-0">
+      <div class="px-6 py-4 flex flex-wrap items-center justify-between gap-4">
+        <div class="flex flex-wrap items-center gap-6 w-full lg:w-auto">
+          <div class="relative w-full sm:w-80">
+            <div
+              class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"
+            >
+              <span class="text-gray-400">🔍</span>
+            </div>
+            <input
+              type="text"
+              id="searchInput"
+              placeholder="Поиск заказов по ФИО, телефону..."
+              class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#D4AF37] shadow-sm transition"
+            />
+          </div>
+
+          <label class="flex items-center gap-2 cursor-pointer hidden md:flex">
+            <input type="checkbox" id="hideEmptyToggle" class="sr-only peer" />
+            <div
+              class="relative w-10 h-6 bg-gray-300 rounded-full transition-colors duration-300 ease-in-out peer-checked:bg-[#D4AF37] shadow-inner after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:w-5 after:h-5 after:bg-white after:rounded-full after:transition-transform after:duration-300 after:ease-in-out peer-checked:after:translate-x-4 after:shadow-md"
+            ></div>
+            <span
+              class="text-sm font-medium text-gray-600 transition-colors duration-200 peer-checked:text-[#D4AF37]"
+              >Скрыть пустые этапы</span
+            >
+          </label>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-3 w-full lg:w-auto">
+          <button
+            id="newOrderBtn"
+            class="flex-1 sm:flex-none bg-[#D4AF37] hover:bg-[#C49F2F] text-gray-900 px-4 py-2 rounded-lg font-bold text-sm transition shadow-sm whitespace-nowrap"
+          >
+            + Новый заказ
+          </button>
+          <button
+            id="quickCalcBtn"
+            class="bg-yellow-500 hover:bg-yellow-600 text-white px-5 py-2 rounded-lg font-semibold text-sm transition whitespace-nowrap shadow-sm"
+          >
+            🧮 Быстрый расчет
+          </button>
+          <button
+            onclick="window.location.href = 'clients.html'"
+            class="flex-1 sm:flex-none bg-gray-800 hover:bg-gray-900 text-white px-4 py-2 rounded-lg font-semibold text-sm transition shadow-sm whitespace-nowrap"
+          >
+            👥 Клиенты
+          </button>
+          <button
+            onclick="window.location.href = 'archive.html'"
+            class="flex-1 sm:flex-none bg-gray-800 hover:bg-gray-900 text-white px-4 py-2 rounded-lg font-semibold text-sm transition shadow-sm whitespace-nowrap"
+          >
+            🗄 Архив
+          </button>
+          <button
+            onclick="window.location.href = 'production.html'"
+            class="admin-only flex-1 sm:flex-none bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-lg font-semibold text-sm transition shadow-sm whitespace-nowrap"
+          >
+            🔨 Цех
+          </button>
+          <button
+            id="priceRefBtn"
+            class="admin-only flex-1 sm:flex-none bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold text-sm transition shadow-sm whitespace-nowrap"
+          >
+            ⚙️ Настройки
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="p-6 flex-1 overflow-y-auto bg-[#F8F9FA]">
+      <div
+        class="flex flex-nowrap overflow-x-auto gap-4 h-full pb-4 items-start"
+      >
+        <div
+          class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 min-h-[500px] max-h-full overflow-y-auto flex-1 min-w-[300px]"
+        >
+          <h3
+            class="font-black text-sm text-gray-800 mb-4 pb-2 border-b border-gray-200 flex justify-between items-center"
+          >
+            <span>Новые заявки</span>
+          </h3>
+          <div class="space-y-3 min-h-[100px]" data-status="new"></div>
+        </div>
+
+        <div
+          class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 min-h-[500px] max-h-full overflow-y-auto flex-1 min-w-[300px]"
+        >
+          <h3
+            class="font-black text-sm text-gray-800 mb-4 pb-2 border-b border-gray-200 flex justify-between items-center"
+          >
+            <span>Замер</span>
+          </h3>
+          <div class="space-y-3 min-h-[100px]" data-status="measurement"></div>
+        </div>
+
+        <div
+          class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 min-h-[500px] max-h-full overflow-y-auto flex-1 min-w-[300px]"
+        >
+          <h3
+            class="font-black text-sm text-gray-800 mb-4 pb-2 border-b border-gray-200 flex justify-between items-center"
+          >
+            <span>КП и согласование ТЗ</span>
+          </h3>
+          <div
+            class="space-y-3 min-h-[100px]"
+            data-status="quote_approval"
+          ></div>
+        </div>
+
+        <div
+          class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 min-h-[500px] max-h-full overflow-y-auto flex-1 min-w-[300px]"
+        >
+          <h3
+            class="font-black text-sm text-gray-800 mb-4 pb-2 border-b border-gray-200 flex justify-between items-center"
+          >
+            <span>Ожидание оплаты</span>
+          </h3>
+          <div
+            class="space-y-3 min-h-[100px]"
+            data-status="waiting_payment"
+          ></div>
+        </div>
+
+        <div
+          class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 min-h-[500px] max-h-full overflow-y-auto flex-1 min-w-[300px]"
+        >
+          <h3
+            class="font-black text-sm text-gray-800 mb-4 pb-2 border-b border-gray-200 flex justify-between items-center"
+          >
+            <span>Ожидание камня</span>
+          </h3>
+          <div
+            class="space-y-3 min-h-[100px]"
+            data-status="waiting_stone"
+          ></div>
+        </div>
+
+        <div
+          class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 min-h-[500px] max-h-full overflow-y-auto flex-1 min-w-[300px]"
+        >
+          <h3
+            class="font-black text-sm text-gray-800 mb-4 pb-2 border-b border-gray-200 flex justify-between items-center"
+          >
+            <span>В производстве</span>
+          </h3>
+          <div
+            class="space-y-3 min-h-[100px]"
+            data-status="in_production"
+          ></div>
+        </div>
+
+        <div
+          class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 min-h-[500px] max-h-full overflow-y-auto flex-1 min-w-[300px]"
+        >
+          <h3
+            class="font-black text-sm text-gray-800 mb-4 pb-2 border-b border-gray-200 flex justify-between items-center"
+          >
+            <span>Готово к отгрузке</span>
+          </h3>
+          <div
+            class="space-y-3 min-h-[100px]"
+            data-status="ready_shipping"
+          ></div>
+        </div>
+
+        <div
+          class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 min-h-[500px] max-h-full overflow-y-auto flex-1 min-w-[300px]"
+        >
+          <h3
+            class="font-black text-sm text-gray-800 mb-4 pb-2 border-b border-gray-200 flex justify-between items-center"
+          >
+            <span>Логистика и монтаж</span>
+          </h3>
+          <div
+            class="space-y-3 min-h-[100px]"
+            data-status="logistics_install"
+          ></div>
+        </div>
+
+        <div
+          class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 min-h-[500px] max-h-full overflow-y-auto flex-1 min-w-[300px]"
+        >
+          <h3
+            class="font-black text-sm text-gray-800 mb-4 pb-2 border-b border-gray-200 flex justify-between items-center"
+          >
+            <span>Финальный расчет</span>
+          </h3>
+          <div
+            class="space-y-3 min-h-[100px]"
+            data-status="final_calculation"
+          ></div>
+        </div>
+      </div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script src="js/kanban.js"></script>
+  </body>
+</html>

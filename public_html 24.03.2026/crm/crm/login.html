@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PRO-Management - Авторизация</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body class="bg-[#F8F9FA] flex items-center justify-center min-h-screen">
+    <div class="bg-white rounded-3xl shadow-2xl p-8 w-full max-w-md">
+      <!-- Заголовок -->
+      <h1 class="text-3xl font-bold text-center mb-8 text-gray-800">
+        PRO-Management
+      </h1>
+
+      <!-- Форма входа -->
+      <form id="loginForm" class="space-y-6">
+        <!-- Поле Логин -->
+        <div>
+          <label
+            for="login"
+            class="block text-sm font-medium text-gray-700 mb-2"
+            >Логин</label
+          >
+          <input
+            type="text"
+            id="login"
+            placeholder="Введите логин"
+            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D4AF37] transition"
+            required
+          />
+        </div>
+
+        <!-- Поле Пароль -->
+        <div>
+          <label
+            for="password"
+            class="block text-sm font-medium text-gray-700 mb-2"
+            >Пароль</label
+          >
+          <input
+            type="password"
+            id="password"
+            placeholder="Введите пароль"
+            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D4AF37] transition"
+            required
+          />
+        </div>
+
+        <!-- Кнопка входа -->
+        <button
+          type="submit"
+          class="w-full bg-[#D4AF37] hover:bg-[#C49F2F] text-white font-semibold py-3 rounded-lg transition duration-200"
+        >
+          Войти
+        </button>
+      </form>
+
+      <!-- Сообщение об ошибке -->
+      <div
+        id="errorMessage"
+        class="mt-4 text-red-600 text-center font-medium hidden"
+      ></div>
+    </div>
+
+    <!-- Подключение скриптов -->
+    <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
+  </body>
+</html>

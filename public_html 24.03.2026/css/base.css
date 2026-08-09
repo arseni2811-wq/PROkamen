@@ -1,0 +1,155 @@
+:root {
+  /* Цветовая палитра */
+  --bg: #ffffff; /* основной фон */
+  --bg-soft: #f8fafc; /* мягкий светлый фон для блоков */
+  --text: #0f172a; /* основной цвет текста */
+  --muted: #475569; /* приглушённый текст (подписи, описания) - WCAG AAA 5.2:1 */
+  --primary: #0f172a; /* основной цвет (для кнопок, акцентов) */
+  --border: #e5e7eb; /* цвет границ */
+  --accent: #111827; /* акцентный цвет (для hover, выделений) */
+
+  /* Шрифты и размеры */
+  --font-sans:
+    system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Inter,
+    "Helvetica Neue", Arial, "Noto Sans", sans-serif; /* системный стек */
+  --fs-900: clamp(28px, 5.6vw, 48px); /* динамический размер H1 */
+  --fs-800: clamp(22px, 3.8vw, 32px); /* динамический размер H2 */
+  --fs-700: 22px; /* H3 */
+  --fs-600: 18px; /* H4 */
+  --fs-500: 16px; /* обычный текст */
+  --fs-400: 14px; /* мелкий текст */
+
+  /* Отступы (scale) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 40px;
+  --space-8: 56px;
+
+  /* Скругления и тени */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.08);
+
+  /* Точки перелома (адаптив) */
+  --bp-sm: 480px;
+  --bp-md: 768px;
+  --bp-lg: 1024px;
+  --bp-xl: 1280px;
+}
+
+/* ================== */
+/* Сброс (reset)      */
+/* ================== */
+* {
+  box-sizing: border-box; /* все размеры считаются вместе с паддингами */
+}
+html,
+body {
+  height: 100%; /* растягиваем html и body на всю высоту окна */
+}
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: var(--fs-500);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased; /* улучшает рендеринг шрифтов */
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Картинки всегда адаптивные */
+img,
+picture {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* Ссылки */
+a {
+  color: inherit; /* берём текущий цвет текста */
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+
+/* Горизонтальная линия */
+hr {
+  border: 0;
+  border-top: 1px solid var(--border);
+}
+
+/* Доп. классы текста */
+.muted {
+  color: var(--muted); /* приглушённый */
+}
+.small {
+  font-size: var(--fs-400); /* мелкий */
+}
+
+/* Заголовки и текст */
+h1 {
+  font-size: var(--fs-900);
+  margin: 0 0 var(--space-4);
+}
+h2 {
+  font-size: var(--fs-800);
+  margin: 0 0 var(--space-3);
+}
+h3 {
+  font-size: var(--fs-700);
+  margin: 0 0 var(--space-2);
+}
+p {
+  margin: 0 0 var(--space-3);
+}
+
+/* Фокус для доступности */
+:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 2px;
+}
+
+/* Скрытый текст для screen-reader */
+.visually-hidden {
+  position: absolute !important;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  clip-path: inset(50%);
+}
+
+/* Ссылка "Перейти к содержимому" */
+.skip-link {
+  position: absolute;
+  inset-inline-start: -9999px; /* уводим за экран */
+}
+.skip-link:focus {
+  position: fixed;
+  inset: 8px auto auto 8px; /* в угол экрана */
+  z-index: 1000;
+  background: #111;
+  color: #fff;
+  border-radius: 10px;
+  padding: 8px 12px;
+}
+
+/* Анимации для ссылок и кнопок */
+a,
+button {
+  transition:
+    color 0.2s ease,
+    background 0.2s ease,
+    box-shadow 0.2s ease;
+}

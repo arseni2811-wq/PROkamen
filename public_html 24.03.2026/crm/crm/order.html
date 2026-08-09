@@ -1,0 +1,321 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PRO-Management - Карточка заказа</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <style>
+      input[type="number"]::-webkit-inner-spin-button,
+      input[type="number"]::-webkit-outer-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+      }
+    </style>
+  </head>
+  <body class="bg-[#F8F9FA] text-gray-800 antialiased pb-20">
+    <header
+      class="bg-white border-b border-gray-200 sticky top-0 z-40 shadow-sm"
+    >
+      <div
+        class="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8 flex items-center justify-between"
+      >
+        <div class="flex items-center gap-4">
+          <a
+            href="dashboard.html"
+            class="text-blue-600 hover:text-blue-800 font-medium text-sm flex items-center gap-1 transition-colors bg-blue-50 px-3 py-1.5 rounded-lg"
+          >
+            <span>&larr;</span> К Канбан-доске
+          </a>
+          <h1 class="text-2xl font-black text-gray-800 flex items-center gap-3">
+            Заказ #<span id="orderIdDisplay">...</span>
+            <span
+              id="statusBadge"
+              class="px-3 py-1 text-sm rounded-full bg-gray-100 text-gray-700 font-semibold shadow-sm"
+              >Загрузка...</span
+            >
+          </h1>
+        </div>
+        <div>
+          <button
+            id="cancelOrderBtn"
+            class="border border-red-300 text-red-600 hover:bg-red-50 font-bold py-2 px-4 rounded-lg transition duration-200 text-sm shadow-sm hidden"
+          >
+            ❌ Отменить заказ
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div id="orderContent" class="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <div class="lg:col-span-8 space-y-6">
+          <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div class="flex items-center justify-between mb-6 border-b pb-3">
+              <h2
+                class="text-xl font-bold text-gray-800 flex items-center gap-2"
+              >
+                <span>👤</span> Данные заказчика
+              </h2>
+              <button
+                id="editClientBtn"
+                class="hidden text-blue-600 hover:text-blue-800 text-sm font-bold bg-blue-50 px-3 py-1.5 rounded transition"
+              >
+                ✏️ Изменить
+              </button>
+              <button
+                id="saveClientBtn"
+                class="hidden text-white bg-emerald-600 hover:bg-emerald-700 text-sm font-bold px-4 py-1.5 rounded shadow-sm transition"
+              >
+                💾 Сохранить
+              </button>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div class="space-y-4">
+                <div>
+                  <label
+                    class="block text-xs font-bold text-gray-500 uppercase mb-1"
+                    >ФИО Клиента</label
+                  ><input
+                    type="text"
+                    id="clientName"
+                    class="w-full border-gray-300 rounded p-2 text-sm outline-none focus:border-[#D4AF37] border bg-gray-50 disabled:text-gray-600"
+                    disabled
+                  />
+                </div>
+                <div>
+                  <label
+                    class="block text-xs font-bold text-gray-500 uppercase mb-1"
+                    >Телефон</label
+                  ><input
+                    type="text"
+                    id="clientPhone"
+                    class="w-full border-gray-300 rounded p-2 text-sm outline-none focus:border-[#D4AF37] border bg-gray-50 disabled:text-gray-600"
+                    disabled
+                  />
+                </div>
+                <div>
+                  <label
+                    class="block text-xs font-bold text-gray-500 uppercase mb-1"
+                    >Email</label
+                  ><input
+                    type="text"
+                    id="clientEmail"
+                    class="w-full border-gray-300 rounded p-2 text-sm outline-none focus:border-[#D4AF37] border bg-gray-50 disabled:text-gray-600"
+                    disabled
+                  />
+                </div>
+                <div>
+                  <label
+                    class="block text-xs font-bold text-gray-500 uppercase mb-1"
+                    >Соц. сети / Мессенджер</label
+                  ><input
+                    type="text"
+                    id="clientSocial"
+                    class="w-full border-gray-300 rounded p-2 text-sm outline-none focus:border-[#D4AF37] border bg-gray-50 disabled:text-gray-600"
+                    disabled
+                  />
+                </div>
+              </div>
+              <div class="space-y-4">
+                <div>
+                  <label
+                    class="block text-xs font-bold text-gray-500 uppercase mb-1"
+                    >Адрес объекта (Монтаж)</label
+                  ><input
+                    type="text"
+                    id="orderLocation"
+                    class="w-full border-gray-300 rounded p-2 text-sm outline-none focus:border-[#D4AF37] border bg-gray-50 disabled:text-gray-600"
+                    disabled
+                  />
+                </div>
+                <div>
+                  <label
+                    class="block text-xs font-bold text-gray-500 uppercase mb-1"
+                    >Тип изделия</label
+                  ><input
+                    type="text"
+                    id="productType"
+                    class="w-full border-gray-300 rounded p-2 text-sm outline-none focus:border-[#D4AF37] border bg-gray-50 disabled:text-gray-600"
+                    disabled
+                  />
+                </div>
+                <div>
+                  <label
+                    class="block text-xs font-bold text-gray-500 uppercase mb-1"
+                    >Камень (Доп. инфо)</label
+                  ><input
+                    type="text"
+                    id="stoneType"
+                    class="w-full border-[#D4AF37] rounded p-2 text-sm outline-none focus:ring-1 focus:ring-[#D4AF37] border-2 bg-yellow-50 font-bold text-yellow-900 disabled:text-gray-600"
+                    disabled
+                  />
+                </div>
+                <div>
+                  <label
+                    class="block text-xs font-bold text-gray-500 uppercase mb-1"
+                    >Источник заявки</label
+                  ><input
+                    type="text"
+                    id="orderSource"
+                    class="w-full border-gray-300 rounded p-2 text-sm outline-none focus:border-[#D4AF37] border bg-gray-50 disabled:text-gray-600"
+                    disabled
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div id="calcDetailsBlockContainer"></div>
+
+          <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div class="flex items-center justify-between mb-4 border-b pb-2">
+              <h2
+                class="text-lg font-bold text-gray-800 flex items-center gap-2"
+              >
+                <span>⏱</span> График работ и Дедлайны
+              </h2>
+              <button
+                id="editDeadlinesBtn"
+                class="hidden text-blue-600 hover:text-blue-800 text-sm font-bold bg-blue-50 px-3 py-1.5 rounded transition"
+              >
+                ✏️ Изменить
+              </button>
+              <button
+                id="saveDeadlinesBtn"
+                class="hidden text-white bg-emerald-600 hover:bg-emerald-700 text-sm font-bold px-4 py-1.5 rounded shadow-sm transition"
+              >
+                💾 Сохранить
+              </button>
+            </div>
+            <div
+              id="deadlinesList"
+              class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4"
+            ></div>
+          </div>
+
+          <div
+            id="filesContainer"
+            class="bg-white rounded-xl shadow-sm border border-gray-200 p-6"
+          ></div>
+
+          <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <h2
+              class="text-lg font-bold text-gray-800 mb-6 border-b pb-2 flex items-center gap-2"
+            >
+              <span>📜</span> Журнал действий
+            </h2>
+            <div
+              id="historyTimeline"
+              class="space-y-2 max-h-[400px] overflow-y-auto pr-2"
+            ></div>
+          </div>
+        </div>
+
+        <div class="lg:col-span-4">
+          <div class="sticky top-[90px] space-y-6">
+            <div
+              class="financial-block bg-white rounded-xl shadow-lg border border-gray-200 p-6"
+            >
+              <h2
+                class="text-lg font-bold text-gray-800 mb-4 border-b pb-2 text-center uppercase tracking-wide bg-[#212529] text-white py-2 rounded-t-lg -mt-6 -mx-6 mb-6"
+              >
+                Финансы
+              </h2>
+
+              <div class="space-y-4 mb-6" id="financeInputsBlock">
+                <div
+                  class="bg-gray-50 p-3 rounded-lg border border-gray-200 flex justify-between items-center"
+                >
+                  <label class="text-xs font-bold text-gray-600 uppercase"
+                    >Сумма (BYN)</label
+                  >
+                  <input
+                    type="number"
+                    id="totalSumInput"
+                    class="w-24 text-right font-bold text-lg border rounded p-1 outline-none focus:border-[#D4AF37]"
+                  />
+                </div>
+                <div
+                  class="bg-emerald-50 p-3 rounded-lg border border-emerald-200 flex justify-between items-center"
+                >
+                  <label class="text-xs font-bold text-emerald-800 uppercase"
+                    >Предоплата</label
+                  >
+                  <input
+                    type="number"
+                    id="prepaymentInput"
+                    class="w-24 text-right font-bold text-lg text-emerald-700 border border-emerald-300 rounded p-1 outline-none focus:border-emerald-500 bg-white"
+                  />
+                </div>
+                <div
+                  class="flex justify-between items-center p-4 bg-gray-800 rounded-lg text-white shadow-inner"
+                >
+                  <span
+                    class="text-sm font-bold uppercase tracking-wider text-gray-300"
+                    >Остаток:</span
+                  >
+                  <div class="font-black text-2xl text-[#D4AF37]">
+                    <span id="balanceDisplay">0</span>
+                    <span class="text-lg">BYN</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="space-y-3 pt-4 border-t border-gray-100">
+                <button
+                  id="openCalcBtn"
+                  class="w-full bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 font-bold py-3 rounded-xl transition-colors shadow-sm flex justify-center items-center gap-2"
+                >
+                  <span class="text-xl">🧮</span> Тех. калькулятор
+                </button>
+
+                <button
+                  id="downloadPdfBtn"
+                  class="w-full bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 font-bold py-3 rounded-xl transition-colors shadow-sm flex justify-center items-center gap-2"
+                >
+                  <span class="text-xl">📄</span> Скачать КП (PDF)
+                </button>
+
+                <button
+                  id="saveFinancesBtn"
+                  class="hidden w-full bg-gray-800 hover:bg-gray-900 text-white font-bold py-3 rounded-xl shadow-sm transition duration-200"
+                >
+                  💾 Сохранить суммы
+                </button>
+              </div>
+            </div>
+
+            <div
+              class="bg-white rounded-xl shadow-sm border border-gray-200 p-6"
+            >
+              <h2
+                class="text-sm font-bold text-gray-600 uppercase mb-4 text-center"
+              >
+                Действия по этапу
+              </h2>
+              <div id="actionButtonsContainer"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div
+      id="errorMessage"
+      class="hidden max-w-2xl mx-auto mt-20 text-center bg-red-50 border border-red-200 p-8 rounded-xl shadow-lg"
+    >
+      <h2 class="text-2xl font-bold text-red-800 mb-2">Заказ не найден!</h2>
+      <a
+        href="dashboard.html"
+        class="inline-block mt-4 bg-gray-800 text-white font-bold py-2 px-6 rounded-lg hover:bg-gray-900 transition"
+        >На доску</a
+      >
+    </div>
+
+    <script src="js/api.js"></script>
+    <script src="js/order.js"></script>
+  </body>
+</html>

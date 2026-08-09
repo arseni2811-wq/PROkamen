@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PRO-Management - Админ-панель</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body class="bg-[#F8F9FA] text-gray-800 antialiased pb-12">
+    <header class="bg-[#212529] text-white sticky top-0 z-50 shadow-md">
+      <div
+        class="px-6 py-4 flex items-center justify-between max-w-7xl mx-auto"
+      >
+        <div class="flex items-center gap-4">
+          <div class="text-xl font-bold text-[#D4AF37]">PRO-Management</div>
+          <span
+            class="bg-red-600 text-white text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider"
+            >Панель управления</span
+          >
+        </div>
+        <div class="flex items-center gap-6">
+          <button
+            id="logoutBtn"
+            class="text-gray-300 hover:text-white text-sm font-medium transition"
+          >
+            Выйти
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
+      <div class="mb-6 flex items-center justify-between">
+        <a
+          href="dashboard.html"
+          class="text-blue-600 hover:text-blue-800 font-medium text-sm flex items-center gap-1 transition-colors"
+        >
+          <span>&larr;</span> Назад на доску
+        </a>
+        <h1 class="text-2xl font-bold text-gray-800">
+          Настройки системы и Справочники
+        </h1>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <div class="lg:col-span-4 space-y-6">
+          <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <h2
+              class="text-lg font-bold text-gray-800 mb-4 border-b pb-2 flex items-center gap-2"
+            >
+              <span>⚙️</span> Базовые настройки
+            </h2>
+            <div class="space-y-4">
+              <div>
+                <label
+                  class="block text-xs font-bold text-gray-600 uppercase mb-1"
+                  >Курс USD к BYN</label
+                >
+                <input
+                  type="number"
+                  id="exchangeRateInput"
+                  step="0.01"
+                  class="w-full border-gray-300 rounded p-2 text-lg font-bold focus:ring-[#D4AF37] focus:border-[#D4AF37] outline-none border"
+                />
+              </div>
+              <button
+                id="saveSettingsBtn"
+                class="w-full bg-gray-800 hover:bg-gray-900 text-white font-bold py-2 rounded transition-colors shadow-sm"
+              >
+                Сохранить настройки
+              </button>
+            </div>
+          </div>
+
+          <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <h2
+              class="text-lg font-bold text-gray-800 mb-4 border-b pb-2 flex items-center gap-2"
+            >
+              <span>🛠</span> Прайс работ (USD)
+            </h2>
+
+            <div id="servicesContainer" class="space-y-3 text-sm mb-4"></div>
+
+            <button
+              id="savePricesBtn"
+              class="w-full mb-6 bg-[#D4AF37] hover:bg-[#C49F2F] text-white font-bold py-2 rounded transition-colors shadow-sm"
+            >
+              💾 Обновить прайс работ
+            </button>
+
+            <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+              <h3 class="text-xs font-bold text-gray-700 uppercase mb-2">
+                ➕ Добавить новую услугу
+              </h3>
+              <div class="space-y-2">
+                <input
+                  type="text"
+                  id="newServiceName"
+                  placeholder="Название (напр. Подъем на этаж)"
+                  class="w-full border-gray-300 rounded p-2 text-sm outline-none focus:ring-1 focus:ring-blue-500"
+                />
+                <div class="flex gap-2">
+                  <input
+                    type="number"
+                    id="newServicePrice"
+                    placeholder="Цена ($)"
+                    class="w-1/2 border-gray-300 rounded p-2 text-sm outline-none focus:ring-1 focus:ring-blue-500"
+                  />
+                  <button
+                    id="addCustomServiceBtn"
+                    class="w-1/2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded text-sm transition-colors"
+                  >
+                    Добавить
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="lg:col-span-8 space-y-6">
+          <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <h2
+              class="text-lg font-bold text-gray-800 mb-4 border-b pb-2 flex items-center gap-2"
+            >
+              <span>🪨</span> Управление каталогом камня
+            </h2>
+
+            <div
+              class="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-6 transition-colors"
+              id="stoneFormWrapper"
+            >
+              <h3
+                class="text-sm font-bold text-gray-700 mb-3"
+                id="stoneFormTitle"
+              >
+                Добавить новый камень в базу
+              </h3>
+              <form
+                id="addStoneForm"
+                class="grid grid-cols-1 md:grid-cols-5 gap-3 items-end"
+              >
+                <div class="md:col-span-1">
+                  <label class="block text-xs text-gray-500 mb-1"
+                    >Артикул / ID</label
+                  >
+                  <input
+                    type="text"
+                    id="newStoneId"
+                    placeholder="qnt-001"
+                    required
+                    class="w-full border-gray-300 rounded p-2 text-sm outline-none focus:ring-1 focus:ring-[#D4AF37] disabled:bg-gray-200 disabled:text-gray-400"
+                  />
+                </div>
+                <div class="md:col-span-2">
+                  <label class="block text-xs text-gray-500 mb-1"
+                    >Название материала</label
+                  >
+                  <input
+                    type="text"
+                    id="newStoneTitle"
+                    placeholder="Кварц Белый"
+                    required
+                    class="w-full border-gray-300 rounded p-2 text-sm outline-none focus:ring-1 focus:ring-[#D4AF37]"
+                  />
+                </div>
+                <div class="md:col-span-1">
+                  <label class="block text-xs text-gray-500 mb-1"
+                    >Цена 0.5 слэба ($)</label
+                  >
+                  <input
+                    type="number"
+                    id="newStonePriceHalf"
+                    placeholder="400"
+                    required
+                    class="w-full border-gray-300 rounded p-2 text-sm outline-none focus:ring-1 focus:ring-[#D4AF37]"
+                  />
+                </div>
+                <div class="md:col-span-1">
+                  <label class="block text-xs text-gray-500 mb-1"
+                    >Цена 1 слэба ($)</label
+                  >
+                  <input
+                    type="number"
+                    id="newStonePriceFull"
+                    placeholder="800"
+                    required
+                    class="w-full border-gray-300 rounded p-2 text-sm outline-none focus:ring-1 focus:ring-[#D4AF37]"
+                  />
+                </div>
+                <div class="md:col-span-5 flex justify-end mt-2 gap-2">
+                  <button
+                    type="button"
+                    id="cancelEditStoneBtn"
+                    class="hidden bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded text-sm transition-colors shadow-sm"
+                  >
+                    Отмена
+                  </button>
+                  <button
+                    type="submit"
+                    id="submitStoneBtn"
+                    class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-6 rounded text-sm transition-colors shadow-sm"
+                  >
+                    + Добавить в каталог
+                  </button>
+                </div>
+              </form>
+            </div>
+
+            <div class="overflow-x-auto border border-gray-200 rounded-lg">
+              <table class="w-full text-left border-collapse">
+                <thead>
+                  <tr
+                    class="bg-gray-100 text-gray-500 text-xs uppercase tracking-wider"
+                  >
+                    <th class="p-3 font-medium">Название материала</th>
+                    <th class="p-3 font-medium">Артикул</th>
+                    <th class="p-3 font-medium">Закупка (0.5 / Целый) USD</th>
+                    <th class="p-3 font-medium text-right">Действия</th>
+                  </tr>
+                </thead>
+                <tbody
+                  id="catalogTableBody"
+                  class="divide-y divide-gray-100 bg-white"
+                ></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script src="js/admin.js"></script>
+  </body>
+</html>

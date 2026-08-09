@@ -1,0 +1,245 @@
+/* ---------- Контейнер для контента ---------- */
+.container {
+  width: min(
+    1160px,
+    100%
+  ); /* Максимальная ширина 1160px, но не больше ширины экрана */
+  margin-inline: auto; /* Выравнивание по центру */
+  padding-inline: clamp(
+    16px,
+    3vw,
+    28px
+  ); /* Отступы слева/справа: от 16px до 28px, адаптивно */
+}
+
+/* ---------- Шапка сайта ---------- */
+.header {
+  position: sticky; /* "Прилипает" к верху при прокрутке */
+  top: 0;
+  z-index: 50; /* Приоритет отображения поверх других элементов */
+  backdrop-filter: saturate(180%) blur(6px); /* Лёгкое размытие фона */
+  background: color-mix(
+    in srgb,
+    #ffffff 80%,
+    transparent
+  ); /* Полупрозрачный белый фон */
+  border-bottom: 1px solid var(--border); /* Нижняя граница */
+  margin-bottom: 0; /* Убираем отступ под шапкой */
+}
+.header__inner {
+  display: flex; /* Размещаем логотип и меню в строку */
+  align-items: center;
+  justify-content: space-between; /* Логотип слева, меню справа */
+  gap: var(--space-5);
+  padding-block: var(--space-4); /* Вертикальные отступы */
+  position: relative;
+}
+.logo img { height: 40px; width: auto; display: block; }
+
+/* ---------- Навигация (меню) ---------- */
+.nav ul,
+.nav__list {
+  display: flex;
+  gap: clamp(12px, 2.4vw, 28px); /* Расстояние между пунктами */
+  list-style: none; /* Убираем точки у списка */
+  margin: 0;
+  padding: 0;
+}
+.nav a {
+  text-transform: uppercase; /* Заглавные буквы */
+  letter-spacing: 0.04em; /* Расстояние между буквами */
+  font-size: 13px;
+  color: var(--text);
+  opacity: 0.85; /* Немного приглушённый цвет */
+  padding: 12px 4px;
+  border-bottom: 2px solid transparent; /* Подчёркивание появится при активном состоянии */
+  min-height: 44px;
+}
+.nav a:hover {
+  opacity: 1; /* При наведении ярче */
+}
+.nav a[aria-current="page"],
+.nav__link--active {
+  border-color: var(--text); /* Подчёркивание у активного пункта меню */
+  opacity: 1;
+}
+
+/* ---------- Основная разметка страницы ---------- */
+.main {
+  padding-block: 0; /* Убираем внутренние отступы */
+}
+.section {
+  padding-block: var(--space-7); /* Вертикальные отступы для секций */
+}
+.section--soft {
+  background: var(--bg-soft); /* Светло-серый фон */
+}
+
+/* ---------- Подвал сайта ---------- */
+.footer {
+  border-top: 1px solid var(--border); /* Верхняя граница */
+  background: #fff;
+}
+.footer__inner {
+  display: grid; /* Сетка внутри подвала */
+  gap: var(--space-6);
+  padding-block: var(--space-7);
+}
+.footer__bottom {
+  padding-block: var(--space-4);
+  border-top: 1px solid var(--border);
+  color: var(--muted); /* Тусклый текст */
+}
+
+/* Адаптивный подвал */
+@media (min-width: 768px) {
+  .footer__inner {
+    grid-template-columns: 1.2fr 0.8fr 0.9fr; /* Три колонки разной ширины */
+  }
+}
+
+/* ---------- Сетки ---------- */
+.grid {
+  display: grid;
+  gap: var(--space-4);
+}
+.grid-empty {
+  grid-column: 1 / -1;
+  margin: 0;
+  text-align: center;
+}
+.cards {
+  display: grid;
+  gap: var(--space-5);
+}
+/* На планшетах — 2 карточки в ряд */
+@media (min-width: 768px) {
+  .cards {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+/* На больших экранах — 3 карточки */
+@media (min-width: 1024px) {
+  .cards {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.grid-2 {
+  display: grid;
+  gap: var(--space-4);
+}
+.grid-3 {
+  display: grid;
+  gap: var(--space-4);
+}
+/* Для сеток с 2 и 3 колонками */
+@media (min-width: 768px) {
+  .grid-2 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .grid-3 {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* ---------- Две колонки (например, контакты) ---------- */
+.kv {
+  display: grid;
+  gap: var(--space-5);
+}
+@media (min-width: 900px) {
+  .kv {
+    grid-template-columns: 1.1fr 0.9fr; /* Левая колонка чуть шире */
+  }
+}
+
+/* ---------- Галерея ---------- */
+.gallery {
+  display: grid;
+  gap: var(--space-4);
+}
+@media (min-width: 640px) {
+  .gallery {
+    grid-template-columns: repeat(2, 1fr); /* 2 картинки */
+  }
+}
+@media (min-width: 1024px) {
+  .gallery {
+    grid-template-columns: repeat(3, 1fr); /* 3 картинки */
+  }
+}
+
+/* ---------- Мобильное меню ---------- */
+@media (max-width: 767px) {
+  .nav {
+    display: none; /* По умолчанию скрыто */
+  }
+  .nav.nav--open {
+    display: flex; /* JS добавит .nav--open → меню покажется */
+  }
+}
+
+/* ---------- Мобильные секции ---------- */
+@media (max-width: 640px) {
+  .section {
+    padding-block: var(--space-5); /* Меньше отступов на телефонах */
+  }
+}
+
+/* ---------- Нижний отступ под основным контентом ---------- */
+.main {
+  padding-bottom: clamp(40px, 6vw, 72px); /* Адаптивный отступ снизу */
+}
+.header__inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  position: relative;
+}
+
+.header__brand {
+  display: flex;
+  align-items: center;
+  gap: 12px; /* расстояние между логотипом и бургером */
+}
+
+.logo img { display: block; height: 40px; width: auto; }
+
+.nav-toggle {
+  background: none;
+  border: none;
+  cursor: pointer;
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  border-radius: 12px;
+}
+
+.header__inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  position: relative;
+}
+
+.header__brand {
+  display: flex;
+  align-items: center;
+  gap: 16px; /* расстояние между логотипом и бургером */
+}
+
+.logo img { height: 40px; width: auto; display: block; }
+@media (max-width: 640px) {
+  .logo img { height: 36px; }
+}
+
+.header__contacts {
+  margin-left: auto; /* контакты прижмутся вправо */
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-size: 16px;
+}
