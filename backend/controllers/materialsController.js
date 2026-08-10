@@ -14,45 +14,75 @@ async function getMaterials(req, res) {
   }
 }
 
+// Тип материала по умолчанию (обязано существовать в dict_material_types)
+const FALLBACK_TYPE_ID = "quartz";
+
+// Приводит любое значение type_id к валидному ключу справочника
+// dict_material_types (иначе INSERT падает с FK-ошибкой → 500).
+async function resolveValidTypeId(typeId) {
+  const requested =
+    typeId === null || typeId === undefined ? "" : String(typeId).trim();
+  if (requested) {
+    try {
+      const [rows] = await pool.query(
+        "SELECT type_id FROM dict_material_types WHERE type_id = ?",
+        [requested],
+      );
+      if (rows.length > 0) return rows[0].type_id;
+    } catch (error) {
+      console.error("Ошибка проверки type_id:", error);
+    }
+  }
+  return FALLBACK_TYPE_ID;
+}
+
 // Создание материала
 async function createMaterial(req, res) {
   const validatedData = req.validatedBody;
 
   try {
-    const normalizedTypeId = validatedData.type_id ?? null;
-    const normalizedFabricator = validatedData.fabricator ?? null;
-
-    let query =
-      "INSERT INTO materials (type_id, title, fabricator, price_per_m2) VALUES (?, ?, ?, ?)";
-    let values = [
-      normalizedTypeId,
-      validatedData.title.trim(),
-      normalizedFabricator,
-      validatedData.price_per_m2,
-    ];
-
-    if (
+    // materials.material_id — VARCHAR PRIMARY KEY без AUTO_INCREMENT:
+    // если фронтенд не прислал ID, генерируем уникальный вместо NULL,
+    // иначе INSERT падает с "Field 'material_id' doesn't have a default value".
+    const materialId =
       validatedData.material_id !== undefined &&
       validatedData.material_id !== null &&
-      validatedData.material_id !== ""
-    ) {
-      query =
-        "INSERT INTO materials (material_id, type_id, title, fabricator, price_per_m2) VALUES (?, ?, ?, ?, ?)";
-      values = [
-        validatedData.material_id,
+      String(validatedData.material_id).trim() !== ""
+        ? String(validatedData.material_id).trim()
+        : `auto_${Date.now()}`;
+
+    // Дубликат ключа → понятный 409 вместо сырой Error 500
+    const [existingRows] = await pool.query(
+      "SELECT material_id FROM materials WHERE material_id = ?",
+      [materialId],
+    );
+    if (existingRows.length > 0) {
+      return res.status(409).json({
+        success: false,
+        message: `Материал с ID «${materialId}» уже существует в базе`,
+      });
+    }
+
+    const normalizedTypeId = await resolveValidTypeId(validatedData.type_id);
+    const normalizedFabricator = validatedData.fabricator ?? null;
+
+    await pool.query(
+      "INSERT INTO materials (material_id, type_id, title, fabricator, price_per_m2) VALUES (?, ?, ?, ?, ?)",
+      [
+        materialId,
         normalizedTypeId,
         validatedData.title.trim(),
         normalizedFabricator,
         validatedData.price_per_m2,
-      ];
-    }
+      ],
+    );
 
-    const [result] = await pool.query(query, values);
-    res.json({
+    res.status(201).json({
       success: true,
       message: "Материал успешно добавлен",
       material: {
-        material_id: result.insertId,
+        material_id: materialId,
+        type_id: normalizedTypeId,
         title: validatedData.title.trim(),
         fabricator: normalizedFabricator,
         price_per_m2: validatedData.price_per_m2,
@@ -70,10 +100,11 @@ async function updateMaterial(req, res) {
   const validatedData = req.validatedBody;
 
   try {
+    const normalizedTypeId = await resolveValidTypeId(validatedData.type_id);
     const [result] = await pool.query(
       "UPDATE materials SET type_id = ?, title = ?, fabricator = ?, price_per_m2 = ? WHERE material_id = ?",
       [
-        validatedData.type_id ?? null,
+        normalizedTypeId,
         validatedData.title.trim(),
         validatedData.fabricator ?? null,
         validatedData.price_per_m2,

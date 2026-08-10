@@ -186,6 +186,7 @@ const Store = (function () {
     localStorage.removeItem("currentUser");
     localStorage.removeItem("crm_settings");
     localStorage.removeItem("crm_calc_draft");
+    localStorage.removeItem("crm_token");
 
     _notify("currentUser", null);
     _notify("exchangeRate", 3.2);

@@ -494,12 +494,15 @@ async function createOrder(req, res) {
           orderId,
           item.product_type_id ?? item.productTypeId ?? 1,
           materialId,
-          item.length_mm ?? item.lengthMm ?? null,
-          item.width_mm ?? item.widthMm ?? null,
-          item.area_m2 ?? item.areaM2 ?? null,
+          // NULL-поля в NOT NULL-колонках (length_mm, width_mm, area_m2,
+          // item_cost) заменяются на 0, чтобы INSERT не падал с
+          // "Column '...' cannot be null".
+          (item.length_mm ?? item.lengthMm) || 0,
+          (item.width_mm ?? item.widthMm) || 0,
+          (item.area_m2 ?? item.areaM2) || 0,
           item.edge_profile_id ?? item.edgeProfileId ?? 1,
-          item.edge_length_m ?? item.edgeLengthM ?? null,
-          item.item_cost ?? item.itemCost ?? null,
+          (item.edge_length_m ?? item.edgeLengthM) || 0,
+          (item.item_cost ?? item.itemCost) || 0,
         ],
       );
     }

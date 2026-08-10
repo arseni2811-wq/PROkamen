@@ -14,6 +14,9 @@ document
     try {
       const data = await api.login(login, password);
 
+      // Токен для заголовка Authorization: Bearer <token> (использует apiFetch)
+      if (data.token) localStorage.setItem("crm_token", data.token);
+
       // Сохраняем данные пользователя для отображения в интерфейсе
       // ВАЖНО: роль и права проверяются на сервере через JWT, а не из localStorage
       localStorage.setItem("currentUser", JSON.stringify(data.user));

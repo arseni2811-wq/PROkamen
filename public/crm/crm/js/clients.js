@@ -15,6 +15,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (logoutBtn) {
     logoutBtn.addEventListener("click", () => {
       localStorage.removeItem("currentUser");
+      localStorage.removeItem("crm_token");
       window.location.href = "login.html";
     });
   }

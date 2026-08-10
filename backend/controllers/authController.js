@@ -41,7 +41,7 @@ async function login(req, res) {
     });
 
     delete user.password_hash;
-    res.json({ success: true, message: "Вход выполнен успешно!", user });
+    res.json({ success: true, message: "Вход выполнен успешно!", token, user });
   } catch (error) {
     console.error("Ошибка при входе:", error);
     res

@@ -52,6 +52,7 @@ const authRoutes = require("./routes/auth.routes");
 const ordersRoutes = require("./routes/orders.routes");
 const materialsRoutes = require("./routes/materials.routes");
 const settingsRoutes = require("./routes/settings.routes");
+const clientsRoutes = require("./routes/clients.routes");
 
 // =========================================================
 // HEALTH-CHECK (JSON)
@@ -78,6 +79,7 @@ app.use("/api", authRoutes);
 // внутренний путь "/orders", который не совпадает ни с одним роутом →
 // fallback отвечает "API endpoint not found: POST /api/orders".
 app.use("/api/orders", ordersRoutes);
+app.use("/api/clients", clientsRoutes);
 app.use("/api", materialsRoutes);
 app.use("/api", settingsRoutes);
 

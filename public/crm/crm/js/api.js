@@ -22,10 +22,16 @@ const API_BASE_URL =
 async function apiFetch(endpoint, options = {}) {
   const url = `${API_BASE_URL}${endpoint}`;
 
+  // JWT из localStorage для заголовка Authorization: Bearer <token>
+  // (страховка на случай, когда httpOnly cookie не отправляется браузером
+  // из-за sameSite/cross-origin → иначе запрос падает с 401).
+  const token = localStorage.getItem("crm_token");
+
   const config = {
     credentials: "include", // обязательно для httpOnly cookie с JWT
     headers: {
       "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(options.headers || {}),
     },
     ...options,
@@ -107,6 +113,13 @@ const api = {
     }),
 
   logout: () => apiFetch("/api/logout", { method: "POST" }),
+
+  // --- НАСТРОЙКИ ---
+  updateSettings: (settings) =>
+    apiFetch("/api/exchange-rate", {
+      method: "PUT",
+      body: JSON.stringify({ exchange_rate: settings.exchangeRate }),
+    }),
 
   // --- ЗАКАЗЫ ---
   getOrders: () => apiFetch("/api/orders"),

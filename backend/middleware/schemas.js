@@ -37,12 +37,14 @@ const orderSchema = z.object({
     .object({
       full_name: z.string().min(1).max(255).optional().nullable(),
       phone: z.string().max(20).optional().nullable(),
-      // email: "" (пустая строка), null и undefined пропускаются;
-      // любой введённый текст обязан быть валидным email.
-      // .or(z.literal("")) — «либо пустая строка, либо email»
+      // email: пустая строка или строка из пробелов через .transform()
+      // превращается в null, null и undefined пропускаются; любой введённый
+      // текст обязан быть валидным email (иначе → "Invalid email address").
       email: z
-        .literal("")
-        .or(z.string().trim().email())
+        .string()
+        .trim()
+        .transform((v) => (v === "" ? null : v))
+        .pipe(z.string().email().nullable().optional())
         .optional()
         .nullable(),
       address: z.string().max(500).optional().nullable(),
@@ -59,7 +61,8 @@ const orderSchema = z.object({
 // Схема для материала
 const materialSchema = z.object({
   material_id: z.string().optional(),
-  type_id: z.string().nullable().optional(),
+  // type_id приходит и строкой ("quartz"), и числом (фронтенд админки шлёт 1)
+  type_id: z.union([z.string(), z.number()]).nullable().optional(),
   title: z.string().min(1).max(255),
   fabricator: z.string().nullable().optional(),
   price_per_m2: z.number().min(0),
