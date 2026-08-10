@@ -18,11 +18,11 @@ const ROLES = {
   MANAGER: 2,
 };
 
-router.get("/", authenticateJWT, getMaterials);
+router.get("/materials", authenticateJWT, getMaterials);
 router.get("/services", authenticateJWT, getServices);
 
 router.post(
-  "/",
+  "/materials",
   authenticateJWT,
   authorize(ROLES.ADMIN, ROLES.MANAGER),
   validate(materialSchema),
@@ -30,14 +30,19 @@ router.post(
 );
 
 router.put(
-  "/:id",
+  "/materials/:id",
   authenticateJWT,
   authorize(ROLES.ADMIN, ROLES.MANAGER),
   validate(materialSchema),
   updateMaterial,
 );
 
-router.delete("/:id", authenticateJWT, authorize(ROLES.ADMIN), deleteMaterial);
+router.delete(
+  "/materials/:id",
+  authenticateJWT,
+  authorize(ROLES.ADMIN),
+  deleteMaterial,
+);
 
 router.put(
   "/services",

@@ -1,15 +1,19 @@
 const { z } = require("zod");
 
 // Схема для создания/обновления заказа
+// Все второстепенные поля — optional + nullable: фронтенд может
+// прислать null, undefined или не прислать поле вовсе.
+// .optional()  → пропускает undefined и отсутствие поля
+// .nullable()  → пропускает null
 const orderSchema = z.object({
-  total_amount: z.number().int().min(0).max(999999999).optional(),
-  prepayment: z.number().int().min(0).max(999999999).optional(),
-  installation_address: z.string().max(500).nullable().optional(),
+  total_amount: z.number().int().min(0).max(999999999).optional().nullable(),
+  prepayment: z.number().int().min(0).max(999999999).optional().nullable(),
+  installation_address: z.string().max(500).optional().nullable(),
   deadline_date: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/)
-    .nullable()
-    .optional(),
+    .optional()
+    .nullable(),
   status_id: z
     .enum([
       "lead",
@@ -25,20 +29,31 @@ const orderSchema = z.object({
       "archived",
       "cancelled",
     ])
-    .optional(),
+    .optional()
+    .nullable(),
+  // client может быть null целиком ("клиент не выбран") ИЛИ объектом,
+  // у которого отдельные поля тоже могут быть null (phone/email пустые)
   client: z
     .object({
-      full_name: z.string().min(1).max(255).optional(),
-      phone: z.string().max(20).optional(),
-      email: z.string().email().optional(),
-      address: z.string().max(500).optional(),
+      full_name: z.string().min(1).max(255).optional().nullable(),
+      phone: z.string().max(20).optional().nullable(),
+      // email: "" (пустая строка), null и undefined пропускаются;
+      // любой введённый текст обязан быть валидным email.
+      // .or(z.literal("")) — «либо пустая строка, либо email»
+      email: z
+        .literal("")
+        .or(z.string().trim().email())
+        .optional()
+        .nullable(),
+      address: z.string().max(500).optional().nullable(),
     })
-    .optional(),
-  client_id: z.number().int().positive().optional(),
-  manager_id: z.number().int().positive().optional(),
-  exchange_rate: z.number().positive().optional(),
-  calculator_snapshot: z.any().optional(),
-  items: z.array(z.any()).optional(),
+    .optional()
+    .nullable(),
+  client_id: z.number().int().positive().optional().nullable(),
+  manager_id: z.number().int().positive().optional().nullable(),
+  exchange_rate: z.number().positive().optional().nullable(),
+  calculator_snapshot: z.any().optional().nullable(),
+  items: z.array(z.any()).optional().nullable(),
 });
 
 // Схема для материала

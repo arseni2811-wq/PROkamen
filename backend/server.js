@@ -53,10 +53,133 @@ const ordersRoutes = require("./routes/orders.routes");
 const materialsRoutes = require("./routes/materials.routes");
 const settingsRoutes = require("./routes/settings.routes");
 
+// =========================================================
+// HEALTH-CHECK (JSON)
+// Должен быть ЗАРЕГИСТРИРОВАН ДО app.use("/api", ordersRoutes):
+// иначе GET /api/health ловит роут "/:id" и требует JWT-токен.
+// =========================================================
+app.get("/api/health", async (req, res) => {
+  try {
+    await pool.query("SELECT 1");
+    res.json({ success: true, status: "ok", db: "connected" });
+  } catch (err) {
+    res
+      .status(500)
+      .json({ success: false, status: "error", message: err.message });
+  }
+});
+
 app.use("/api", authRoutes);
-app.use("/api", ordersRoutes);
+// ВАЖНО: ordersRoutes монтируется на /api/orders, потому что внутри
+// orders.routes.js эндпоинты написаны относительно корня роутера:
+//   router.post("/")  → POST  /api/orders
+//   router.get("/:id") → GET   /api/orders/123
+// Если монтировать на /api, то POST /api/orders превращается во
+// внутренний путь "/orders", который не совпадает ни с одним роутом →
+// fallback отвечает "API endpoint not found: POST /api/orders".
+app.use("/api/orders", ordersRoutes);
 app.use("/api", materialsRoutes);
 app.use("/api", settingsRoutes);
+
+// =========================================================
+// РАЗДАЧА СТАТИКИ ФРОНТЕНДА
+// Папка public становится корневой (замена Live Server):
+//   http://localhost:3000/            → public/index.html
+//   http://localhost:3000/js/app.js   → public/js/app.js
+// ВАЖНО: путь — абсолютный, через path.join(__dirname, "..", "public"),
+// т.е. от папки файла server.js, а не от текущего process.cwd().
+// =========================================================
+const PUBLIC_DIR = path.join(__dirname, "..", "public");
+
+// ----- Отладочный логгер статики (включить: DEBUG_STATIC=1 node server.js)
+// Показывает, какой URL реально запрашивает браузер и существует ли
+// файл с таким путём на диске.
+if (process.env.DEBUG_STATIC === "1") {
+  app.use((req, res, next) => {
+    if (
+      req.path.startsWith("/api/") ||
+      req.path.startsWith("/uploads/") ||
+      req.path.startsWith("/php")
+    ) {
+      return next();
+    }
+
+    const diskPath = path.join(PUBLIC_DIR, req.path);
+    const exists = fs.existsSync(diskPath);
+
+    res.on("finish", () => {
+      console.log(
+        `[static] ${req.method} ${req.originalUrl} → ${diskPath} ` +
+          `(на диске: ${exists ? "ДА" : "НЕТ"}, ответ: ${res.statusCode}, ` +
+          `${res.getHeader("content-type") || ""})`,
+      );
+    });
+    next();
+  });
+}
+
+// PHP-скрипты Node.js не исполняет, а config.php содержит SMTP-доступ,
+// поэтому блокируем каталог ДО express.static (иначе статика отдаст
+// файл браузеру как обычный текст)
+app.use("/php", (req, res) => res.status(404).send("Not found"));
+
+app.use(express.static(PUBLIC_DIR, { index: "index.html" }));
+
+// =========================================================
+// FALLBACK-РОУТ (замена правилам .htaccess, которые Node
+// игнорирует).
+//
+//   /api/*                       → JSON 404 (API не трогаем)
+//   *.css, *.js, *.jpg, *.png,
+//   *.csv и любой файл с «.»     → пропускаем → жёсткий 404
+//   остальные GET/HEAD           → public/index.html (страницы SPA)
+//
+// В Express 5 нельзя использовать app.get("*") — wildcard-строки
+// убраны, поэтому используем app.use().
+// =========================================================
+const PRETTY_URLS = {
+  "/catalog": "/pages/catalog.html",
+  "/services": "/pages/services.html",
+  "/works": "/pages/works.html",
+  "/about": "/pages/about.html",
+  "/contacts": "/pages/contacts.html",
+};
+
+app.use((req, res, next) => {
+  // API-запросы к несуществующим эндпоинтам → JSON 404
+  if (req.path.startsWith("/api/")) {
+    return res.status(404).json({
+      success: false,
+      message: `API endpoint not found: ${req.method} ${req.path}`,
+    });
+  }
+
+  // Запросы к загрузкам не трогаем
+  if (req.path.startsWith("/uploads/")) {
+    return next();
+  }
+
+  // Не-GET запросы отдаём на дефолтный 404 Express
+  if (req.method !== "GET" && req.method !== "HEAD") {
+    return next();
+  }
+
+  // Главная защита: запросы к файлам с расширением НЕ подменяем
+  // index.html — браузер должен получить честный 404, а не HTML.
+  if (path.extname(req.path) !== "") {
+    return next();
+  }
+
+  // ЧПУ-редиректы из .htaccess: /catalog/ → /pages/catalog.html
+  const cleanPath = req.path.replace(/\/+$/, "") || "/";
+  const prettyTarget = PRETTY_URLS[cleanPath];
+  if (prettyTarget) {
+    return res.redirect(301, prettyTarget);
+  }
+
+  // SPA-fallback: «страничные» пути → index.html
+  res.sendFile(path.join(PUBLIC_DIR, "index.html"));
+});
 
 // =========================================================
 // ГЛОБАЛЬНАЯ ОБРАБОТКА ОШИБОК
@@ -104,16 +227,8 @@ process.on("uncaughtException", (err) => {
 // =========================================================
 // ПУБЛИЧНЫЕ МАРШРУТЫ (без аутентификации)
 // =========================================================
-
-// 1. ПРОВЕРКА ПОДКЛЮЧЕНИЯ К БД
-app.get("/", async (req, res) => {
-  try {
-    const [rows] = await pool.query("SELECT 1");
-    res.send("Сервер работает! Подключение к БД успешно.");
-  } catch (err) {
-    res.status(500).send("Ошибка подключения к базе данных: " + err.message);
-  }
-});
+// Health-check перенесён на GET /api/health (см. секцию
+// «Раздача статики»), потому что "/" теперь отдаёт index.html.
 
 // =========================================================
 // ИНИЦИАЛИЗАЦИЯ БАЗЫ ДАННЫХ
@@ -295,5 +410,8 @@ ensureDatabaseSchema().finally(() => {
       `🌐 Разрешённые frontend-адреса: ${ALLOWED_ORIGINS.join(", ")}`,
     );
     console.log(`📁 Загрузка файлов: /uploads/orders/`);
+    console.log(
+      `📄 Статика: ${PUBLIC_DIR} (fallback: index.html для страниц, 404 для *.css/*.js/*.jpg/*.csv)`,
+    );
   });
 });

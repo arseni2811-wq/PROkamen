@@ -414,6 +414,10 @@ async function createOrder(req, res) {
     calculator_snapshot,
   } = validatedData;
 
+  // Менеджер заказа: если фронтенд не прислал manager_id (или прислал null),
+  // берём пользователя из JWT — это на 100% отсекает "Column 'manager_id' cannot be null"
+  const effectiveManagerId = manager_id || req.user?.user_id || null;
+
   if (!Array.isArray(items) || items.length === 0) {
     return res
       .status(400)
@@ -454,8 +458,8 @@ async function createOrder(req, res) {
       "INSERT INTO orders (client_id, manager_id, status_id, total_amount, installation_address, deadline_date, exchange_rate, calculator_snapshot) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
       [
         resolvedClientId,
-        manager_id || null,
-        status_id,
+        effectiveManagerId,
+        status_id || "lead",
         toCents(totalAmount),
         validatedData.installation_address || null,
         validatedData.deadline_date || null,
