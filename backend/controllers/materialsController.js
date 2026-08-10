@@ -162,14 +162,10 @@ async function getServices(req, res) {
 
     rows.forEach((row) => {
       if (row.service_name) {
-        // Читаемый ключ: пробелы → _, кириллица/латиница сохраняются
-        // (раньше весь кириллический текст удалялся и оставались ключи
-        //  вида «___», из-за чего цены в админке отображались мусором).
-        const key = row.service_name
-          .replace(/\s+/g, "_")
-          .replace(/[^a-zA-Z0-9ёЁа-яА-Я_]/g, "")
-          .toLowerCase();
-        services[key] = Number(row.price_per_unit) || 0;
+        // Используем оригинальное service_name как ключ БЕЗ трансформаций.
+        // Раньше ключ lowercaser-ся и пробелы заменялись на _, из-за чего
+        // updateServices не находил услугу по ключу и создавал дубликаты.
+        services[row.service_name] = Number(row.price_per_unit) || 0;
       }
     });
 

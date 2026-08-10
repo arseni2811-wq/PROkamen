@@ -6,8 +6,14 @@
 // ВАЖНО: без этого импорта внутри worker-thread глобальный parentPort
 // не существует → PDF падает с "ReferenceError: parentPort is not defined".
 const { parentPort } = require("worker_threads");
+const path = require("path");
 
 const PDFDocument = require("pdfkit");
+
+// Пути к кастомным шрифтам с поддержкой кириллицы.
+// pdfkit не поддерживает кириллицу «из коробки» — только через локальные шрифты.
+const FONT_REGULAR = path.join(__dirname, "..", "assets", "fonts", "Roboto-Regular.ttf");
+const FONT_BOLD = path.join(__dirname, "..", "assets", "fonts", "Roboto-Bold.ttf");
 
 // Обработчик сообщений от основного процесса
 parentPort.on("message", async (message) => {
@@ -124,10 +130,10 @@ async function fillPDFDocument(
   // Заголовок
   doc
     .fontSize(24)
-    .font("Helvetica-Bold")
+    .font(FONT_BOLD)
     .text("PRO Камень", { align: "left" })
     .fontSize(8)
-    .font("Helvetica")
+    .font(FONT_REGULAR)
     .fillColor("#666666")
     .text("Производство изделий из натурального и искусственного камня", {
       align: "left",
@@ -135,13 +141,13 @@ async function fillPDFDocument(
 
   doc
     .fontSize(14)
-    .font("Helvetica-Bold")
+    .font(FONT_BOLD)
     .fillColor("#000000")
     .text(`Коммерческое предложение №${order.order_id}`, {
       align: "right",
     })
     .fontSize(10)
-    .font("Helvetica")
+    .font(FONT_REGULAR)
     .fillColor("#666666")
     .text(`от ${today} г.`, { align: "right" });
 
@@ -152,37 +158,37 @@ async function fillPDFDocument(
   // Исполнитель и заказчик
   doc
     .fontSize(11)
-    .font("Helvetica-Bold")
+    .font(FONT_BOLD)
     .fillColor("#000000")
     .text("ИСПОЛНИТЕЛЬ:", { continued: true })
-    .font("Helvetica")
+    .font(FONT_REGULAR)
     .fillColor("#333333")
     .text(" Компания «PRO Камень»");
 
   doc
-    .font("Helvetica-Bold")
+    .font(FONT_BOLD)
     .fillColor("#000000")
     .text("ЗАКАЗЧИК:", { continued: true })
-    .font("Helvetica")
+    .font(FONT_REGULAR)
     .fillColor("#333333")
     .text(` ${order.client_name || "___________________________"}`);
 
   if (order.client_phone) {
     doc
-      .font("Helvetica-Bold")
+      .font(FONT_BOLD)
       .fillColor("#000000")
       .text("Телефон:", { continued: true })
-      .font("Helvetica")
+      .font(FONT_REGULAR)
       .fillColor("#333333")
       .text(` ${order.client_phone}`);
   }
 
   if (order.installation_address) {
     doc
-      .font("Helvetica-Bold")
+      .font(FONT_BOLD)
       .fillColor("#000000")
       .text("Адрес доставки/монтажа:", { continued: true })
-      .font("Helvetica")
+      .font(FONT_REGULAR)
       .fillColor("#333333")
       .text(` ${order.installation_address}`);
   }
@@ -192,7 +198,7 @@ async function fillPDFDocument(
   // Детализация заказа
   doc
     .fontSize(13)
-    .font("Helvetica-Bold")
+    .font(FONT_BOLD)
     .fillColor("#000000")
     .text("ДЕТАЛИЗАЦИЯ ЗАКАЗА И СМЕТА РАБОТ");
 
@@ -207,7 +213,7 @@ async function fillPDFDocument(
   doc
     .fillColor("#000000")
     .fontSize(9)
-    .font("Helvetica-Bold")
+    .font(FONT_BOLD)
     .text("Наименование", col1 + 5, tableTop + 5)
     .text("Кол-во", col2 + 5, tableTop + 5)
     .text("Сумма", col3 + 5, tableTop + 5);
@@ -218,7 +224,7 @@ async function fillPDFDocument(
     doc
       .fillColor("#333333")
       .fontSize(9)
-      .font("Helvetica")
+      .font(FONT_REGULAR)
       .text(`Материал: ${snapshot.stoneName || "Не указан"}`, col1 + 5, rowY)
       .text(`${snapshot.slabAmt || 0} слэба`, col2 + 5, rowY)
       .text(`$${(snapshot.matUSD || 0).toFixed(1)}`, col3 + 5, rowY);
@@ -262,7 +268,7 @@ async function fillPDFDocument(
   doc
     .fillColor("#000000")
     .fontSize(11)
-    .font("Helvetica-Bold")
+    .font(FONT_BOLD)
     .text("Итоговая стоимость:", 55, rowY + 8)
     .text(`${totalAmount.toLocaleString("ru-RU")} BYN`, 400, rowY + 8, {
       align: "right",
@@ -271,7 +277,7 @@ async function fillPDFDocument(
   doc
     .fillColor("#059669")
     .fontSize(10)
-    .font("Helvetica")
+    .font(FONT_REGULAR)
     .text("Внесена предоплата:", 55, rowY + 28)
     .text(`${prepayment.toLocaleString("ru-RU")} BYN`, 400, rowY + 28, {
       align: "right",
@@ -284,7 +290,7 @@ async function fillPDFDocument(
   doc
     .fillColor("#d97706")
     .fontSize(12)
-    .font("Helvetica-Bold")
+    .font(FONT_BOLD)
     .text("ОСТАТОК К ОПЛАТЕ:", 55, rowY + 6)
     .text(`${balance.toLocaleString("ru-RU")} BYN`, 400, rowY + 6, {
       align: "right",
@@ -295,7 +301,7 @@ async function fillPDFDocument(
 
   doc
     .fontSize(9)
-    .font("Helvetica")
+    .font(FONT_REGULAR)
     .fillColor("#666666")
     .text("ПОДПИСЬ ИСПОЛНИТЕЛЯ:", 50, doc.y, { align: "left" });
 
@@ -311,7 +317,7 @@ async function fillPDFDocument(
   doc.y = rowY + 60;
   doc
     .fontSize(9)
-    .font("Helvetica")
+    .font(FONT_REGULAR)
     .fillColor("#666666")
     .text("ПОДПИСЬ ЗАКАЗЧИКА:", 350, doc.y, { align: "left" });
 

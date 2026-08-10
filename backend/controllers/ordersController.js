@@ -163,13 +163,16 @@ async function getOrderById(req, res) {
           o.total_amount,
           o.prepayment,
           o.installation_address,
+          o.order_source,
+          o.stone_name,
           DATE_FORMAT(o.deadline_date, '%Y-%m-%d') AS deadline_date,
           o.exchange_rate,
           o.calculator_snapshot,
           c.full_name AS client_name,
           c.phone AS client_phone,
           c.email AS client_email,
-          NULL AS client_address,
+          c.address AS client_address,
+          c.social_networks AS client_social,
           u.full_name AS manager_name,
           s.status_name
         FROM orders o
@@ -302,9 +305,19 @@ async function updateOrder(req, res) {
       updateValues.push(validatedData.prepayment);
     }
 
-    if (validatedData.installation_address !== undefined) {
+            if (validatedData.installation_address !== undefined) {
       updateFields.push("installation_address = ?");
       updateValues.push(validatedData.installation_address ?? null);
+    }
+
+    if (validatedData.order_source !== undefined) {
+      updateFields.push("order_source = ?");
+      updateValues.push(validatedData.order_source ?? null);
+    }
+
+    if (validatedData.stone_name !== undefined) {
+      updateFields.push("stone_name = ?");
+      updateValues.push(validatedData.stone_name ?? null);
     }
 
     if (validatedData.deadline_date !== undefined) {
@@ -406,9 +419,14 @@ async function updateOrder(req, res) {
           clientValues.push(validatedData.client.email || null);
         }
 
-        if (validatedData.client.address !== undefined) {
+         if (validatedData.client.address !== undefined) {
           clientFields.push("address = ?");
           clientValues.push(validatedData.client.address || null);
+        }
+
+        if (validatedData.client.social_networks !== undefined) {
+          clientFields.push("social_networks = ?");
+          clientValues.push(validatedData.client.social_networks || null);
         }
 
         if (clientFields.length > 0) {
@@ -553,7 +571,7 @@ async function createOrder(req, res) {
     const prepayment = validatedData.prepayment || 0;
 
     const [orderResult] = await connection.query(
-      "INSERT INTO orders (client_id, manager_id, status_id, total_amount, installation_address, deadline_date, exchange_rate, calculator_snapshot) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+      "INSERT INTO orders (client_id, manager_id, status_id, total_amount, installation_address, deadline_date, exchange_rate, calculator_snapshot, order_source, stone_name) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
       [
         resolvedClientId,
         effectiveManagerId,
@@ -569,6 +587,8 @@ async function createOrder(req, res) {
           ? null
           : Number(exchange_rate),
         serializedSnapshot,
+        validatedData.order_source || null,
+        validatedData.stone_name || null,
       ],
     );
 

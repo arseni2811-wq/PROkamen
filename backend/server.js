@@ -260,8 +260,46 @@ async function ensureDatabaseSchema() {
       "SHOW COLUMNS FROM orders LIKE 'prepayment'",
     );
     if (prepaymentRows.length === 0) {
-      await pool.query(
+           await pool.query(
         "ALTER TABLE orders ADD COLUMN prepayment DECIMAL(10,2) NULL DEFAULT 0.00",
+      );
+    }
+
+    // Дополнительные колонки заказа (ШАГ 4: Источник, Камень)
+    const [sourceCols] = await pool.query(
+      "SHOW COLUMNS FROM orders LIKE 'order_source'",
+    );
+    if (sourceCols.length === 0) {
+      await pool.query(
+        "ALTER TABLE orders ADD COLUMN order_source VARCHAR(255) NULL COMMENT 'Источник заявки'",
+      );
+    }
+
+    const [stoneCols] = await pool.query(
+      "SHOW COLUMNS FROM orders LIKE 'stone_name'",
+    );
+    if (stoneCols.length === 0) {
+      await pool.query(
+        "ALTER TABLE orders ADD COLUMN stone_name VARCHAR(255) NULL COMMENT 'Выбранный камень'",
+      );
+    }
+
+    // Дополнительные колонки клиента (ШАГ 4: Адрес, Соц. сети)
+    const [addressCols] = await pool.query(
+      "SHOW COLUMNS FROM clients LIKE 'address'",
+    );
+    if (addressCols.length === 0) {
+      await pool.query(
+        "ALTER TABLE clients ADD COLUMN address VARCHAR(500) NULL COMMENT 'Адрес клиента'",
+      );
+    }
+
+    const [socialCols] = await pool.query(
+      "SHOW COLUMNS FROM clients LIKE 'social_networks'",
+    );
+    if (socialCols.length === 0) {
+      await pool.query(
+        "ALTER TABLE clients ADD COLUMN social_networks VARCHAR(500) NULL COMMENT 'Соц. сети / Мессенджер'",
       );
     }
 

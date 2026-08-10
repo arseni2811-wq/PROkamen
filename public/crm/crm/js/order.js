@@ -96,6 +96,18 @@ const statusFlow = {
     prev: "logistics_install",
     prevText: "Рекламация",
   },
+  archived: {
+    next: null,
+    nextText: "",
+    prev: "final_calculation",
+    prevText: "Вернуть в работу",
+  },
+  cancelled: {
+    next: null,
+    nextText: "",
+    prev: null,
+    prevText: "",
+  },
 };
 const deadlineOffsets = {
   new: 0,
@@ -550,11 +562,11 @@ function renderOrderData(order, isNew) {
   sv("clientName", order.client_name || order.client || "");
   sv("clientPhone", order.client_phone || order.phone || "");
   sv("clientEmail", order.client_email || order.email || "");
-  sv("clientSocial", "");
+  sv("clientSocial", order.client_social || "");
   sv("orderLocation", order.installation_address || "");
-  sv("orderSource", "");
+  sv("orderSource", order.order_source || "");
   sv("productType", "");
-  sv("stoneType", "");
+  sv("stoneType", order.stone_name || "");
   if (!isNew) {
     lockClientFields();
     lockDeadlineFields();
@@ -787,13 +799,17 @@ function setupOrderListeners(order, currentUser, isNew) {
       }
       await sos(
         {
+          installation_address: gv("orderLocation") || null,
+          order_source: gv("orderSource") || null,
+          stone_name: gv("stoneType") || null,
           client: {
             full_name: gv("clientName"),
             phone: gv("clientPhone"),
             email: gv("clientEmail"),
+            social_networks: gv("clientSocial") || null,
           },
         },
-        "Данные клиента сохранены",
+        "Данные сохранены",
       );
     });
   }

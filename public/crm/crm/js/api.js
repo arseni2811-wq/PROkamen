@@ -115,6 +115,11 @@ const api = {
   logout: () => apiFetch("/api/logout", { method: "POST" }),
 
   // --- НАСТРОЙКИ ---
+  getSettings: () =>
+    apiFetch("/api/exchange-rate").then((data) => ({
+      exchangeRate: data.exchange_rate,
+    })),
+
   updateSettings: (settings) =>
     apiFetch("/api/exchange-rate", {
       method: "PUT",

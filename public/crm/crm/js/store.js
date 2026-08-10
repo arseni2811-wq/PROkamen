@@ -74,6 +74,7 @@ const Store = (function () {
   function setSettings(settings) {
     _state.settings = { ..._state.settings, ...settings };
     _notify("settings", _state.settings);
+    syncSettingsToStorage();
   }
 
   // =========================================================

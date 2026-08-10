@@ -13,6 +13,8 @@ const orderSchema = z.object({
   total_amount: z.number().int().min(0).max(20000000).optional().nullable(),
   prepayment: z.number().int().min(0).max(20000000).optional().nullable(),
   installation_address: z.string().max(500).optional().nullable(),
+  order_source: z.string().max(255).optional().nullable(),
+  stone_name: z.string().max(255).optional().nullable(),
   deadline_date: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/)
@@ -52,6 +54,7 @@ const orderSchema = z.object({
         .optional()
         .nullable(),
       address: z.string().max(500).optional().nullable(),
+      social_networks: z.string().max(500).optional().nullable(),
     })
     .optional()
     .nullable(),
