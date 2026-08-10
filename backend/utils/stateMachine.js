@@ -1,3 +1,23 @@
+// Полный набор статусов, поддерживаемых фронтендом
+// (колонки канбана + карточка заказа). Должны присутствовать в dict_order_statuses.
+const ALL_STATUSES = [
+  "lead",
+  "new",
+  "measurement",
+  "quote_approval",
+  "waiting_payment",
+  "waiting_stone",
+  "in_production",
+  "ready_shipping",
+  "logistics_install",
+  "final_calculation",
+  "archived",
+  "cancelled",
+];
+
+// Исходная строгая карта переходов (сохранена как «бизнес-документация»).
+// Фактическое правило ниже — гибкое: канбан-доска позволяет перемещать карточку
+// между любыми корректными статусами, а администратор (role_id === 1) — всегда.
 const statusTransitions = {
   lead: { next: ["measurement", "new"], prev: [] },
   new: { next: ["measurement"], prev: ["lead"] },
@@ -19,11 +39,15 @@ const statusTransitions = {
   cancelled: { next: [], prev: ["*"] },
 };
 
-function canTransition(fromStatus, toStatus) {
+function canTransition(fromStatus, toStatus, options = {}) {
+  // Администратор может двигать заказ в любой статус
+  if (options && options.isAdmin) return true;
+  // Отмена разрешена из любого статуса
   if (toStatus === "cancelled") return true;
-  const allowed = statusTransitions[fromStatus];
-  if (!allowed) return false;
-  return allowed.next.includes(toStatus);
+  // Статус обязан существовать в справочнике (иначе FK-ошибка → 500)
+  if (!ALL_STATUSES.includes(toStatus)) return false;
+  // Свободное перемещение между корректными статусами (канбан-доска)
+  return true;
 }
 
-module.exports = { canTransition };
+module.exports = { canTransition, ALL_STATUSES };

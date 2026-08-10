@@ -6,18 +6,38 @@ const {
   updateOrder,
   createOrder,
   updateOrderStatus,
+  logOrderAction,
 } = require("../controllers/ordersController");
 const { authenticateJWT } = require("../middleware/auth");
 const { validate } = require("../middleware/validate");
 const { orderSchema, statusUpdateSchema } = require("../middleware/schemas");
 const multer = require("multer");
 const path = require("path");
-const fs = require("path");
+const fs = require("fs");
 const pool = require("../db");
 
 // Worker threads для асинхронной генерации PDF
 const { Worker } = require("worker_threads");
 const pdfWorkerPath = path.join(__dirname, "..", "workers", "pdf.worker.js");
+
+// Безопасный парсинг calculator_snapshot.
+// MySQL JSON-колонка уже возвращает объект, но в старых строках может
+// лежать строка, "[object Object]" или null — JSON.parse в этих случаях
+// падает с "... is not valid JSON".
+function safeParseSnapshot(value) {
+  if (value === null || value === undefined || value === "") return {};
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!trimmed) return {};
+    try {
+      const parsed = JSON.parse(trimmed);
+      return parsed && typeof parsed === "object" ? parsed : {};
+    } catch (error) {
+      return {};
+    }
+  }
+  return typeof value === "object" ? value : {};
+}
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -91,6 +111,15 @@ router.post(
         });
       }
 
+      // Пишем в журнал действий
+      await logOrderAction(
+        pool,
+        orderId,
+        "Загрузка файлов",
+        `Загружено файлов: ${inserted.length} (тип: ${fileType})`,
+        req.user?.user_id,
+      );
+
       res.json({
         success: true,
         message: `Загружено ${inserted.length} файлов`,
@@ -155,7 +184,7 @@ router.get("/:id/pdf", authenticateJWT, async (req, res) => {
     }
 
     const order = orderRows[0];
-    const snapshot = JSON.parse(order.calculator_snapshot || "{}");
+    const snapshot = safeParseSnapshot(order.calculator_snapshot);
     const today = new Date().toLocaleDateString("ru-RU");
 
     // Отправляем задачу в worker thread
@@ -219,5 +248,30 @@ function generatePDFInWorker(payload) {
     });
   });
 }
+
+router.get("/:id/history", authenticateJWT, async (req, res) => {
+  const orderId = req.params.id;
+
+  try {
+    const [rows] = await pool.query(
+      `
+        SELECT
+          h.created_at,
+          h.action,
+          h.description,
+          COALESCE(u.full_name, 'Система') AS user_name
+        FROM order_history_log h
+        LEFT JOIN users u ON h.user_id = u.user_id
+        WHERE h.order_id = ?
+        ORDER BY h.created_at DESC
+      `,
+      [orderId],
+    );
+    res.json({ success: true, history: rows });
+  } catch (error) {
+    console.error("Ошибка получения истории заказа:", error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
 
 module.exports = router;

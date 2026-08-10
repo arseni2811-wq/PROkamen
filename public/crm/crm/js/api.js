@@ -221,7 +221,8 @@ const api = {
   updateServices: (services) =>
     apiFetch("/api/services", {
       method: "PUT",
-      body: JSON.stringify(services),
+      // Бэкенд-схема servicesSchema ждёт объект с ключом services
+      body: JSON.stringify({ services }),
     }),
 };
 

@@ -390,7 +390,32 @@ async function ensureDatabaseSchema() {
       console.log("✅ Индекс idx_phone создан");
     }
 
+    // Таблица журнала действий по заказам (Журнал действий)
+    const [histTables] = await pool.query(
+      "SHOW TABLES LIKE 'order_history_log'",
+    );
+    if (histTables.length === 0) {
+      await pool.query(`
+        CREATE TABLE order_history_log (
+          log_id INT AUTO_INCREMENT PRIMARY KEY,
+          order_id INT NOT NULL,
+          action VARCHAR(100) NOT NULL,
+          description VARCHAR(500) NULL,
+          user_id INT NULL,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (order_id) REFERENCES orders(order_id) ON DELETE CASCADE,
+          FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE SET NULL,
+          INDEX idx_history_order (order_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+      `);
+      console.log("✅ Таблица order_history_log создана");
+    }
+
     console.log("✅ Все индексы БД созданы");
+
+    // Синхронизация справочника статусов с фронтендом канбана
+    const { ensureOrderStatuses } = require("./utils/seedStatuses");
+    await ensureOrderStatuses(pool);
   } catch (error) {
     console.error("Ошибка инициализации схемы БД:", error);
   }

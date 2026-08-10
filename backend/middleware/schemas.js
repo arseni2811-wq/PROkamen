@@ -6,8 +6,12 @@ const { z } = require("zod");
 // .optional()  → пропускает undefined и отсутствие поля
 // .nullable()  → пропускает null
 const orderSchema = z.object({
-  total_amount: z.number().int().min(0).max(999999999).optional().nullable(),
-  prepayment: z.number().int().min(0).max(999999999).optional().nullable(),
+  // total_amount/prepayment хранятся в РУБЛЯХ (DECIMAL(10,2)).
+  // Верхняя граница 20 000 000 BYN согласована с колонками *_cents (INT) в
+  // order_finances: 20 000 000 × 100 = 2 000 000 000 < INT.MAX (2 147 483 647).
+  // Большие значения падали с "Out of range value for column ...".
+  total_amount: z.number().int().min(0).max(20000000).optional().nullable(),
+  prepayment: z.number().int().min(0).max(20000000).optional().nullable(),
   installation_address: z.string().max(500).optional().nullable(),
   deadline_date: z
     .string()

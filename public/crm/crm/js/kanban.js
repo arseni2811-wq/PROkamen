@@ -69,7 +69,13 @@ document.addEventListener("DOMContentLoaded", function () {
 async function loadOrdersFromServer() {
   try {
     const data = await api.getOrders();
-    return Array.isArray(data) ? data : [];
+    // Активная доска: заказы со статусами cancelled/archived не показываем
+    // (они видны в Архиве archive.html, который читает тот же GET /api/orders).
+    return Array.isArray(data)
+      ? data.filter(
+          (o) => !["cancelled", "archived"].includes(String(o.status_id)),
+        )
+      : [];
   } catch (error) {
     console.error("Ошибка загрузки заказов с сервера:", error);
     return [];

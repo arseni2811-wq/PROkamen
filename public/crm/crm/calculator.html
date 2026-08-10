@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Умный Калькулятор - PRO Камень</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = { corePlugins: { preflight: true } };
+    </script>
     <style>
       input[type="number"]::-webkit-inner-spin-button,
       input[type="number"]::-webkit-outer-spin-button {
@@ -411,9 +414,16 @@
         joint: 40,
         plinth: 10,
       };
-      const PRICES =
-        JSON.parse(localStorage.getItem("crm_services_prices")) ||
-        DEFAULT_PRICES;
+      // Безопасная загрузка цен: битый/частичный JSON не даёт undefined/NaN
+      const RAW_PRICES = (() => {
+        try {
+          const p = JSON.parse(localStorage.getItem("crm_services_prices"));
+          return p && typeof p === "object" ? p : {};
+        } catch (error) {
+          return {};
+        }
+      })();
+      const PRICES = { ...DEFAULT_PRICES, ...RAW_PRICES };
 
       const DEFAULT_CATALOG = [
         {
@@ -453,7 +463,13 @@
         select.innerHTML =
           '<option value="0" data-half="0" data-full="0">--- Выберите камень ---</option>';
 
-        const rawCatalog = JSON.parse(localStorage.getItem("crm_catalog"));
+        const rawCatalog = (() => {
+          try {
+            return JSON.parse(localStorage.getItem("crm_catalog")) || [];
+          } catch (error) {
+            return [];
+          }
+        })();
         const STONE_CATALOG =
           rawCatalog && rawCatalog.length > 0
             ? rawCatalog.map((s) => ({
@@ -538,8 +554,8 @@
         } else if (stoneSel.value !== "0") {
           const opt = stoneSel.options[stoneSel.selectedIndex];
           stoneNameForReceipt = opt.text.split("(")[0].trim();
-          const pF = Number(opt.dataset.full);
-          const pH = Number(opt.dataset.half);
+          const pF = Number(opt.dataset.full) || 0;
+          const pH = Number(opt.dataset.half) || 0;
           if (slabAmt === 0.5) matUSD = pH;
           else matUSD = pF * slabAmt;
         }

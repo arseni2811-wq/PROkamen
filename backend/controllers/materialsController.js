@@ -162,9 +162,12 @@ async function getServices(req, res) {
 
     rows.forEach((row) => {
       if (row.service_name) {
+        // Читаемый ключ: пробелы → _, кириллица/латиница сохраняются
+        // (раньше весь кириллический текст удалялся и оставались ключи
+        //  вида «___», из-за чего цены в админке отображались мусором).
         const key = row.service_name
           .replace(/\s+/g, "_")
-          .replace(/[^a-zA-Z0-9_]/g, "")
+          .replace(/[^a-zA-Z0-9ёЁа-яА-Я_]/g, "")
           .toLowerCase();
         services[key] = Number(row.price_per_unit) || 0;
       }
@@ -194,18 +197,18 @@ async function updateServices(req, res) {
     for (const [serviceKey, value] of Object.entries(incomingServices)) {
       const numericValue = Number(value) || 0;
       const [existing] = await pool.query(
-        "SELECT service_key FROM dict_services WHERE service_key = ?",
+        "SELECT service_id FROM dict_services WHERE service_name = ?",
         [serviceKey],
       );
 
       if (existing.length > 0) {
         await pool.query(
-          "UPDATE dict_services SET price = ? WHERE service_key = ?",
+          "UPDATE dict_services SET price_per_unit = ? WHERE service_name = ?",
           [numericValue, serviceKey],
         );
       } else {
         await pool.query(
-          "INSERT INTO dict_services (service_key, price) VALUES (?, ?)",
+          "INSERT INTO dict_services (service_name, unit, price_per_unit) VALUES (?, 'услуга', ?)",
           [serviceKey, numericValue],
         );
       }

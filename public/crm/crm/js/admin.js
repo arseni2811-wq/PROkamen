@@ -303,7 +303,9 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   if (
     !currentUser ||
-    (currentUser.role !== "admin" && currentUser.role !== "director")
+    (Number(currentUser.role_id) !== 1 &&
+      currentUser.role !== "admin" &&
+      currentUser.role !== "director")
   ) {
     alert("Доступ запрещен. Недостаточно прав.");
     window.location.href = "dashboard.html";

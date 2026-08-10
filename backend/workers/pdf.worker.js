@@ -3,6 +3,10 @@
 // Sprint 3: Вынесение тяжелых операций в отдельный поток
 // =========================================================
 
+// ВАЖНО: без этого импорта внутри worker-thread глобальный parentPort
+// не существует → PDF падает с "ReferenceError: parentPort is not defined".
+const { parentPort } = require("worker_threads");
+
 const PDFDocument = require("pdfkit");
 
 // Обработчик сообщений от основного процесса
@@ -47,8 +51,10 @@ parentPort.on("message", async (message) => {
 async function generatePDF(orderData) {
   const { order, snapshot, today } = orderData;
 
-  const totalAmount = (order.total_amount || 0) / 100;
-  const prepayment = (order.prepayment || 0) / 100;
+  // orders.total_amount/prepayment хранятся в РУБЛЯХ (DECIMAL(10,2)).
+  // Деление на 100 убрано — иначе суммы в PDF уменьшались бы в 100 раз.
+  const totalAmount = Number(order.total_amount || 0);
+  const prepayment = Number(order.prepayment || 0);
   const balance = totalAmount - prepayment;
 
   // Создаем документ в памяти (не в поток ответа)

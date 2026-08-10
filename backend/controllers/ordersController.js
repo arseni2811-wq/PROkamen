@@ -39,6 +39,20 @@ function serializeJsonField(value) {
   return normalized ? JSON.stringify(normalized) : null;
 }
 
+// Запись действия в журнал заказа (работает и внутри транзакции, и вне её)
+async function logOrderAction(connection, orderId, action, description, userId) {
+  const executor = connection || pool;
+  try {
+    await executor.query(
+      "INSERT INTO order_history_log (order_id, action, description, user_id) VALUES (?, ?, ?, ?)",
+      [orderId, action, description || null, userId || null],
+    );
+  } catch (error) {
+    // Лог не должен ронять основную операцию
+    console.error("Ошибка записи в журнал заказа:", error.message);
+  }
+}
+
 // Определение категории камня
 function determineStoneCategory(materialId, snapshot) {
   if (!materialId) return "other";
@@ -115,7 +129,7 @@ async function getAllOrders(req, res) {
         o.order_id,
         o.status_id,
         o.total_amount,
-        o.deadline_date,
+        DATE_FORMAT(o.deadline_date, '%Y-%m-%d') AS deadline_date,
         o.installation_address,
         c.full_name AS client_name,
         c.phone AS client_phone,
@@ -149,7 +163,7 @@ async function getOrderById(req, res) {
           o.total_amount,
           o.prepayment,
           o.installation_address,
-          o.deadline_date,
+          DATE_FORMAT(o.deadline_date, '%Y-%m-%d') AS deadline_date,
           o.exchange_rate,
           o.calculator_snapshot,
           c.full_name AS client_name,
@@ -197,6 +211,29 @@ async function getOrderById(req, res) {
     const rawSnapshot = orderRows[0]?.calculator_snapshot;
     const parsedSnapshot = normalizeJsonField(rawSnapshot);
 
+    const [historyRows] = await pool.query(
+      `
+        SELECT
+          h.created_at,
+          h.action,
+          h.description,
+          COALESCE(u.full_name, 'Система') AS user_name
+        FROM order_history_log h
+        LEFT JOIN users u ON h.user_id = u.user_id
+        WHERE h.order_id = ?
+        ORDER BY h.created_at DESC
+      `,
+      [orderId],
+    );
+    const history = historyRows.map((h) => ({
+      date: h.created_at
+        ? new Date(h.created_at).toLocaleString("ru-RU")
+        : "",
+      user: h.user_name,
+      action: h.action,
+      comment: h.description || "",
+    }));
+
     res.json({
       success: true,
       order: {
@@ -204,6 +241,9 @@ async function getOrderById(req, res) {
         calculator_snapshot: parsedSnapshot,
         calculatorData: parsedSnapshot,
         items: itemRows,
+        history,
+        // Алиас для обратной совместимости фронтенда
+        logs: history,
       },
     });
   } catch (error) {
@@ -236,7 +276,11 @@ async function updateOrder(req, res) {
       }
 
       const currentStatus = currentOrder[0].status_id;
-      if (!canTransition(currentStatus, validatedData.status_id)) {
+      if (
+        !canTransition(currentStatus, validatedData.status_id, {
+          isAdmin: req.user?.role_id === 1,
+        })
+      ) {
         return res.status(400).json({
           success: false,
           message: `Недопустимый переход статуса: ${currentStatus} → ${validatedData.status_id}`,
@@ -249,12 +293,13 @@ async function updateOrder(req, res) {
 
     if (validatedData.total_amount !== undefined) {
       updateFields.push("total_amount = ?");
-      updateValues.push(toCents(validatedData.total_amount));
+      // orders.total_amount — DECIMAL(10,2): храним РУБЛИ без *100
+      updateValues.push(validatedData.total_amount);
     }
 
     if (validatedData.prepayment !== undefined) {
       updateFields.push("prepayment = ?");
-      updateValues.push(toCents(validatedData.prepayment));
+      updateValues.push(validatedData.prepayment);
     }
 
     if (validatedData.installation_address !== undefined) {
@@ -295,6 +340,43 @@ async function updateOrder(req, res) {
       );
     }
 
+    // Синхронизация позиций заказа (order_items): если фронтенд прислал items,
+    // полностью заменяем старый набор позиций новым.
+    if (Array.isArray(validatedData.items)) {
+      await connection.query(
+        "DELETE FROM order_items WHERE order_id = ?",
+        [orderId],
+      );
+
+      for (const item of validatedData.items) {
+        const materialId = item.material_id ?? item.materialId ?? "custom";
+        const [stoneRows] = await connection.query(
+          "SELECT material_id FROM materials WHERE material_id = ?",
+          [materialId],
+        );
+        if (stoneRows.length === 0) {
+          await connection.query(
+            "INSERT INTO materials (material_id, type_id, title, fabricator, price_per_m2) VALUES (?, ?, ?, ?, ?)",
+            [materialId, "quartz", `Авто-камень (${materialId})`, "Импорт", 0.0],
+          );
+        }
+        await connection.query(
+          "INSERT INTO order_items (order_id, product_type_id, material_id, length_mm, width_mm, area_m2, edge_profile_id, edge_length_m, item_cost) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+          [
+            orderId,
+            item.product_type_id ?? item.productTypeId ?? 1,
+            materialId,
+            (item.length_mm ?? item.lengthMm) || 0,
+            (item.width_mm ?? item.widthMm) || 0,
+            (item.area_m2 ?? item.areaM2) || 0,
+            item.edge_profile_id ?? item.edgeProfileId ?? 1,
+            (item.edge_length_m ?? item.edgeLengthM) || 0,
+            (item.item_cost ?? item.itemCost) || 0,
+          ],
+        );
+      }
+    }
+
     if (validatedData.client) {
       const [orderRows] = await connection.query(
         "SELECT client_id FROM orders WHERE order_id = ?",
@@ -309,12 +391,14 @@ async function updateOrder(req, res) {
 
         if (validatedData.client.full_name !== undefined) {
           clientFields.push("full_name = ?");
-          clientValues.push(validatedData.client.full_name || null);
+          // full_name/phone — NOT NULL: пустая строка/undefined ⇒ fallback,
+          // иначе "Column 'full_name' cannot be null"
+          clientValues.push(validatedData.client.full_name || "Не указано");
         }
 
         if (validatedData.client.phone !== undefined) {
           clientFields.push("phone = ?");
-          clientValues.push(validatedData.client.phone || null);
+          clientValues.push(validatedData.client.phone || "Не указан");
         }
 
         if (validatedData.client.email !== undefined) {
@@ -390,6 +474,20 @@ async function updateOrder(req, res) {
       }
     }
 
+    // Логируем изменения заказа
+    const changedList = [
+      ...updateFields.map((f) => f.split(" = ")[0]),
+      validatedData.client ? "клиент" : null,
+      Array.isArray(validatedData.items) ? "позиции заказа" : null,
+    ].filter(Boolean);
+    await logOrderAction(
+      connection,
+      orderId,
+      "Обновление заказа",
+      changedList.length > 0 ? `Изменено: ${changedList.join(", ")}` : "Заказ обновлен",
+      req.user?.user_id,
+    );
+
     await connection.commit();
     res.json({ success: true, message: "Заказ успешно обновлен" });
   } catch (error) {
@@ -460,7 +558,9 @@ async function createOrder(req, res) {
         resolvedClientId,
         effectiveManagerId,
         status_id || "lead",
-        toCents(totalAmount),
+        // total_amount/prepayment — DECIMAL(10,2) в рублях (БЕЗ toCents),
+        // иначе значение *100 не влезает в лимит колонки → "Out of range value".
+        totalAmount,
         validatedData.installation_address || null,
         validatedData.deadline_date || null,
         exchange_rate === "" ||
@@ -509,6 +609,13 @@ async function createOrder(req, res) {
 
     // Создаем финансовую запись
     await createOrderFinance(connection, orderId, validatedData, items);
+    await logOrderAction(
+      connection,
+      orderId,
+      "Создание заказа",
+      `Заказ создан (${items.length} поз.), сумма: ${totalAmount} BYN`,
+      req.user?.user_id,
+    );
 
     await connection.commit();
     res.status(201).json({
@@ -554,7 +661,11 @@ async function updateOrderStatus(req, res) {
     }
 
     const currentStatus = currentOrder[0].status_id;
-    if (!canTransition(currentStatus, status_id)) {
+    if (
+      !canTransition(currentStatus, status_id, {
+        isAdmin: req.user?.role_id === 1,
+      })
+    ) {
       return res.status(400).json({
         success: false,
         message: `Недопустимый переход статуса: ${currentStatus} → ${status_id}`,
@@ -572,6 +683,14 @@ async function updateOrderStatus(req, res) {
         .json({ success: false, message: "Заказ не найден" });
     }
 
+    await logOrderAction(
+      pool,
+      orderId,
+      "Смена статуса",
+      `Статус изменен: ${currentStatus} → ${status_id}`,
+      req.user?.user_id,
+    );
+
     res.json({ success: true, message: "Статус успешно обновлен" });
   } catch (error) {
     console.error("Ошибка обновления статуса:", error);
@@ -587,4 +706,5 @@ module.exports = {
   updateOrder,
   createOrder,
   updateOrderStatus,
+  logOrderAction,
 };

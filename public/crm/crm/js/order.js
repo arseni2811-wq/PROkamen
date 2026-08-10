@@ -2,6 +2,7 @@
 // 1. КОНСТАНТЫ И СПРАВОЧНИКИ
 // =========================================================
 const statusLabels = {
+  lead: { text: "Новая заявка", bg: "bg-blue-100 text-blue-800" },
   new: { text: "Новая заявка", bg: "bg-blue-100 text-blue-800" },
   measurement: { text: "Замер", bg: "bg-indigo-100 text-indigo-800" },
   quote_approval: { text: "КП и ТЗ", bg: "bg-purple-100 text-purple-800" },
@@ -44,6 +45,8 @@ const stageOrder = [
   "final_calculation",
 ];
 const statusFlow = {
+  // lead — стартовый статус (его ставит бэкенд при создании заказа)
+  lead: { next: "measurement", nextText: "Отправить на замер", prev: null },
   new: { next: "measurement", nextText: "Отправить на замер", prev: null },
   measurement: {
     next: "quote_approval",
@@ -88,7 +91,7 @@ const statusFlow = {
     prevText: "Срыв монтажа",
   },
   final_calculation: {
-    next: "done",
+    next: "archived",
     nextText: "Закрыть сделку",
     prev: "logistics_install",
     prevText: "Рекламация",
@@ -105,6 +108,31 @@ const deadlineOffsets = {
   logistics_install: 19,
   final_calculation: 21,
 };
+
+// Текущий заказ, открытый в карточке (обновляется кнопками переходов статусов)
+let currentOrderView = null;
+
+// Смена статуса из карточки заказа.
+// ВАЖНО: страница order.html НЕ подключает kanban.js, поэтому здесь своя
+// реализация через api.updateOrderStatus + перерисовка карточки.
+async function changeOrderStatus(orderId, newStatus) {
+  if (!orderId || orderId === "НОВЫЙ") {
+    alert("Сначала сохраните заказ.");
+    return false;
+  }
+  try {
+    await api.updateOrderStatus(orderId, newStatus);
+    const res = await api.getOrder(orderId);
+    const fresh = res.order || res;
+    if (currentOrderView) Object.assign(currentOrderView, fresh);
+    renderOrderData(currentOrderView || fresh, false);
+    return true;
+  } catch (e) {
+    console.error("Ошибка смены статуса:", e);
+    alert("❌ " + e.message);
+    return false;
+  }
+}
 
 // =========================================================
 // 2. БЛОКИРОВКА И РАЗБЛОКИРОВКА
@@ -358,6 +386,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   try {
     const d = await api.getOrder(id);
     const o = d.order || d;
+    currentOrderView = o;
     // Восстанавливаем черновик калькулятора, если он есть
     const draft = draftStorage.load(id);
     if (draft && o.calculatorData) {
@@ -387,11 +416,13 @@ function initNewOrderPage(cu) {
       id: "НОВЫЙ",
       status: "new",
       history: [],
+      logs: [],
       stageDeadlines: { new: today },
       sum: 0,
       prepayment: 0,
       calculatorData: {},
     };
+  currentOrderView = no;
 
   // Восстанавливаем черновик калькулятора из localStorage
   const draft = draftStorage.load("НОВЫЙ");
@@ -614,8 +645,9 @@ function renderOrderData(order, isNew) {
   }
   // История
   const hist = document.getElementById("historyTimeline");
-  if (hist && order.history)
-    hist.innerHTML = order.history
+  const orderLogs = order.history || order.logs || [];
+  if (hist && orderLogs.length)
+    hist.innerHTML = orderLogs
       .slice()
       .reverse()
       .map(
@@ -638,13 +670,14 @@ function renderOrderData(order, isNew) {
   // Кнопки
   const bc = document.getElementById("actionButtonsContainer");
   if (!isNew && bc) {
-    if (order.status === "cancelled" || order.status === "archived") {
+    const curStatus = order.status_id || order.status || "new";
+    if (curStatus === "cancelled" || curStatus === "archived") {
       bc.innerHTML =
         '<div class="p-3 bg-gray-100 text-center rounded text-gray-500 font-bold">Архив</div>';
       const cb = document.getElementById("cancelOrderBtn");
       if (cb) cb.style.display = "none";
     } else {
-      const f = statusFlow[order.status];
+      const f = statusFlow[curStatus];
       if (f) {
         bc.innerHTML = "";
         if (f.next) {
@@ -788,12 +821,22 @@ function setupOrderListeners(order, currentUser, isNew) {
   // Отмена
   const cb = document.getElementById("cancelOrderBtn");
   if (cb) {
-    cb.addEventListener("click", () => {
-      if (confirm("Отменить заказ?")) {
-        const r = prompt("Причина:");
-        if (r !== null) {
-          /* просто уходим */ window.location.href = "dashboard.html";
-        }
+    cb.addEventListener("click", async () => {
+      if (!confirm("Отменить заказ?")) return;
+      const reason = prompt("Причина:");
+      if (reason === null) return;
+      const oid = order.order_id || order.id;
+      if (!oid || oid === "НОВЫЙ") {
+        alert("Сначала сохраните заказ.");
+        return;
+      }
+      try {
+        await api.updateOrderStatus(oid, "cancelled");
+        alert("Заказ отменен.");
+        window.location.href = "dashboard.html";
+      } catch (e) {
+        console.error("Ошибка отмены заказа:", e);
+        alert("❌ " + e.message);
       }
     });
   }
@@ -881,7 +924,10 @@ async function openCalculatorModal(order) {
   try {
     const [md, sd] = await Promise.all([api.getMaterials(), api.getServices()]);
     materials = Array.isArray(md.materials) ? md.materials : [];
-    PRICES = sd.services || sd || defP;
+    // ВАЖНО: мерджим с дефолтами. Если сервер вернул сервисы с другими
+    // ключами (например, русские имена из dict_services), camelCase-цены
+    // из defP сохраняются — иначе PRICES.cutStraight === undefined → NaN/undefined.
+    PRICES = { ...defP, ...(sd.services || sd || {}) };
   } catch (e) {
     console.error("Ошибка загрузки:", e);
     materials = [];
@@ -1017,10 +1063,20 @@ async function openCalculatorModal(order) {
       si.classList.add("bg-yellow-50", "border-yellow-400");
     }
     const sa = Number(si.value) || 0,
-      rate =
-        Number(
-          JSON.parse(localStorage.getItem("crm_settings") || "{}").exchangeRate,
-        ) || 3.2;
+      rate = (() => {
+        try {
+          // Безопасный парсинг курса: битый JSON в localStorage не должен
+          // ронять расчёт в NaN.
+          return (
+            Number(
+              JSON.parse(localStorage.getItem("crm_settings") || "{}")
+                .exchangeRate,
+            ) || 3.2
+          );
+        } catch (error) {
+          return 3.2;
+        }
+      })();
     let mu = 0;
     const ss = document.getElementById("cStone");
     document
