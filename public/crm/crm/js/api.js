@@ -82,10 +82,23 @@ async function apiFetch(endpoint, options = {}) {
       return null;
     }
 
-    const data = await response.json();
+    const data = await response.json().catch(() => ({}));
 
     if (!response.ok) {
-      throw new Error(data.message || `Ошибка сервера: ${response.status}`);
+      const details = data.errors || data.error || null;
+      let errorMessage = data.message || `Ошибка сервера: ${response.status}`;
+      if (!data.message && details) {
+        if (typeof details === "string") {
+          errorMessage = details;
+        } else if (typeof details === "object") {
+          const flat = Object.values(details).flat().filter(Boolean).join("; ");
+          if (flat) errorMessage = flat;
+        }
+      }
+      const error = new Error(errorMessage);
+      error.status = response.status;
+      error.details = details;
+      throw error;
     }
 
     return data;

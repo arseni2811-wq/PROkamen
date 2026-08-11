@@ -545,6 +545,39 @@ async function handleCreateOrder(cu) {
 // 8. РЕНДЕР ДАННЫХ ЗАКАЗА
 // =========================================================
 function renderOrderData(order, isNew) {
+  const lockMessage =
+    "⚠️ Сначала сохраните базовые данные клиента, чтобы разблокировать калькулятор, график работ и финансы.";
+  const applyLock = (container, locked, showMessage = false) => {
+    if (!container) return;
+    container.classList.toggle("opacity-50", locked);
+    container.classList.toggle("pointer-events-none", locked);
+    if (!showMessage) return;
+    const existing = container.querySelector(".new-order-warning");
+    if (locked) {
+      if (!existing) {
+        const note = document.createElement("div");
+        note.className =
+          "new-order-warning mb-4 rounded border border-yellow-200 bg-yellow-50 text-yellow-900 p-3 text-sm font-medium";
+        note.textContent = lockMessage;
+        container.prepend(note);
+      }
+    } else if (existing) {
+      existing.remove();
+    }
+  };
+  const calcDetailsBlock = document.getElementById("calcDetailsBlockContainer");
+  const deadlinesBlock = document.getElementById("deadlinesList");
+  const financeBlock = document.getElementById("financeInputsBlock");
+  if (isNew) {
+    applyLock(calcDetailsBlock, true, true);
+    applyLock(deadlinesBlock, true);
+    applyLock(financeBlock, true);
+  } else {
+    applyLock(calcDetailsBlock, false, false);
+    applyLock(deadlinesBlock, false);
+    applyLock(financeBlock, false);
+  }
+
   const idDisp = document.getElementById("orderIdDisplay");
   if (idDisp && !isNew) idDisp.textContent = order.order_id || order.id;
   const badge = document.getElementById("statusBadge");
@@ -647,6 +680,11 @@ function renderOrderData(order, isNew) {
       })
       .join("");
     bindLiveDeadlineValidation();
+    if (isNew) {
+      applyLock(list, true);
+    } else {
+      applyLock(list, false);
+    }
   }
   // Файлы
   const fc = document.getElementById("filesContainer");
@@ -728,7 +766,24 @@ function setupOrderListeners(order, currentUser, isNew) {
       return true;
     } catch (e) {
       console.error("Ошибка:", e);
-      alert("❌ " + e.message);
+      let message = e.message || "Ошибка сохранения";
+      if (e.details) {
+        const details = e.details;
+        if (typeof details === "string") {
+          message = details;
+        } else if (typeof details === "object") {
+          const flat = Object.entries(details)
+            .flatMap(([field, errors]) =>
+              (Array.isArray(errors) ? errors : [errors]).map(
+                (err) => `${field}: ${err}`,
+              ),
+            )
+            .filter(Boolean)
+            .join("; ");
+          if (flat) message = `${message}: ${flat}`;
+        }
+      }
+      alert("❌ " + message);
       return false;
     }
   }

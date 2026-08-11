@@ -40,7 +40,13 @@ function serializeJsonField(value) {
 }
 
 // Запись действия в журнал заказа (работает и внутри транзакции, и вне её)
-async function logOrderAction(connection, orderId, action, description, userId) {
+async function logOrderAction(
+  connection,
+  orderId,
+  action,
+  description,
+  userId,
+) {
   const executor = connection || pool;
   try {
     await executor.query(
@@ -229,9 +235,7 @@ async function getOrderById(req, res) {
       [orderId],
     );
     const history = historyRows.map((h) => ({
-      date: h.created_at
-        ? new Date(h.created_at).toLocaleString("ru-RU")
-        : "",
+      date: h.created_at ? new Date(h.created_at).toLocaleString("ru-RU") : "",
       user: h.user_name,
       action: h.action,
       comment: h.description || "",
@@ -305,7 +309,7 @@ async function updateOrder(req, res) {
       updateValues.push(validatedData.prepayment);
     }
 
-            if (validatedData.installation_address !== undefined) {
+    if (validatedData.installation_address !== undefined) {
       updateFields.push("installation_address = ?");
       updateValues.push(validatedData.installation_address ?? null);
     }
@@ -356,10 +360,9 @@ async function updateOrder(req, res) {
     // Синхронизация позиций заказа (order_items): если фронтенд прислал items,
     // полностью заменяем старый набор позиций новым.
     if (Array.isArray(validatedData.items)) {
-      await connection.query(
-        "DELETE FROM order_items WHERE order_id = ?",
-        [orderId],
-      );
+      await connection.query("DELETE FROM order_items WHERE order_id = ?", [
+        orderId,
+      ]);
 
       for (const item of validatedData.items) {
         const materialId = item.material_id ?? item.materialId ?? "custom";
@@ -370,7 +373,13 @@ async function updateOrder(req, res) {
         if (stoneRows.length === 0) {
           await connection.query(
             "INSERT INTO materials (material_id, type_id, title, fabricator, price_per_m2) VALUES (?, ?, ?, ?, ?)",
-            [materialId, "quartz", `Авто-камень (${materialId})`, "Импорт", 0.0],
+            [
+              materialId,
+              "quartz",
+              `Авто-камень (${materialId})`,
+              "Импорт",
+              0.0,
+            ],
           );
         }
         await connection.query(
@@ -419,7 +428,7 @@ async function updateOrder(req, res) {
           clientValues.push(validatedData.client.email || null);
         }
 
-         if (validatedData.client.address !== undefined) {
+        if (validatedData.client.address !== undefined) {
           clientFields.push("address = ?");
           clientValues.push(validatedData.client.address || null);
         }
@@ -442,7 +451,8 @@ async function updateOrder(req, res) {
     // Обновляем финансовую запись
     if (
       validatedData.calculator_snapshot !== undefined ||
-      validatedData.total_amount !== undefined
+      validatedData.total_amount !== undefined ||
+      validatedData.prepayment !== undefined
     ) {
       const [existingFinance] = await connection.query(
         "SELECT finance_id FROM order_finances WHERE order_id = ?",
@@ -502,7 +512,9 @@ async function updateOrder(req, res) {
       connection,
       orderId,
       "Обновление заказа",
-      changedList.length > 0 ? `Изменено: ${changedList.join(", ")}` : "Заказ обновлен",
+      changedList.length > 0
+        ? `Изменено: ${changedList.join(", ")}`
+        : "Заказ обновлен",
       req.user?.user_id,
     );
 

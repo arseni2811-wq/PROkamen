@@ -10,8 +10,8 @@ const orderSchema = z.object({
   // Верхняя граница 20 000 000 BYN согласована с колонками *_cents (INT) в
   // order_finances: 20 000 000 × 100 = 2 000 000 000 < INT.MAX (2 147 483 647).
   // Большие значения падали с "Out of range value for column ...".
-  total_amount: z.number().int().min(0).max(20000000).optional().nullable(),
-  prepayment: z.number().int().min(0).max(20000000).optional().nullable(),
+  total_amount: z.coerce.number().min(0).max(20000000).optional().nullable(),
+  prepayment: z.coerce.number().min(0).max(20000000).optional().nullable(),
   installation_address: z.string().max(500).optional().nullable(),
   order_source: z.string().max(255).optional().nullable(),
   stone_name: z.string().max(255).optional().nullable(),
@@ -45,12 +45,12 @@ const orderSchema = z.object({
       phone: z.string().max(20).optional().nullable(),
       // email: пустая строка или строка из пробелов через .transform()
       // превращается в null, null и undefined пропускаются; любой введённый
-      // текст обязан быть валидным email (иначе → "Invalid email address").
+      // текст просто ограничивается длиной.
       email: z
         .string()
         .trim()
         .transform((v) => (v === "" ? null : v))
-        .pipe(z.string().email().nullable().optional())
+        .pipe(z.string().max(255).optional().nullable())
         .optional()
         .nullable(),
       address: z.string().max(500).optional().nullable(),
@@ -60,7 +60,7 @@ const orderSchema = z.object({
     .nullable(),
   client_id: z.number().int().positive().optional().nullable(),
   manager_id: z.number().int().positive().optional().nullable(),
-  exchange_rate: z.number().positive().optional().nullable(),
+  exchange_rate: z.coerce.number().positive().optional().nullable(),
   calculator_snapshot: z.any().optional().nullable(),
   items: z.array(z.any()).optional().nullable(),
 });
