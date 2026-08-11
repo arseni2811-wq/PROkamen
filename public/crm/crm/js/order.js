@@ -204,33 +204,73 @@ function unlockDeadlineFields() {
   document.getElementById("saveDeadlinesBtn")?.classList.remove("hidden");
 }
 
+function readMoney(id) {
+  const el = document.getElementById(id);
+  if (!el) return 0;
+  // Запятые ввода ("596,00") → точки для parseFloat, иначе БД выдаст ошибку.
+  return parseFloat(String(el.value).replace(",", ".")) || 0;
+}
+
 // =========================================================
-// 3. ВАЛИДАЦИЯ ДАТ
+// 2. УМНЫЙ РАСЧЁТ ДАТ (ГРАФИК РАБОТ / ДЕДЛАЙНЫ)
 // =========================================================
-function handleCascadeShift(changedStage, input) {
-  const n = input.value,
-    o = input.dataset.oldValue;
-  if (!n || !o) {
-    validateLiveDeadlines();
-    return;
+// Цепочка этапов, которые пересчитываются автоматически при ручном
+// изменении любого из них. Каждый следующий этап = предыдущий + CHAIN_GAP.
+// Этапы ВНЕ цепочки (промежуточные и ФИНАЛЬНЫЙ срок) НЕ трогаются.
+const AUTO_CHAIN = [
+  "measurement", // Замер
+  "quote_approval", // КП и ТЗ = Замер + 1
+  "waiting_payment", // Ожидание оплаты = КП и ТЗ + 1
+  "waiting_stone", // Ожидание камня = Ожидание оплаты + 2
+];
+const CHAIN_GAP = {
+  quote_approval: 1,
+  waiting_payment: 1,
+  waiting_stone: 2,
+};
+// ФИНАЛЬНЫЙ срок (например, "В производстве" / сдача) — жёсткая дата,
+// НИКОГДА не пересчитывается автоматически, только вручную пользователем.
+const FINAL_STAGE = "final_calculation";
+
+// Прибавляет дни к дате "YYYY-MM-DD". setDate сам обрабатывает
+// переход между месяцами и годами (30.06 + 1 = 01.07 и т.п.).
+function addDays(dateStr, days) {
+  if (!dateStr) return "";
+  const d = new Date(dateStr + "T00:00:00");
+  if (isNaN(d.getTime())) return "";
+  d.setDate(d.getDate() + Number(days || 0));
+  return d.toISOString().slice(0, 10);
+}
+
+// Собирает чистый объект дат со всех инпутов: { stage: 'YYYY-MM-DD', ... }
+function collectDeadlines() {
+  const dl = {};
+  document.querySelectorAll(".deadline-input").forEach((i) => {
+    dl[i.dataset.stage] = i.value;
+  });
+  return dl;
+}
+
+// Цепочный пересчёт: пользователь изменил этап changedStage —
+// следующие этапы цепочки сдвигаются вперёд, ФИНАЛЬНЫЙ срок не трогаем.
+function recomputeDeadlineChain(changedStage) {
+  const startIdx = AUTO_CHAIN.indexOf(changedStage);
+  if (startIdx === -1) return; // изменение вне цепочки (напр. финальный срок)
+  const first = document.querySelector(
+    `.deadline-input[data-stage="${changedStage}"]`,
+  );
+  if (!first || !first.value) return;
+  let prev = first.value;
+  for (let i = startIdx + 1; i < AUTO_CHAIN.length; i++) {
+    const stage = AUTO_CHAIN[i];
+    const inp = document.querySelector(`.deadline-input[data-stage="${stage}"]`);
+    if (!inp) continue;
+    prev = addDays(prev, CHAIN_GAP[stage] || 0);
+    inp.value = prev;
   }
-  const d = Math.round((new Date(n) - new Date(o)) / 86400000);
-  if (d !== 0) {
-    stageOrder
-      .slice(stageOrder.indexOf(changedStage) + 1, stageOrder.length - 1)
-      .forEach((s) => {
-        const el = document.querySelector(`.deadline-input[data-stage="${s}"]`);
-        if (el && el.value) {
-          const dt = new Date(el.value);
-          dt.setDate(dt.getDate() + d);
-          el.value = dt.toISOString().split("T")[0];
-          el.dataset.oldValue = el.value;
-        }
-      });
-  }
-  input.dataset.oldValue = n;
   validateLiveDeadlines();
 }
+
 function validateLiveDeadlines() {
   let h = null,
     err = false,
@@ -275,26 +315,32 @@ function validateLiveDeadlines() {
 function bindLiveDeadlineValidation() {
   stageOrder.forEach((s) => {
     const i = document.querySelector(`.deadline-input[data-stage="${s}"]`);
-    if (i) {
-      i.dataset.oldValue = i.value;
-      i.addEventListener("change", () => handleCascadeShift(s, i));
-      i.addEventListener("input", validateLiveDeadlines);
-    }
+    if (!i) return;
+    // change → запуск цепного пересчёта дат (для этапов цепочки)
+    i.addEventListener("change", () => recomputeDeadlineChain(s));
+    i.addEventListener("input", validateLiveDeadlines);
   });
 }
-function autoFillDeadlines(d) {
-  if (!d) return;
-  const sd = new Date(d);
+function autoFillDeadlines(startDate) {
+  if (!startDate) return;
+  const sd = new Date(startDate + "T00:00:00");
   if (isNaN(sd.getTime())) return;
+  // Цепочка от стартовой даты: Замер = старт, далее + CHAIN_GAP.
+  let prev = startDate;
+  AUTO_CHAIN.forEach((s, i) => {
+    const inp = document.querySelector(`.deadline-input[data-stage="${s}"]`);
+    if (!inp || inp.value) return;
+    if (i > 0) prev = addDays(prev, CHAIN_GAP[s] || 0);
+    else prev = startDate;
+    inp.value = prev;
+  });
+  // Промежуточные этапы и ФИНАЛЬНЫЙ срок заполняем только по умолчанию
+  // фиксированными смещениями от старта (их авто-пересчёт запрещён).
   stageOrder.forEach((s) => {
-    if (s === "new") return;
-    const i = document.querySelector(`.deadline-input[data-stage="${s}"]`);
-    if (i && !i.value) {
-      const dt = new Date(sd);
-      dt.setDate(sd.getDate() + deadlineOffsets[s]);
-      i.value = dt.toISOString().split("T")[0];
-      i.dataset.oldValue = i.value;
-    }
+    if (s === "new" || AUTO_CHAIN.includes(s)) return;
+    const inp = document.querySelector(`.deadline-input[data-stage="${s}"]`);
+    if (!inp || inp.value) return;
+    inp.value = addDays(startDate, deadlineOffsets[s]);
   });
   validateLiveDeadlines();
 }
@@ -475,16 +521,17 @@ async function handleCreateOrder(cu) {
     sb.disabled = true;
     sb.innerHTML = "⏳ Сохранение на сервер...";
   }
-  const dl = {};
-  document
-    .querySelectorAll(".deadline-input")
-    .forEach((i) => (dl[i.dataset.stage] = i.value));
+  // Даты со всех инпутов (учитывая авто-сохранённые по кнопке сроков)
+  const dl =
+    window.tempDeadlines && Object.keys(window.tempDeadlines).length
+      ? window.tempDeadlines
+      : collectDeadlines();
   const gv = (id) =>
       document.getElementById(id)
         ? document.getElementById(id).value.trim()
         : "",
-    sv = parseFloat(document.getElementById("totalSumInput")?.value.replace(",", ".")) || 0,
-    pp = parseFloat(document.getElementById("prepaymentInput")?.value.replace(",", ".")) || 0,
+    sv = readMoney("totalSumInput"),
+    pp = readMoney("prepaymentInput"),
     cd = window.tempCalcData || {};
   const su = JSON.parse(localStorage.getItem("currentUser") || "{}"),
     st = JSON.parse(localStorage.getItem("crm_settings") || "{}"),
@@ -498,7 +545,7 @@ async function handleCreateOrder(cu) {
     order_source: gv("orderSource") || null,
     stone_name: gv("stoneType") || null,
     installation_address: gv("orderLocation") || null,
-    deadline_date: dl["final_calculation"] || null,
+    deadline_date: dl[FINAL_STAGE] || null,
     deadlines: dl,
     client: {
       full_name: ne.value.trim(),
@@ -531,11 +578,13 @@ async function handleCreateOrder(cu) {
       },
     ],
   };
+  console.log("[createOrder] полный payload:", body);
   try {
     const d = await api.createOrder(body);
     // Очищаем черновик после успешного сохранения
     draftStorage.remove("НОВЫЙ");
     delete window.tempCalcData;
+    delete window.tempDeadlines;
     alert("Заказ сохранен!");
     const orderId = d.order_id || d.order?.order_id;
     if (orderId) {
@@ -570,44 +619,24 @@ function parseJsonField(value) {
 }
 
 function renderOrderData(order, isNew) {
-  const applyLock = (container, locked) => {
-    if (!container) return;
-    container.classList.toggle("opacity-50", locked);
-    container.classList.toggle("pointer-events-none", locked);
-  };
   const calcDetailsBlock = document.getElementById("calcDetailsBlockContainer");
   const deadlinesBlock = document.getElementById("deadlinesList");
   const financeBlock = document.getElementById("financeInputsBlock");
   const openCalcBtn = document.getElementById("openCalcBtn");
   const downloadPdfBtn = document.getElementById("downloadPdfBtn");
-  if (isNew) {
-    // Полная свобода ввода с первого экрана: НЕ блокируем калькулятор,
-    // финансы и дедлайны. Снапшот калькулятора и даты копятся во
-    // window.tempCalcData / инпутах и улетают на бэкенд при нажатии
-    // главной кнопки "СОЗДАТЬ ЗАКАЗ".
-    applyLock(calcDetailsBlock, false, false);
-    applyLock(deadlinesBlock, false, false);
-    applyLock(financeBlock, false, false);
-    if (openCalcBtn) {
-      openCalcBtn.disabled = false;
-      openCalcBtn.classList.remove("opacity-50", "cursor-not-allowed");
-    }
-    if (downloadPdfBtn) {
-      downloadPdfBtn.disabled = true;
-      downloadPdfBtn.classList.add("opacity-50", "cursor-not-allowed");
-    }
-  } else {
-    applyLock(calcDetailsBlock, false, false);
-    applyLock(deadlinesBlock, false, false);
-    applyLock(financeBlock, false, false);
-    if (openCalcBtn) {
-      openCalcBtn.disabled = false;
-      openCalcBtn.classList.remove("opacity-50", "cursor-not-allowed");
-    }
-    if (downloadPdfBtn) {
-      downloadPdfBtn.disabled = false;
-      downloadPdfBtn.classList.remove("opacity-50", "cursor-not-allowed");
-    }
+  // Интерфейс всегда свободен для ввода (и новый заказ, и существующий):
+  // никаких костылей applyLock / disabled на блоках. Пользователь вводит
+  // данные в любом порядке, сохраняется всё одной кнопкой (новый заказ)
+  // или отдельными кнопками (существующий).
+  if (openCalcBtn) {
+    openCalcBtn.disabled = false;
+    openCalcBtn.classList.remove("opacity-50", "cursor-not-allowed");
+  }
+  if (downloadPdfBtn) {
+    // PDF нельзя скачать, пока заказ не создан (нет orderId).
+    downloadPdfBtn.disabled = isNew;
+    downloadPdfBtn.classList.toggle("opacity-50", isNew);
+    downloadPdfBtn.classList.toggle("cursor-not-allowed", isNew);
   }
 
   const idDisp = document.getElementById("orderIdDisplay");
@@ -707,9 +736,7 @@ function renderOrderData(order, isNew) {
           v +
           '" ' +
           (isNew ? "" : "disabled") +
-          ' data-old-value="' +
-          v +
-          '"></div></div>'
+          '></div></div>'
         );
       })
       .join("");
@@ -788,6 +815,7 @@ function renderOrderData(order, isNew) {
 function setupOrderListeners(order, currentUser, isNew) {
   async function sos(payload, msg) {
     try {
+      console.log(`[updateOrder] ${msg} → payload:`, payload);
       await api.updateOrder(order.order_id || order.id, payload);
       Object.assign(order, payload);
       renderOrderData(order, false);
@@ -857,14 +885,14 @@ function setupOrderListeners(order, currentUser, isNew) {
   const sfb = document.getElementById("saveFinancesBtn");
   if (sfb) {
     sfb.addEventListener("click", async () => {
-      const si =
-          parseFloat(document.getElementById("totalSumInput")?.value.replace(",", ".")) || 0,
-        pi = parseFloat(document.getElementById("prepaymentInput")?.value.replace(",", ".")) || 0;
+      const si = readMoney("totalSumInput"),
+        pi = readMoney("prepaymentInput");
       if (pi > si && !confirm("Предоплата больше суммы?")) return;
       if (order.id === "НОВЫЙ") {
         alert("Черновик.");
         return;
       }
+      console.log("[finances] сумма/аванс (рубли):", { total_amount: si, prepayment: pi });
       await sos({ total_amount: si, prepayment: pi }, "Финансы сохранены");
     });
   }
@@ -905,16 +933,17 @@ function setupOrderListeners(order, currentUser, isNew) {
     edb.addEventListener("click", unlockDeadlineFields);
     sdb.addEventListener("click", async () => {
       if (!validateLiveDeadlines()) return alert("Исправьте красные поля.");
-      const dl = {};
-      document
-        .querySelectorAll(".deadline-input")
-        .forEach((i) => (dl[i.dataset.stage] = i.value));
+      const dl = collectDeadlines();
+      console.log("[deadlines] собран объект:", dl);
       if (order.id === "НОВЫЙ") {
-        alert("Черновик.");
+        window.tempDeadlines = dl;
+        alert(
+          "Сроки будут сохранены вместе с заказом при нажатии «СОЗДАТЬ ЗАКАЗ».",
+        );
         return;
       }
       await sos(
-        { deadline_date: dl.final_calculation || null },
+        { deadlines: dl, deadline_date: dl[FINAL_STAGE] || null },
         "Сроки сохранены",
       );
     });
