@@ -483,8 +483,8 @@ async function handleCreateOrder(cu) {
       document.getElementById(id)
         ? document.getElementById(id).value.trim()
         : "",
-    sv = parseFloat(document.getElementById("totalSumInput")?.value) || 0,
-    pp = parseFloat(document.getElementById("prepaymentInput")?.value) || 0,
+    sv = parseFloat(document.getElementById("totalSumInput")?.value.replace(",", ".")) || 0,
+    pp = parseFloat(document.getElementById("prepaymentInput")?.value.replace(",", ".")) || 0,
     cd = window.tempCalcData || {};
   const su = JSON.parse(localStorage.getItem("currentUser") || "{}"),
     st = JSON.parse(localStorage.getItem("crm_settings") || "{}"),
@@ -570,25 +570,10 @@ function parseJsonField(value) {
 }
 
 function renderOrderData(order, isNew) {
-  const lockMessage =
-    "⚠️ Сначала сохраните базовые данные клиента, чтобы разблокировать калькулятор, график работ и финансы.";
-  const applyLock = (container, locked, showMessage = false) => {
+  const applyLock = (container, locked) => {
     if (!container) return;
     container.classList.toggle("opacity-50", locked);
     container.classList.toggle("pointer-events-none", locked);
-    if (!showMessage) return;
-    const existing = container.querySelector(".new-order-warning");
-    if (locked) {
-      if (!existing) {
-        const note = document.createElement("div");
-        note.className =
-          "new-order-warning mb-4 rounded border border-yellow-200 bg-yellow-50 text-yellow-900 p-3 text-sm font-medium";
-        note.textContent = lockMessage;
-        container.prepend(note);
-      }
-    } else if (existing) {
-      existing.remove();
-    }
   };
   const calcDetailsBlock = document.getElementById("calcDetailsBlockContainer");
   const deadlinesBlock = document.getElementById("deadlinesList");
@@ -596,12 +581,16 @@ function renderOrderData(order, isNew) {
   const openCalcBtn = document.getElementById("openCalcBtn");
   const downloadPdfBtn = document.getElementById("downloadPdfBtn");
   if (isNew) {
-    applyLock(calcDetailsBlock, true, true);
+    // Полная свобода ввода с первого экрана: НЕ блокируем калькулятор,
+    // финансы и дедлайны. Снапшот калькулятора и даты копятся во
+    // window.tempCalcData / инпутах и улетают на бэкенд при нажатии
+    // главной кнопки "СОЗДАТЬ ЗАКАЗ".
+    applyLock(calcDetailsBlock, false, false);
     applyLock(deadlinesBlock, false, false);
     applyLock(financeBlock, false, false);
     if (openCalcBtn) {
-      openCalcBtn.disabled = true;
-      openCalcBtn.classList.add("opacity-50", "cursor-not-allowed");
+      openCalcBtn.disabled = false;
+      openCalcBtn.classList.remove("opacity-50", "cursor-not-allowed");
     }
     if (downloadPdfBtn) {
       downloadPdfBtn.disabled = true;
@@ -869,8 +858,8 @@ function setupOrderListeners(order, currentUser, isNew) {
   if (sfb) {
     sfb.addEventListener("click", async () => {
       const si =
-          parseFloat(document.getElementById("totalSumInput")?.value) || 0,
-        pi = parseFloat(document.getElementById("prepaymentInput")?.value) || 0;
+          parseFloat(document.getElementById("totalSumInput")?.value.replace(",", ".")) || 0,
+        pi = parseFloat(document.getElementById("prepaymentInput")?.value.replace(",", ".")) || 0;
       if (pi > si && !confirm("Предоплата больше суммы?")) return;
       if (order.id === "НОВЫЙ") {
         alert("Черновик.");

@@ -43,16 +43,10 @@ const orderSchema = z.object({
     .object({
       full_name: z.string().min(1).max(255).optional().nullable(),
       phone: z.string().max(20).optional().nullable(),
-      // email: пустая строка или строка из пробелов через .transform()
-      // превращается в null, null и undefined пропускаются; любой введённый
-      // текст просто ограничивается длиной.
-      email: z
-        .string()
-        .trim()
-        .transform((v) => (v === "" ? null : v))
-        .pipe(z.string().max(255).optional().nullable())
-        .optional()
-        .nullable(),
+      // email: смягчённая валидация — только ограничение длины (255).
+      // null/undefined/пустая строка пропускаются, формат НЕ проверяется,
+      // чтобы не блокировать сохранение заказа из-за email клиента.
+      email: z.string().max(255).optional().nullable(),
       address: z.string().max(500).optional().nullable(),
       social_networks: z.string().max(500).optional().nullable(),
     })
@@ -62,6 +56,7 @@ const orderSchema = z.object({
   manager_id: z.number().int().positive().optional().nullable(),
   exchange_rate: z.coerce.number().positive().optional().nullable(),
   calculator_snapshot: z.any().optional().nullable(),
+  deadlines: z.any().optional().nullable(),
   items: z.array(z.any()).optional().nullable(),
 });
 
