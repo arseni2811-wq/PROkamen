@@ -483,7 +483,8 @@ async function handleCreateOrder(cu) {
       document.getElementById(id)
         ? document.getElementById(id).value.trim()
         : "",
-    sv = Number(document.getElementById("totalSumInput")?.value) || 0,
+    sv = parseFloat(document.getElementById("totalSumInput")?.value) || 0,
+    pp = parseFloat(document.getElementById("prepaymentInput")?.value) || 0,
     cd = window.tempCalcData || {};
   const su = JSON.parse(localStorage.getItem("currentUser") || "{}"),
     st = JSON.parse(localStorage.getItem("crm_settings") || "{}"),
@@ -493,12 +494,16 @@ async function handleCreateOrder(cu) {
     manager_id: su?.user_id || cu?.user_id || null,
     status_id: "lead",
     total_amount: sv,
+    prepayment: pp,
+    order_source: gv("orderSource") || null,
+    stone_name: gv("stoneType") || null,
     installation_address: gv("orderLocation"),
     deadline_date: dl["final_calculation"] || null,
     client: {
       full_name: ne.value.trim(),
       phone: gv("clientPhone") || null,
       email: gv("clientEmail") || null,
+      social_networks: gv("clientSocial") || null,
     },
     exchange_rate: er,
     calculator_snapshot: sp,
@@ -530,7 +535,12 @@ async function handleCreateOrder(cu) {
     draftStorage.remove("НОВЫЙ");
     delete window.tempCalcData;
     alert("Заказ сохранен!");
-    window.location.href = "dashboard.html";
+    const orderId = d.order_id || d.order?.order_id;
+    if (orderId) {
+      window.location.href = `/crm/crm/order.html?id=${orderId}`;
+    } else {
+      window.location.href = "dashboard.html";
+    }
   } catch (e) {
     console.error("Ошибка:", e);
     if (sb) {
@@ -570,12 +580,12 @@ function renderOrderData(order, isNew) {
   const financeBlock = document.getElementById("financeInputsBlock");
   if (isNew) {
     applyLock(calcDetailsBlock, true, true);
-    applyLock(deadlinesBlock, true);
-    applyLock(financeBlock, true);
+    applyLock(deadlinesBlock, true, true);
+    applyLock(financeBlock, true, true);
   } else {
     applyLock(calcDetailsBlock, false, false);
-    applyLock(deadlinesBlock, false);
-    applyLock(financeBlock, false);
+    applyLock(deadlinesBlock, false, false);
+    applyLock(financeBlock, false, false);
   }
 
   const idDisp = document.getElementById("orderIdDisplay");
@@ -828,8 +838,9 @@ function setupOrderListeners(order, currentUser, isNew) {
   const sfb = document.getElementById("saveFinancesBtn");
   if (sfb) {
     sfb.addEventListener("click", async () => {
-      const si = Number(document.getElementById("totalSumInput")?.value) || 0,
-        pi = Number(document.getElementById("prepaymentInput")?.value) || 0;
+      const si =
+          parseFloat(document.getElementById("totalSumInput")?.value) || 0,
+        pi = parseFloat(document.getElementById("prepaymentInput")?.value) || 0;
       if (pi > si && !confirm("Предоплата больше суммы?")) return;
       if (order.id === "НОВЫЙ") {
         alert("Черновик.");

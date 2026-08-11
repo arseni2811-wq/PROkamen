@@ -563,11 +563,13 @@ async function createOrder(req, res) {
       const clientPhone =
         client.phone && client.phone.trim() ? client.phone.trim() : "Не указан";
       const [clientResult] = await connection.query(
-        "INSERT INTO clients (full_name, phone, email, source_id) VALUES (?, ?, ?, ?)",
+        "INSERT INTO clients (full_name, phone, email, address, social_networks, source_id) VALUES (?, ?, ?, ?, ?, ?)",
         [
           client.full_name || client.name || "Не указано",
           clientPhone,
           client.email || null,
+          client.address || null,
+          client.social_networks || null,
           client.source_id || null,
         ],
       );
@@ -583,7 +585,7 @@ async function createOrder(req, res) {
     const prepayment = validatedData.prepayment || 0;
 
     const [orderResult] = await connection.query(
-      "INSERT INTO orders (client_id, manager_id, status_id, total_amount, installation_address, deadline_date, exchange_rate, calculator_snapshot, order_source, stone_name) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+      "INSERT INTO orders (client_id, manager_id, status_id, total_amount, prepayment, installation_address, deadline_date, exchange_rate, calculator_snapshot, order_source, stone_name) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
       [
         resolvedClientId,
         effectiveManagerId,
@@ -591,6 +593,7 @@ async function createOrder(req, res) {
         // total_amount/prepayment — DECIMAL(10,2) в рублях (БЕЗ toCents),
         // иначе значение *100 не влезает в лимит колонки → "Out of range value".
         totalAmount,
+        prepayment,
         validatedData.installation_address || null,
         validatedData.deadline_date || null,
         exchange_rate === "" ||
@@ -654,6 +657,7 @@ async function createOrder(req, res) {
       success: true,
       message: "Заказ успешно создан",
       order_id: orderId,
+      order: { order_id: orderId },
       exchange_rate:
         exchange_rate === "" ||
         exchange_rate === null ||
