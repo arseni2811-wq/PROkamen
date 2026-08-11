@@ -344,6 +344,11 @@ async function updateOrder(req, res) {
       );
     }
 
+    if (validatedData.deadlines !== undefined) {
+      updateFields.push("deadlines = ?");
+      updateValues.push(serializeJsonField(validatedData.deadlines));
+    }
+
     if (validatedData.calculator_snapshot !== undefined) {
       updateFields.push("calculator_snapshot = ?");
       updateValues.push(serializeJsonField(validatedData.calculator_snapshot));
@@ -585,17 +590,16 @@ async function createOrder(req, res) {
     const prepayment = validatedData.prepayment || 0;
 
     const [orderResult] = await connection.query(
-      "INSERT INTO orders (client_id, manager_id, status_id, total_amount, prepayment, installation_address, deadline_date, exchange_rate, calculator_snapshot, order_source, stone_name) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+      "INSERT INTO orders (client_id, manager_id, status_id, total_amount, prepayment, installation_address, deadline_date, deadlines, exchange_rate, calculator_snapshot, order_source, stone_name) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
       [
         resolvedClientId,
         effectiveManagerId,
         status_id || "lead",
-        // total_amount/prepayment — DECIMAL(10,2) в рублях (БЕЗ toCents),
-        // иначе значение *100 не влезает в лимит колонки → "Out of range value".
         totalAmount,
         prepayment,
         validatedData.installation_address || null,
         validatedData.deadline_date || null,
+        serializeJsonField(validatedData.deadlines),
         exchange_rate === "" ||
         exchange_rate === null ||
         exchange_rate === undefined

@@ -284,6 +284,15 @@ async function ensureDatabaseSchema() {
       );
     }
 
+    const [deadlinesCols] = await pool.query(
+      "SHOW COLUMNS FROM orders LIKE 'deadlines'",
+    );
+    if (deadlinesCols.length === 0) {
+      await pool.query(
+        "ALTER TABLE orders ADD COLUMN deadlines JSON NULL COMMENT 'График работ и дедлайны'",
+      );
+    }
+
     // Дополнительные колонки клиента (ШАГ 4: Адрес, Соц. сети)
     const [addressCols] = await pool.query(
       "SHOW COLUMNS FROM clients LIKE 'address'",

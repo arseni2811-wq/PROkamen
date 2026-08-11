@@ -497,12 +497,14 @@ async function handleCreateOrder(cu) {
     prepayment: pp,
     order_source: gv("orderSource") || null,
     stone_name: gv("stoneType") || null,
-    installation_address: gv("orderLocation"),
+    installation_address: gv("orderLocation") || null,
     deadline_date: dl["final_calculation"] || null,
+    deadlines: dl,
     client: {
       full_name: ne.value.trim(),
       phone: gv("clientPhone") || null,
       email: gv("clientEmail") || null,
+      address: gv("orderLocation") || null,
       social_networks: gv("clientSocial") || null,
     },
     exchange_rate: er,
@@ -554,6 +556,19 @@ async function handleCreateOrder(cu) {
 // =========================================================
 // 8. РЕНДЕР ДАННЫХ ЗАКАЗА
 // =========================================================
+function parseJsonField(value) {
+  if (!value && value !== 0) return null;
+  if (typeof value === "string") {
+    try {
+      return JSON.parse(value);
+    } catch (error) {
+      return null;
+    }
+  }
+  if (typeof value === "object") return value;
+  return null;
+}
+
 function renderOrderData(order, isNew) {
   const lockMessage =
     "⚠️ Сначала сохраните базовые данные клиента, чтобы разблокировать калькулятор, график работ и финансы.";
@@ -578,14 +593,32 @@ function renderOrderData(order, isNew) {
   const calcDetailsBlock = document.getElementById("calcDetailsBlockContainer");
   const deadlinesBlock = document.getElementById("deadlinesList");
   const financeBlock = document.getElementById("financeInputsBlock");
+  const openCalcBtn = document.getElementById("openCalcBtn");
+  const downloadPdfBtn = document.getElementById("downloadPdfBtn");
   if (isNew) {
     applyLock(calcDetailsBlock, true, true);
-    applyLock(deadlinesBlock, true, true);
-    applyLock(financeBlock, true, true);
+    applyLock(deadlinesBlock, false, false);
+    applyLock(financeBlock, false, false);
+    if (openCalcBtn) {
+      openCalcBtn.disabled = true;
+      openCalcBtn.classList.add("opacity-50", "cursor-not-allowed");
+    }
+    if (downloadPdfBtn) {
+      downloadPdfBtn.disabled = true;
+      downloadPdfBtn.classList.add("opacity-50", "cursor-not-allowed");
+    }
   } else {
     applyLock(calcDetailsBlock, false, false);
     applyLock(deadlinesBlock, false, false);
     applyLock(financeBlock, false, false);
+    if (openCalcBtn) {
+      openCalcBtn.disabled = false;
+      openCalcBtn.classList.remove("opacity-50", "cursor-not-allowed");
+    }
+    if (downloadPdfBtn) {
+      downloadPdfBtn.disabled = false;
+      downloadPdfBtn.classList.remove("opacity-50", "cursor-not-allowed");
+    }
   }
 
   const idDisp = document.getElementById("orderIdDisplay");
@@ -644,7 +677,7 @@ function renderOrderData(order, isNew) {
       "relative border-l-2 border-gray-200 ml-4 mt-6 space-y-4 pb-4";
     const cs = order.status_id || order.status || "new",
       ci = stageOrder.indexOf(cs),
-      sd = order.stageDeadlines || {};
+      sd = parseJsonField(order.deadlines) || order.stageDeadlines || {};
     if (order.deadline_date) sd.final_calculation = order.deadline_date;
     list.innerHTML = stageOrder
       .map((s, idx) => {
@@ -683,18 +716,15 @@ function renderOrderData(order, isNew) {
           s +
           '" value="' +
           v +
-          '" disabled data-old-value="' +
+          '" ' +
+          (isNew ? "" : "disabled") +
+          ' data-old-value="' +
           v +
           '"></div></div>'
         );
       })
       .join("");
     bindLiveDeadlineValidation();
-    if (isNew) {
-      applyLock(list, true);
-    } else {
-      applyLock(list, false);
-    }
   }
   // Файлы
   const fc = document.getElementById("filesContainer");
