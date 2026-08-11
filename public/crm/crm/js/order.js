@@ -146,63 +146,7 @@ async function changeOrderStatus(orderId, newStatus) {
   }
 }
 
-// =========================================================
-// 2. БЛОКИРОВКА И РАЗБЛОКИРОВКА
-// =========================================================
-function lockClientFields() {
-  document
-    .querySelectorAll(
-      "#clientName,#clientPhone,#clientEmail,#clientSocial,#orderLocation,#productType,#stoneType,#orderSource",
-    )
-    .forEach((i) => {
-      i.disabled = true;
-      i.classList.add("bg-gray-50", "text-gray-500", "cursor-not-allowed");
-      i.classList.remove("border-gray-300", "bg-white");
-    });
-  document.getElementById("editClientBtn")?.classList.remove("hidden");
-  document.getElementById("saveClientBtn")?.classList.add("hidden");
-}
-function unlockClientFields() {
-  document
-    .querySelectorAll(
-      "#clientName,#clientPhone,#clientEmail,#clientSocial,#orderLocation,#productType,#stoneType,#orderSource",
-    )
-    .forEach((i) => {
-      i.disabled = false;
-      i.classList.remove("bg-gray-50", "text-gray-500", "cursor-not-allowed");
-      i.classList.add("border-gray-300", "bg-white");
-    });
-  document.getElementById("editClientBtn")?.classList.add("hidden");
-  document.getElementById("saveClientBtn")?.classList.remove("hidden");
-}
-function lockDeadlineFields() {
-  document.querySelectorAll(".deadline-input").forEach((i) => {
-    i.disabled = true;
-    i.classList.add("border-transparent", "bg-transparent");
-    i.classList.remove(
-      "border-gray-300",
-      "bg-white",
-      "hover:border-blue-300",
-      "cursor-pointer",
-    );
-  });
-  document.getElementById("editDeadlinesBtn")?.classList.remove("hidden");
-  document.getElementById("saveDeadlinesBtn")?.classList.add("hidden");
-}
-function unlockDeadlineFields() {
-  document.querySelectorAll(".deadline-input").forEach((i) => {
-    i.disabled = false;
-    i.classList.remove("border-transparent", "bg-transparent");
-    i.classList.add(
-      "border-gray-300",
-      "bg-white",
-      "hover:border-blue-300",
-      "cursor-pointer",
-    );
-  });
-  document.getElementById("editDeadlinesBtn")?.classList.add("hidden");
-  document.getElementById("saveDeadlinesBtn")?.classList.remove("hidden");
-}
+
 
 function readMoney(id) {
   const el = document.getElementById(id);
@@ -239,7 +183,12 @@ function addDays(dateStr, days) {
   const d = new Date(dateStr + "T00:00:00");
   if (isNaN(d.getTime())) return "";
   d.setDate(d.getDate() + Number(days || 0));
-  return d.toISOString().slice(0, 10);
+  // Формируем из ЛОКАЛЬНЫХ компонентов (а не toISOString, который вернёт
+  // предыдущий день для положительных UTC-смещений вроде UTC+3).
+  const y = d.getFullYear(),
+    m = String(d.getMonth() + 1).padStart(2, "0"),
+    dd = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${dd}`;
 }
 
 // Собирает чистый объект дат со всех инпутов: { stage: 'YYYY-MM-DD', ... }
@@ -469,7 +418,13 @@ function initNewOrderPage(cu) {
     },
   );
   document.getElementById("saveFinancesBtn")?.classList.remove("hidden");
-  const today = new Date().toISOString().split("T")[0],
+  const today = (() => {
+    // Локальная дата (без сдвига дней из-за UTC в toISOString).
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
+      d.getDate(),
+    ).padStart(2, "0")}`;
+  })(),
     no = {
       id: "НОВЫЙ",
       status: "new",
@@ -491,8 +446,6 @@ function initNewOrderPage(cu) {
 
   renderOrderData(no, true);
   autoFillDeadlines(today);
-  unlockClientFields();
-  unlockDeadlineFields();
   const lc = document.querySelector(".lg\\:col-span-8");
   if (lc) {
     document.getElementById("createOrderBtn")?.remove();
@@ -513,7 +466,7 @@ function initNewOrderPage(cu) {
 }
 async function handleCreateOrder(cu) {
   const ne = document.getElementById("clientName");
-  if (!ne || !ne.value.trim()) return alert("Введите имя заказчика!");
+  if (!ne || !String(ne.value?.trim?.() ?? "")) return alert("Введите имя заказчика!");
   if (!validateLiveDeadlines()) return alert("Исправьте ошибки в датах.");
   const sb = document.getElementById("createOrderBtn"),
     ob = sb?.innerHTML || "🚀 СОЗДАТЬ ЗАКАЗ";
@@ -527,9 +480,7 @@ async function handleCreateOrder(cu) {
       ? window.tempDeadlines
       : collectDeadlines();
   const gv = (id) =>
-      document.getElementById(id)
-        ? document.getElementById(id).value.trim()
-        : "",
+      document.getElementById(id)?.value?.trim?.() ?? "",
     sv = readMoney("totalSumInput"),
     pp = readMoney("prepaymentInput"),
     cd = window.tempCalcData || {};
@@ -548,7 +499,7 @@ async function handleCreateOrder(cu) {
     deadline_date: dl[FINAL_STAGE] || null,
     deadlines: dl,
     client: {
-      full_name: ne.value.trim(),
+      full_name: String(ne.value ?? "").trim(),
       phone: gv("clientPhone") || null,
       email: gv("clientEmail") || null,
       address: gv("orderLocation") || null,
@@ -662,8 +613,6 @@ function renderOrderData(order, isNew) {
   sv("productType", "");
   sv("stoneType", order.stone_name || "");
   if (!isNew) {
-    lockClientFields();
-    lockDeadlineFields();
     document.getElementById("cancelOrderBtn")?.classList.remove("hidden");
     document.getElementById("saveFinancesBtn")?.classList.remove("hidden");
   }
@@ -730,13 +679,11 @@ function renderOrderData(order, isNew) {
           (isLast
             ? '<span class="text-[10px] uppercase font-bold text-red-500 mt-0.5">Фиксированная дата</span>'
             : "") +
-          '</div><input type="date" class="deadline-input text-sm border-2 border-transparent rounded bg-transparent focus:bg-white focus:border-blue-400 outline-none px-2 py-1 text-right font-medium transition-colors w-[140px]" data-stage="' +
+          '</div><input type="date" class="deadline-input text-sm border-2 border-gray-300 rounded bg-white focus:bg-white focus:border-blue-400 outline-none px-2 py-1 text-right font-medium transition-colors w-[140px]" data-stage="' +
           s +
           '" value="' +
           v +
-          '" ' +
-          (isNew ? "" : "disabled") +
-          '></div></div>'
+          '"></div></div>'
         );
       })
       .join("");
@@ -896,16 +843,13 @@ function setupOrderListeners(order, currentUser, isNew) {
       await sos({ total_amount: si, prepayment: pi }, "Финансы сохранены");
     });
   }
-  // Клиент
-  const ecb = document.getElementById("editClientBtn"),
-    scb = document.getElementById("saveClientBtn");
-  if (ecb && scb) {
-    ecb.addEventListener("click", unlockClientFields);
+  // Клиент — поля всегда разблокированы, кнопка «Редактировать» удалена из разметки.
+  const scb = document.getElementById("saveClientBtn");
+  if (scb) scb.classList.remove("hidden");
+  if (scb) {
     scb.addEventListener("click", async () => {
       const gv = (id) =>
-        document.getElementById(id)
-          ? document.getElementById(id).value.trim()
-          : "";
+        document.getElementById(id)?.value?.trim?.() ?? "";
       if (order.id === "НОВЫЙ") {
         alert("Черновик.");
         return;
@@ -926,11 +870,10 @@ function setupOrderListeners(order, currentUser, isNew) {
       );
     });
   }
-  // Сроки
-  const edb = document.getElementById("editDeadlinesBtn"),
-    sdb = document.getElementById("saveDeadlinesBtn");
-  if (edb && sdb) {
-    edb.addEventListener("click", unlockDeadlineFields);
+  // Сроки — поля всегда разблокированы, кнопка «Редактировать» удалена из разметки.
+  const sdb = document.getElementById("saveDeadlinesBtn");
+  if (sdb) sdb.classList.remove("hidden");
+  if (sdb) {
     sdb.addEventListener("click", async () => {
       if (!validateLiveDeadlines()) return alert("Исправьте красные поля.");
       const dl = collectDeadlines();
