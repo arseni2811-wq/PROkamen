@@ -260,7 +260,7 @@ async function ensureDatabaseSchema() {
       "SHOW COLUMNS FROM orders LIKE 'prepayment'",
     );
     if (prepaymentRows.length === 0) {
-           await pool.query(
+      await pool.query(
         "ALTER TABLE orders ADD COLUMN prepayment DECIMAL(10,2) NULL DEFAULT 0.00",
       );
     }
