@@ -15,6 +15,7 @@ const orderSchema = z.object({
   installation_address: z.string().max(500).optional().nullable(),
   order_source: z.string().max(255).optional().nullable(),
   stone_name: z.string().max(255).optional().nullable(),
+  product_type: z.string().max(255).optional().nullable(),
   deadline_date: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/)

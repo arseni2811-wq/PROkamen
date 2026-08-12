@@ -152,7 +152,9 @@ function readMoney(id) {
   const el = document.getElementById(id);
   if (!el) return 0;
   // Запятые ввода ("596,00") → точки для parseFloat, иначе БД выдаст ошибку.
-  return parseFloat(String(el.value).replace(",", ".")) || 0;
+  // Пробелы-разделители тысяч ("1 500,00") удаляются до разбора: parseFloat
+  // обрывается на первом пробеле и молча искажал бы сумму.
+  return parseFloat(String(el.value).replace(/\s+/g, "").replace(",", ".")) || 0;
 }
 
 // =========================================================
@@ -191,11 +193,38 @@ function addDays(dateStr, days) {
   return `${y}-${m}-${dd}`;
 }
 
+// Нормализует дату из БД/JSON к строгому формату YYYY-MM-DD для <input type="date">.
+// Если дата пришла с временем ("2026-08-11T12:00:00.000Z"), обрезаем часть со
+// временем — иначе браузер проигнорирует value и инпут останется пустым.
+function normalizeDateForInput(value) {
+  if (!value) return "";
+  const d = String(value).split("T")[0];
+  return /^\d{4}-\d{2}-\d{2}$/.test(d) ? d : "";
+}
+
+// UX: при вводе года двумя цифрами (браузер трактует "26" как год "0026")
+// автоматически преобразует год в 2000-2099 ("0026-08-11" → "2026-08-11").
+function autoCorrectYear(input) {
+  if (!input || !input.value) return false;
+  const [y, m, d] = input.value.split("-");
+  const n = parseInt(y, 10);
+  if (y && m && d && n > 0 && n < 100) {
+    input.value = `${2000 + n}-${m}-${d}`;
+    return true;
+  }
+  return false;
+}
+
 // Собирает чистый объект дат со всех инпутов: { stage: 'YYYY-MM-DD', ... }
 function collectDeadlines() {
   const dl = {};
   document.querySelectorAll(".deadline-input").forEach((i) => {
-    dl[i.dataset.stage] = i.value;
+    // Авто-коррекция года (26 → 2026) на случай, если событие не успело
+    // обработаться (авто-заполнение, черновик «НОВЫЙ» и т.п.).
+    autoCorrectYear(i);
+    const v = String(i.value || "").trim();
+    // Собираем только непустые значения в формате YYYY-MM-DD.
+    if (v && /^\d{4}-\d{2}-\d{2}$/.test(v)) dl[i.dataset.stage] = v;
   });
   return dl;
 }
@@ -265,8 +294,15 @@ function bindLiveDeadlineValidation() {
   stageOrder.forEach((s) => {
     const i = document.querySelector(`.deadline-input[data-stage="${s}"]`);
     if (!i) return;
-    // change → запуск цепного пересчёта дат (для этапов цепочки)
-    i.addEventListener("change", () => recomputeDeadlineChain(s));
+    // change → авто-коррекция года (26 → 2026) + цепной пересчёт дат
+    i.addEventListener("change", () => {
+      autoCorrectYear(i);
+      recomputeDeadlineChain(s);
+    });
+    // blur → контрольный проход авто-коррекции (если change не сработал)
+    i.addEventListener("blur", () => {
+      if (autoCorrectYear(i)) validateLiveDeadlines();
+    });
     i.addEventListener("input", validateLiveDeadlines);
   });
 }
@@ -495,6 +531,7 @@ async function handleCreateOrder(cu) {
     prepayment: pp,
     order_source: gv("orderSource") || null,
     stone_name: gv("stoneType") || null,
+    product_type: gv("productType") || null,
     installation_address: gv("orderLocation") || null,
     deadline_date: dl[FINAL_STAGE] || null,
     deadlines: dl,
@@ -610,7 +647,7 @@ function renderOrderData(order, isNew) {
   sv("clientSocial", order.client_social || "");
   sv("orderLocation", order.installation_address || "");
   sv("orderSource", order.order_source || "");
-  sv("productType", "");
+  sv("productType", order.product_type || "");
   sv("stoneType", order.stone_name || "");
   if (!isNew) {
     document.getElementById("cancelOrderBtn")?.classList.remove("hidden");
@@ -648,7 +685,7 @@ function renderOrderData(order, isNew) {
     if (order.deadline_date) sd.final_calculation = order.deadline_date;
     list.innerHTML = stageOrder
       .map((s, idx) => {
-        const v = sd[s] ? sd[s] : "",
+        const v = normalizeDateForInput(sd[s]) || "",
           isPast = idx < ci,
           isCurrent = idx === ci,
           isLast = idx === stageOrder.length - 1;
@@ -859,6 +896,7 @@ function setupOrderListeners(order, currentUser, isNew) {
           installation_address: gv("orderLocation") || null,
           order_source: gv("orderSource") || null,
           stone_name: gv("stoneType") || null,
+          product_type: gv("productType") || null,
           client: {
             full_name: gv("clientName"),
             phone: gv("clientPhone"),

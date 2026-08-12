@@ -284,6 +284,16 @@ async function ensureDatabaseSchema() {
       );
     }
 
+    const [ptCols] = await pool.query(
+      "SHOW COLUMNS FROM orders LIKE 'product_type'",
+    );
+    if (ptCols.length === 0) {
+      await pool.query(
+        "ALTER TABLE orders ADD COLUMN product_type VARCHAR(255) NULL COMMENT 'Тип изделия'",
+      );
+      console.log("✅ Добавлена колонка product_type в orders");
+    }
+
     const [deadlinesCols] = await pool.query(
       "SHOW COLUMNS FROM orders LIKE 'deadlines'",
     );

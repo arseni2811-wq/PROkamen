@@ -171,9 +171,11 @@ async function getOrderById(req, res) {
           o.installation_address,
           o.order_source,
           o.stone_name,
+          o.product_type,
           DATE_FORMAT(o.deadline_date, '%Y-%m-%d') AS deadline_date,
           o.exchange_rate,
           o.calculator_snapshot,
+          o.deadlines,
           c.full_name AS client_name,
           c.phone AS client_phone,
           c.email AS client_email,
@@ -311,22 +313,32 @@ async function updateOrder(req, res) {
 
     if (validatedData.installation_address !== undefined) {
       updateFields.push("installation_address = ?");
-      updateValues.push(validatedData.installation_address ?? null);
+      updateValues.push(validatedData.installation_address || null);
     }
 
     if (validatedData.order_source !== undefined) {
       updateFields.push("order_source = ?");
-      updateValues.push(validatedData.order_source ?? null);
+      updateValues.push(validatedData.order_source || null);
     }
 
     if (validatedData.stone_name !== undefined) {
       updateFields.push("stone_name = ?");
-      updateValues.push(validatedData.stone_name ?? null);
+      updateValues.push(validatedData.stone_name || null);
+    }
+
+    if (validatedData.product_type !== undefined) {
+      updateFields.push("product_type = ?");
+      updateValues.push(validatedData.product_type || null);
     }
 
     if (validatedData.deadline_date !== undefined) {
       updateFields.push("deadline_date = ?");
-      updateValues.push(validatedData.deadline_date ?? null);
+      updateValues.push(
+        validatedData.deadline_date === "" ||
+          validatedData.deadline_date === null
+          ? null
+          : validatedData.deadline_date,
+      );
     }
 
     if (validatedData.status_id !== undefined) {
@@ -590,7 +602,7 @@ async function createOrder(req, res) {
     const prepayment = validatedData.prepayment || 0;
 
     const [orderResult] = await connection.query(
-      "INSERT INTO orders (client_id, manager_id, status_id, total_amount, prepayment, installation_address, deadline_date, deadlines, exchange_rate, calculator_snapshot, order_source, stone_name) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+      "INSERT INTO orders (client_id, manager_id, status_id, total_amount, prepayment, installation_address, deadline_date, deadlines, exchange_rate, calculator_snapshot, order_source, stone_name, product_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
       [
         resolvedClientId,
         effectiveManagerId,
@@ -608,6 +620,7 @@ async function createOrder(req, res) {
         serializedSnapshot,
         validatedData.order_source || null,
         validatedData.stone_name || null,
+        validatedData.product_type || null,
       ],
     );
 
