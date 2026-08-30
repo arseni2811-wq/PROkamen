@@ -49,17 +49,3 @@ CREATE INDEX IF NOT EXISTS idx_order_items_category ON order_items(stone_categor
 SELECT 'system_settings' as table_name, COUNT(*) as row_count FROM system_settings
 UNION ALL
 SELECT 'order_finances', COUNT(*) FROM order_finances;
-
-</parameter>
-<task_progress>
-- [x] Analyze current server.js structure
-- [x] Create modular folder structure (routes, controllers, middleware)
-- [x] Extract middleware (auth, validation, role checks)
-- [x] Create route files (orders, materials, auth)
-- [ ] Create SQL tables (system_settings, order_finances)
-- [ ] Update controllers for finance integration
-- [ ] Create exchange rate endpoint
-- [ ] Test server startup
-- [ ] Create SPRINT2_IMPLEMENTATION_SUMMARY.md
-</task_progress>
-</write_to_file>

@@ -1,0 +1,26 @@
+.DS_Store
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+backend/.env
+backend/.env.*
+!backend/.env.example
+
+# Dependencies and generated output
+node_modules/
+backend/node_modules/
+coverage/
+*.log
+*.pid
+*.tmp
+*.temp
+*.pdf
+
+# User-controlled CRM uploads (store outside Git)
+backend/uploads/
+
+# Local editor/runtime state
+.vscode/
+.idea/

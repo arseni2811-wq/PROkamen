@@ -5,7 +5,18 @@
   "main": "index.js",
   "scripts": {
     "start": "node server.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "migrate": "node scripts/migrate.js",
+    "migrate:adopt-baseline": "node scripts/adopt-baseline.js",
+    "test": "node --test test/*.test.js",
+    "check:syntax": "find . ../public -name '*.js' -type f -not -path '*/node_modules/*' -print0 | xargs -0 -n1 node --check",
+    "test:migrations": "node scripts/test-migrations.js",
+    "test:integration": "node scripts/test-integration.js",
+    "check:static": "node scripts/check-static-references.js",
+    "check:integrity": "node scripts/check-integrity.js",
+    "report:finance-anomalies": "node scripts/report-finance-anomalies.js",
+    "repair:attachment-filenames": "node scripts/repair-attachment-filenames.js",
+    "verify": "npm test && npm run check:syntax && npm run check:static",
+    "verify:full": "npm run verify && npm run test:migrations && npm run test:integration"
   },
   "keywords": [],
   "author": "",

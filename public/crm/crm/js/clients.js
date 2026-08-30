@@ -57,7 +57,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   } catch (error) {
     console.error("Ошибка загрузки клиентов:", error);
     if (tbody) {
-      tbody.innerHTML = `<tr><td colspan="5" class="text-center py-8 text-red-500">${error.message}</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="5" class="text-center py-8 text-red-500">${escapeHtml(error.message)}</td></tr>`;
     }
   }
 });
@@ -119,24 +119,27 @@ function renderClients(clientsData) {
       "border-b border-gray-100 hover:bg-gray-50 transition-colors";
     tr.innerHTML = `
       <td class="p-4">
-        <div class="font-bold text-gray-800 text-sm">${topBadge}${client.full_name || "Не указано"}</div>
+        <div class="font-bold text-gray-800 text-sm">${topBadge}${escapeHtml(client.full_name || "Не указано")}</div>
       </td>
       <td class="p-4">
-        <div class="text-sm font-medium text-gray-700">${client.phone || "---"}</div>
-        <div class="text-xs text-gray-400">${client.email || ""}</div>
+        <div class="text-sm font-medium text-gray-700">${escapeHtml(client.phone || "---")}</div>
+        <div class="text-xs text-gray-400">${escapeHtml(client.email || "")}</div>
       </td>
       <td class="p-4 text-center">
-        <span class="bg-blue-100 text-blue-800 text-xs font-bold px-2.5 py-1 rounded-full">${client.client_id || "—"}</span>
+        <span class="bg-blue-100 text-blue-800 text-xs font-bold px-2.5 py-1 rounded-full">${escapeHtml(client.client_id || "—")}</span>
       </td>
       <td class="p-4 text-right">
         <div class="font-black text-gray-900">${Number(client.totalRevenue || 0).toLocaleString("ru-RU")} BYN</div>
       </td>
       <td class="p-4 text-center">
-        <button onclick='openClientHistory(${JSON.stringify(client).replace(/'/g, "&#39;")})' class="text-gray-500 hover:text-blue-600 bg-gray-100 hover:bg-blue-50 px-3 py-1.5 rounded transition text-xs font-bold">
+        <button class="open-client-history text-gray-500 hover:text-blue-600 bg-gray-100 hover:bg-blue-50 px-3 py-1.5 rounded transition text-xs font-bold">
           📂 Детали
         </button>
       </td>
     `;
+    tr
+      .querySelector(".open-client-history")
+      ?.addEventListener("click", () => window.openClientHistory(client));
     tbody.appendChild(tr);
   });
 }

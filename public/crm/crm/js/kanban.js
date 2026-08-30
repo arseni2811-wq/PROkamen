@@ -112,10 +112,7 @@ function getDeadlineColor(deadlineDateString) {
   if (isNaN(deadline.getTime())) return "text-gray-400 font-medium";
   deadline.setHours(0, 0, 0, 0);
 
-  let today = new Date();
-  if (today.getFullYear() < 2026) {
-    today = new Date("2026-03-24T00:00:00");
-  }
+  const today = new Date();
   today.setHours(0, 0, 0, 0);
 
   const diffTime = deadline - today;
@@ -161,6 +158,7 @@ function createOrderCard(order) {
     "bg-white border border-gray-200 rounded-lg p-4 cursor-pointer hover:shadow-xl hover:border-blue-300 transition-all duration-200 order-card mb-3";
   const orderId = order?.order_id ?? order?.id ?? "---";
   card.dataset.orderId = orderId;
+  card.dataset.version = String(order?.version ?? "");
 
   const formatDate = (dateStr) => {
     if (!dateStr) return "Не задано";
@@ -197,7 +195,7 @@ function createOrderCard(order) {
   card.innerHTML = `
     <div class="flex items-start justify-between mb-3">
       <div class="flex items-center gap-2">
-        <div class="font-bold text-lg text-blue-600">#${orderId}</div>
+        <div class="font-bold text-lg text-blue-600">#${escapeHtml(orderId)}</div>
         ${getPaymentBadge(order)}
       </div>
       <div class="flex flex-col items-end gap-1 text-right">
@@ -207,10 +205,10 @@ function createOrderCard(order) {
     </div>
 
     <div class="space-y-1 text-sm text-gray-500 mb-3">
-      <div>👤 ${clientName}</div>
-      <div>🛠 ${statusName}</div>
-      <div>👷 ${managerName}</div>
-      <div>📍 ${installationAddress}</div>
+      <div>👤 ${escapeHtml(clientName)}</div>
+      <div>🛠 ${escapeHtml(statusName)}</div>
+      <div>👷 ${escapeHtml(managerName)}</div>
+      <div>📍 ${escapeHtml(installationAddress)}</div>
     </div>
 
     <div class="pt-2 border-t border-gray-100 font-bold text-gray-800 flex items-center">
@@ -279,6 +277,7 @@ function setupEventListeners() {
 let draggedOrderCard = null;
 let dragState = {
   orderId: null,
+  version: null,
   oldStatus: null,
   newStatus: null,
   sourceColumn: null,
@@ -287,6 +286,7 @@ let dragState = {
 function handleDragStart(e) {
   draggedOrderCard = this;
   dragState.orderId = parseInt(this.dataset.orderId, 10);
+  dragState.version = Number(this.dataset.version);
   dragState.sourceColumn = this.closest("[data-status]");
   dragState.oldStatus = dragState.sourceColumn.dataset.status;
 
@@ -303,6 +303,7 @@ function handleDragEnd(e) {
   draggedOrderCard = null;
   dragState = {
     orderId: null,
+    version: null,
     oldStatus: null,
     newStatus: null,
     sourceColumn: null,
@@ -377,6 +378,7 @@ function handleDrop(e) {
       dragState.orderId,
       newStatus,
       dragState.oldStatus,
+      dragState.version,
       draggedOrderCard,
       targetColumn,
     );
@@ -388,6 +390,7 @@ async function changeOrderStatusOptimistic(
   orderId,
   newStatus,
   oldStatus,
+  version,
   cardElement,
   targetColumn,
 ) {
@@ -396,7 +399,7 @@ async function changeOrderStatusOptimistic(
 
   try {
     // Отправляем запрос на сервер (не блокируя UI)
-    await api.updateOrderStatus(orderId, newStatus);
+    await api.updateOrderStatus(orderId, newStatus, null, version);
 
     // Успех: убираем подсветку
     cardElement.style.opacity = "1";
@@ -438,9 +441,17 @@ async function changeOrderStatusOptimistic(
 }
 
 // ========== УСТАРЕВШАЯ ФУНКЦИЯ (для обратной совместимости) ==========
-async function changeOrderStatus(orderId, newStatus, comment = "") {
+async function changeOrderStatus(orderId, newStatus, comment = "", version) {
   try {
-    await api.updateOrderStatus(orderId, newStatus);
+    const cardVersion = Number(
+      document.querySelector(`[data-order-id="${orderId}"]`)?.dataset.version,
+    );
+    await api.updateOrderStatus(
+      orderId,
+      newStatus,
+      comment || null,
+      version || cardVersion,
+    );
 
     if (
       window.location.pathname.includes("dashboard.html") ||
@@ -476,12 +487,18 @@ function showNotification(message, type = "info") {
   };
 
   notification.classList.add(...(styles[type] || styles.info).split(" "));
-  notification.innerHTML = `
-    <div class="flex items-center gap-3">
-      <div class="text-lg font-bold">${message}</div>
-      <button onclick="this.parentElement.parentElement.remove()" class="ml-auto text-white hover:text-gray-200 text-xl font-bold">&times;</button>
-    </div>
-  `;
+  const content = document.createElement("div");
+  content.className = "flex items-center gap-3";
+  const messageNode = document.createElement("div");
+  messageNode.className = "text-lg font-bold";
+  messageNode.textContent = message;
+  const closeButton = document.createElement("button");
+  closeButton.className =
+    "ml-auto text-white hover:text-gray-200 text-xl font-bold";
+  closeButton.textContent = "×";
+  closeButton.addEventListener("click", () => notification.remove());
+  content.append(messageNode, closeButton);
+  notification.appendChild(content);
 
   document.body.appendChild(notification);
 

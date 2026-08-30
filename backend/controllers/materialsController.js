@@ -10,7 +10,7 @@ async function getMaterials(req, res) {
     res.json({ success: true, materials: rows });
   } catch (error) {
     console.error("Ошибка при получении материалов:", error);
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Не удалось получить материалы" });
   }
 }
 
@@ -90,7 +90,7 @@ async function createMaterial(req, res) {
     });
   } catch (error) {
     console.error("Ошибка при добавлении материала:", error);
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Не удалось добавить материал" });
   }
 }
 
@@ -121,7 +121,7 @@ async function updateMaterial(req, res) {
     res.json({ success: true, message: "Материал успешно обновлен" });
   } catch (error) {
     console.error("Ошибка при обновлении материала:", error);
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Не удалось обновить материал" });
   }
 }
 
@@ -143,7 +143,7 @@ async function deleteMaterial(req, res) {
     res.json({ success: true, message: "Материал удален" });
   } catch (error) {
     console.error("Ошибка при удалении материала:", error);
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Не удалось удалить материал" });
   }
 }
 
@@ -181,39 +181,48 @@ async function updateServices(req, res) {
   const validatedData = req.validatedBody;
   const incomingServices = validatedData.services || {};
 
+  let connection;
   try {
-    const [tables] = await pool.query("SHOW TABLES LIKE 'dict_services'");
+    connection = await pool.getConnection();
+    const [tables] = await connection.query("SHOW TABLES LIKE 'dict_services'");
     if (tables.length === 0) {
+      connection.release();
+      connection = null;
       return res.json({
         success: true,
         services: incomingServices,
       });
     }
 
+    await connection.beginTransaction();
     for (const [serviceKey, value] of Object.entries(incomingServices)) {
       const numericValue = Number(value) || 0;
-      const [existing] = await pool.query(
+      const [existing] = await connection.query(
         "SELECT service_id FROM dict_services WHERE service_name = ?",
         [serviceKey],
       );
 
       if (existing.length > 0) {
-        await pool.query(
+        await connection.query(
           "UPDATE dict_services SET price_per_unit = ? WHERE service_name = ?",
           [numericValue, serviceKey],
         );
       } else {
-        await pool.query(
+        await connection.query(
           "INSERT INTO dict_services (service_name, unit, price_per_unit) VALUES (?, 'услуга', ?)",
           [serviceKey, numericValue],
         );
       }
     }
 
+    await connection.commit();
     res.json({ success: true, services: incomingServices });
   } catch (error) {
+    if (connection) await connection.rollback();
     console.error("Ошибка при обновлении прайса услуг:", error);
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: "Не удалось обновить услуги" });
+  } finally {
+    if (connection) connection.release();
   }
 }
 

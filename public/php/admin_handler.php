@@ -5,6 +5,12 @@
  */
 
 // ========== БЕЗОПАСНОСТЬ И ЛОГИРОВАНИЕ ==========
+$isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off');
+session_set_cookie_params([
+    'httponly' => true,
+    'secure' => $isHttps,
+    'samesite' => 'Strict'
+]);
 session_start();
 header('Content-Type: application/json; charset=utf-8');
 ini_set('display_errors', 0);
@@ -13,7 +19,7 @@ ini_set('display_errors', 0);
 error_log('Admin action - ' . $_SERVER['REQUEST_METHOD']);
 
 // ========== КОНФИГУРАЦИЯ ==========
-$ADMIN_PASSWORD = 'admin123'; // TODO: Измени пароль!
+$ADMIN_PASSWORD_HASH = getenv('PROKAMEN_ADMIN_PASSWORD_HASH') ?: '';
 $DATA_DIR = __DIR__ . '/../assets/data/';
 $IMAGES_DIR = __DIR__ . '/../assets/images/';
 $CATALOG_DIR = $IMAGES_DIR . 'catalog/';
@@ -57,7 +63,7 @@ function transliterate($str) {
         'ш' => 'sh', 'щ' => 'sch', 'ъ' => '', 'ы' => 'y', 'ь' => '',
         'э' => 'e', 'ю' => 'yu', 'я' => 'ya'
     ];
-    return strtolower(strtr($str, array_flip($map)));
+    return strtolower(strtr($str, $map));
 }
 
 function isValidImageFile($file) {
@@ -117,7 +123,20 @@ function readJSON($file) {
 
 function writeJSON($file, $data) {
     $json = json_encode($data, JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
-    return @file_put_contents($file, $json);
+    if ($json === false) {
+        return false;
+    }
+    $tmp = @tempnam(dirname($file), '.json_');
+    if ($tmp === false) {
+        return false;
+    }
+    $written = @file_put_contents($tmp, $json, LOCK_EX);
+    if ($written === false || !@rename($tmp, $file)) {
+        @unlink($tmp);
+        return false;
+    }
+    @chmod($file, 0644);
+    return $written;
 }
 
 function generateID($type) {
@@ -148,7 +167,36 @@ function log_action($action, $data) {
 }
 
 function sanitize($input) {
-    return htmlspecialchars(strip_tags($input), ENT_QUOTES, 'UTF-8');
+    return trim(strip_tags((string)$input));
+}
+
+function csrfTokenFromRequest() {
+    $headers = function_exists('getallheaders') ? getallheaders() : [];
+    return $_POST['csrf_token'] ?? ($headers['X-CSRF-Token'] ?? $headers['x-csrf-token'] ?? '');
+}
+
+function consumeIpRateLimit($scope, $maxAttempts, $windowSeconds) {
+    $ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+    $file = sys_get_temp_dir() . '/prokamen_' . hash('sha256', $scope . '|' . $ip) . '.json';
+    $handle = @fopen($file, 'c+');
+    if ($handle === false || !flock($handle, LOCK_EX)) {
+        if (is_resource($handle)) fclose($handle);
+        return 0;
+    }
+    $raw = stream_get_contents($handle);
+    $now = time();
+    $bucket = $raw ? json_decode($raw, true) : null;
+    if (!is_array($bucket) || ($bucket['reset_at'] ?? 0) <= $now) {
+        $bucket = ['count' => 0, 'reset_at' => $now + $windowSeconds];
+    }
+    $bucket['count']++;
+    ftruncate($handle, 0);
+    rewind($handle);
+    fwrite($handle, json_encode($bucket));
+    fflush($handle);
+    flock($handle, LOCK_UN);
+    fclose($handle);
+    return $bucket['count'] > $maxAttempts ? max(1, $bucket['reset_at'] - $now) : 0;
 }
 
 // Полифилл для PHP < 8.0
@@ -178,13 +226,44 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 // 1. ВХОД
 if ($action === 'login') {
     $password = $request['password'] ?? '';
-    
-    if ($password === $ADMIN_PASSWORD) {
+
+    $ipRetryAfter = consumeIpRateLimit('admin_login', 50, 900);
+    if ($ipRetryAfter > 0) {
+        header('Retry-After: ' . $ipRetryAfter);
+        http_response_code(429);
+        echo json_encode(['success' => false, 'error' => 'Too many attempts']);
+        exit;
+    }
+
+    $now = time();
+    $attempts = $_SESSION['login_attempts'] ?? ['count' => 0, 'reset_at' => $now + 900];
+    if (($attempts['reset_at'] ?? 0) <= $now) {
+        $attempts = ['count' => 0, 'reset_at' => $now + 900];
+    }
+    if (($attempts['count'] ?? 0) >= 10) {
+        header('Retry-After: ' . max(1, $attempts['reset_at'] - $now));
+        http_response_code(429);
+        echo json_encode(['success' => false, 'error' => 'Too many attempts']);
+        exit;
+    }
+    if ($ADMIN_PASSWORD_HASH === '') {
+        http_response_code(503);
+        echo json_encode(['success' => false, 'error' => 'Admin authentication is not configured']);
+        exit;
+    }
+
+    if (password_verify($password, $ADMIN_PASSWORD_HASH)) {
+        session_regenerate_id(true);
         $_SESSION['admin_authenticated'] = true;
+        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+        unset($_SESSION['login_attempts']);
         log_action('LOGIN', ['status' => 'success']);
-        echo json_encode(['success' => true, 'token' => session_id()]);
+        echo json_encode(['success' => true, 'csrf_token' => $_SESSION['csrf_token']]);
     } else {
+        $attempts['count'] = ($attempts['count'] ?? 0) + 1;
+        $_SESSION['login_attempts'] = $attempts;
         log_action('LOGIN', ['status' => 'failed']);
+        http_response_code(401);
         echo json_encode(['success' => false, 'error' => 'Invalid password']);
     }
     exit;
@@ -194,6 +273,13 @@ if ($action === 'login') {
 if (!isAuthenticated()) {
     http_response_code(401);
     echo json_encode(['success' => false, 'error' => 'Not authenticated']);
+    exit;
+}
+
+$csrfToken = csrfTokenFromRequest();
+if (!isset($_SESSION['csrf_token']) || !is_string($csrfToken) || !hash_equals($_SESSION['csrf_token'], $csrfToken)) {
+    http_response_code(403);
+    echo json_encode(['success' => false, 'error' => 'Invalid CSRF token']);
     exit;
 }
 

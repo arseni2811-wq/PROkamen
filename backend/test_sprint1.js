@@ -72,9 +72,14 @@ async function testLogin() {
   }
 
   // Test 2: Valid login
+  const testLogin = process.env.TEST_ADMIN_LOGIN;
+  const testPassword = process.env.TEST_ADMIN_PASSWORD;
+  if (!testLogin || !testPassword) {
+    throw new Error("TEST_ADMIN_LOGIN and TEST_ADMIN_PASSWORD are required");
+  }
   const res2 = await makeRequest("POST", "/api/login", {
-    login: "admin",
-    password: "mazda2877",
+    login: testLogin,
+    password: testPassword,
   });
 
   if (res2.status === 200 && res2.data.success) {

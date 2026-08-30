@@ -37,7 +37,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 async function loadProductionData() {
   try {
-    const data = await api.getOrders();
+    const data = await api.getProductionOrders();
     const orders = Array.isArray(data) ? data : [];
     renderProductionBoard(orders);
   } catch (error) {
@@ -45,10 +45,10 @@ async function loadProductionData() {
     const queueContainer = document.getElementById("queueContainer");
     const inWorkContainer = document.getElementById("inWorkContainer");
     if (queueContainer) {
-      queueContainer.innerHTML = `<div class="text-center text-red-500 py-10 font-bold">${error.message}</div>`;
+      queueContainer.innerHTML = `<div class="text-center text-red-500 py-10 font-bold">${escapeHtml(error.message)}</div>`;
     }
     if (inWorkContainer) {
-      inWorkContainer.innerHTML = `<div class="text-center text-red-500 py-10 font-bold">${error.message}</div>`;
+      inWorkContainer.innerHTML = `<div class="text-center text-red-500 py-10 font-bold">${escapeHtml(error.message)}</div>`;
     }
   }
 }
@@ -107,12 +107,13 @@ function createProductionCard(order, type) {
       })
     : "Не задан";
 
-  const totalAmount = Number(order.total_amount || 0).toLocaleString("ru-RU");
+  const currentUser = JSON.parse(localStorage.getItem("currentUser") || "null");
+  const canOpenFullOrder = [1, 2].includes(Number(currentUser?.role_id));
 
   card.innerHTML = `
     <div class="flex justify-between items-start border-b border-gray-100 pb-3 mb-3">
       <div>
-        <div class="text-xl font-black text-gray-800">Заказ #${order.order_id}</div>
+        <div class="text-xl font-black text-gray-800">Заказ #${escapeHtml(order.order_id)}</div>
         <div class="text-xs font-bold text-gray-500">🏁 Дедлайн цеха: до ${deadlineText}</div>
       </div>
       <span class="text-[10px] text-gray-400 border border-gray-200 px-2 py-1 rounded">${type === "queue" ? "Очередь" : "В работе"}</span>
@@ -120,28 +121,30 @@ function createProductionCard(order, type) {
 
     <div class="space-y-3 mb-4">
       <div class="bg-gray-50 p-3 rounded border border-gray-200">
-        <div class="text-[10px] text-gray-500 uppercase font-bold mb-1">Клиент</div>
-        <div class="font-black text-blue-900 text-base">${order.client_name || "Не указан"}</div>
+        <div class="text-[10px] text-gray-500 uppercase font-bold mb-1">Изделие</div>
+        <div class="font-black text-blue-900 text-base">${escapeHtml(order.product_type || "Не указано")}</div>
       </div>
       <div class="bg-gray-50 p-3 rounded border border-gray-200">
-        <div class="text-[10px] text-gray-500 uppercase font-bold mb-1">Сумма</div>
-        <div class="font-black text-gray-800">${totalAmount} BYN</div>
+        <div class="text-[10px] text-gray-500 uppercase font-bold mb-1">Материал</div>
+        <div class="font-black text-gray-800">${escapeHtml(order.stone_name || "Не указан")}</div>
       </div>
     </div>
 
-    <a href="order.html?id=${order.order_id}" class="block w-full bg-blue-600 hover:bg-blue-700 text-white font-black py-3 rounded-lg shadow-sm transition uppercase tracking-wide text-sm text-center">
-      🔎 Открыть карточку
-    </a>
+    ${
+      canOpenFullOrder
+        ? `<a href="order.html?id=${escapeHtml(order.order_id)}" class="block w-full bg-blue-600 hover:bg-blue-700 text-white font-black py-3 rounded-lg shadow-sm transition uppercase tracking-wide text-sm text-center">🔎 Открыть карточку</a>`
+        : ""
+    }
   `;
 
   return card;
 }
 
-window.moveStatus = async function (orderId, newStatus) {
+window.moveStatus = async function (orderId, newStatus, version) {
   if (!confirm("Подтвердить изменение статуса?")) return;
 
   try {
-    await api.updateOrderStatus(orderId, newStatus);
+    await api.updateOrderStatus(orderId, newStatus, null, version);
     await loadProductionData();
   } catch (error) {
     console.error("Ошибка смены статуса:", error);

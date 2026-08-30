@@ -19,7 +19,12 @@ const ROLES = {
 };
 
 router.get("/materials", authenticateJWT, getMaterials);
-router.get("/services", authenticateJWT, getServices);
+router.get(
+  "/services",
+  authenticateJWT,
+  authorize(ROLES.ADMIN, ROLES.MANAGER),
+  getServices,
+);
 
 router.post(
   "/materials",

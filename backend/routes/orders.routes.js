@@ -2,19 +2,48 @@ const express = require("express");
 const router = express.Router();
 const {
   getAllOrders,
+  getProductionOrders,
   getOrderById,
   updateOrder,
+  updateOrderCalculator,
   createOrder,
   updateOrderStatus,
   logOrderAction,
 } = require("../controllers/ordersController");
 const { authenticateJWT } = require("../middleware/auth");
 const { validate } = require("../middleware/validate");
-const { orderSchema, statusUpdateSchema } = require("../middleware/schemas");
+const {
+  orderSchema,
+  orderUpdateSchema,
+  calculatorUpdateSchema,
+  statusUpdateSchema,
+} = require("../middleware/schemas");
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
+const crypto = require("crypto");
 const pool = require("../db");
+const { hasAllowedFileSignature } = require("../utils/fileSignatures");
+const {
+  safeDisplayFilename,
+  attachmentContentDisposition,
+} = require("../utils/filenames");
+const {
+  authorizeOrderCollection,
+  authorizeOrderCreation,
+  authorizeProductionRead,
+  authorizeOrderObject,
+} = require("../middleware/orderAccess");
+
+router.param("id", (req, res, next, value) => {
+  const id = Number(value);
+  if (!Number.isSafeInteger(id) || id <= 0) {
+    return res
+      .status(400)
+      .json({ success: false, message: "Некорректный ID заказа" });
+  }
+  next();
+});
 
 // Worker threads для асинхронной генерации PDF
 const { Worker } = require("worker_threads");
@@ -42,10 +71,10 @@ function safeParseSnapshot(value) {
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     const orderId = req.params.id;
+    const uploadRoot =
+      process.env.UPLOADS_DIR || path.join(__dirname, "..", "uploads");
     const dir = path.join(
-      __dirname,
-      "..",
-      "uploads",
+      uploadRoot,
       "orders",
       String(orderId),
     );
@@ -62,15 +91,119 @@ const storage = multer.diskStorage({
 const upload = multer({
   storage,
   limits: { fileSize: 50 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const allowedExtensions = new Set([
+      ".pdf",
+      ".doc",
+      ".docx",
+      ".xls",
+      ".xlsx",
+      ".png",
+      ".jpg",
+      ".jpeg",
+      ".webp",
+    ]);
+    file.originalname = safeDisplayFilename(file.originalname);
+    const extension = path.extname(file.originalname).toLowerCase();
+    if (!file.originalname || file.originalname.length > 255) {
+      return cb(new multer.MulterError("LIMIT_UNEXPECTED_FILE", file.fieldname));
+    }
+    cb(
+      allowedExtensions.has(extension)
+        ? null
+        : new multer.MulterError("LIMIT_UNEXPECTED_FILE", file.fieldname),
+      allowedExtensions.has(extension),
+    );
+  },
 });
 
-router.get("/", authenticateJWT, getAllOrders);
-router.get("/:id", authenticateJWT, getOrderById);
-router.put("/:id", authenticateJWT, validate(orderSchema), updateOrder);
-router.post("/", authenticateJWT, validate(orderSchema), createOrder);
+function handleOrderUpload(req, res, next) {
+  upload.array("files", 20)(req, res, (error) => {
+    if (error) {
+      return res.status(400).json({
+        success: false,
+        message:
+          error.code === "LIMIT_FILE_SIZE"
+            ? "Файл превышает лимит 50 МБ"
+            : "Недопустимый тип или количество файлов",
+      });
+    }
+    next();
+  });
+}
+
+async function validateUploadedFileSignatures(req, res, next) {
+  try {
+    for (const file of req.files || []) {
+      const handle = await fs.promises.open(file.path, "r");
+      const header = Buffer.alloc(16);
+      let bytesRead = 0;
+      try {
+        ({ bytesRead } = await handle.read(header, 0, header.length, 0));
+      } finally {
+        await handle.close();
+      }
+      if (
+        !hasAllowedFileSignature(
+          file.originalname,
+          header.subarray(0, bytesRead),
+        )
+      ) {
+        await Promise.all(
+          (req.files || []).map((uploaded) =>
+            fs.promises.unlink(uploaded.path).catch(() => undefined),
+          ),
+        );
+        return res.status(400).json({
+          success: false,
+          message: "Содержимое файла не соответствует его расширению",
+        });
+      }
+    }
+    next();
+  } catch (error) {
+    await Promise.all(
+      (req.files || []).map((file) =>
+        fs.promises.unlink(file.path).catch(() => undefined),
+      ),
+    );
+    next(error);
+  }
+}
+
+router.get("/", authenticateJWT, authorizeOrderCollection, getAllOrders);
+router.get(
+  "/production",
+  authenticateJWT,
+  authorizeProductionRead,
+  getProductionOrders,
+);
+router.get("/:id", authenticateJWT, authorizeOrderObject, getOrderById);
+router.put(
+  "/:id",
+  authenticateJWT,
+  authorizeOrderObject,
+  validate(orderUpdateSchema),
+  updateOrder,
+);
+router.post(
+  "/",
+  authenticateJWT,
+  authorizeOrderCreation,
+  validate(orderSchema),
+  createOrder,
+);
+router.put(
+  "/:id/calculator",
+  authenticateJWT,
+  authorizeOrderObject,
+  validate(calculatorUpdateSchema),
+  updateOrderCalculator,
+);
 router.put(
   "/:id/status",
   authenticateJWT,
+  authorizeOrderObject,
   validate(statusUpdateSchema),
   updateOrderStatus,
 );
@@ -78,7 +211,9 @@ router.put(
 router.post(
   "/:id/upload",
   authenticateJWT,
-  upload.array("files", 20),
+  authorizeOrderObject,
+  handleOrderUpload,
+  validateUploadedFileSignatures,
   async (req, res) => {
     const orderId = req.params.id;
     const fileType = req.body.file_type || "document";
@@ -89,7 +224,10 @@ router.post(
         .json({ success: false, message: "Файлы не переданы" });
     }
 
+    let connection;
     try {
+      connection = await pool.getConnection();
+      await connection.beginTransaction();
       const inserted = [];
 
       for (const file of req.files) {
@@ -99,7 +237,7 @@ router.post(
           String(orderId),
           file.filename,
         );
-        const [result] = await pool.query(
+        const [result] = await connection.query(
           "INSERT INTO order_attachments (order_id, file_name, file_path, file_type) VALUES (?, ?, ?, ?)",
           [orderId, file.originalname, relativePath, fileType],
         );
@@ -113,12 +251,14 @@ router.post(
 
       // Пишем в журнал действий
       await logOrderAction(
-        pool,
+        connection,
         orderId,
         "Загрузка файлов",
         `Загружено файлов: ${inserted.length} (тип: ${fileType})`,
         req.user?.user_id,
       );
+
+      await connection.commit();
 
       res.json({
         success: true,
@@ -126,13 +266,28 @@ router.post(
         files: inserted,
       });
     } catch (error) {
+      if (connection) await connection.rollback();
+      await Promise.all(
+        (req.files || []).map((file) =>
+          fs.promises.unlink(file.path).catch(() => undefined),
+        ),
+      );
       console.error("Ошибка сохранения файлов в БД:", error);
-      res.status(500).json({ success: false, message: error.message });
+      res.status(500).json({
+        success: false,
+        message: "Не удалось сохранить файлы",
+      });
+    } finally {
+      if (connection) connection.release();
     }
   },
 );
 
-router.get("/:id/attachments", authenticateJWT, async (req, res) => {
+router.get(
+  "/:id/attachments",
+  authenticateJWT,
+  authorizeOrderObject,
+  async (req, res) => {
   const orderId = req.params.id;
 
   try {
@@ -143,17 +298,199 @@ router.get("/:id/attachments", authenticateJWT, async (req, res) => {
 
     const files = rows.map((row) => ({
       ...row,
-      url: `http://localhost:3000/${row.file_path.replace(/\\/g, "/")}`,
+      url: `/api/orders/${orderId}/attachments/${row.attachment_id}/download`,
     }));
 
     res.json({ success: true, files });
   } catch (error) {
     console.error("Ошибка получения файлов:", error);
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({
+      success: false,
+      message: "Не удалось получить список файлов",
+    });
   }
-});
+  },
+);
 
-router.get("/:id/pdf", authenticateJWT, async (req, res) => {
+router.get(
+  "/:id/attachments/:attachmentId/download",
+  authenticateJWT,
+  authorizeOrderObject,
+  async (req, res) => {
+    const attachmentId = Number(req.params.attachmentId);
+    if (!Number.isSafeInteger(attachmentId) || attachmentId <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Некорректный ID вложения",
+      });
+    }
+    try {
+      const [rows] = await pool.query(
+        `SELECT attachment_id, file_name, file_path
+         FROM order_attachments
+         WHERE attachment_id = ? AND order_id = ?`,
+        [attachmentId, req.params.id],
+      );
+      const attachment = rows[0];
+      if (!attachment) {
+        return res.status(404).json({
+          success: false,
+          message: "Вложение не найдено",
+        });
+      }
+      const uploadRoot =
+        process.env.UPLOADS_DIR || path.join(__dirname, "..", "uploads");
+      const absolutePath = path.join(
+        uploadRoot,
+        "orders",
+        String(req.params.id),
+        path.basename(attachment.file_path),
+      );
+      try {
+        await fs.promises.access(absolutePath, fs.constants.R_OK);
+      } catch (error) {
+        return res.status(404).json({
+          success: false,
+          message: "Файл вложения не найден",
+        });
+      }
+      res.setHeader(
+        "Content-Disposition",
+        attachmentContentDisposition(attachment.file_name),
+      );
+      return res.sendFile(absolutePath);
+    } catch (error) {
+      console.error("Ошибка скачивания вложения:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Не удалось скачать вложение",
+      });
+    }
+  },
+);
+
+router.delete(
+  "/:id/attachments/:attachmentId",
+  authenticateJWT,
+  authorizeOrderObject,
+  async (req, res) => {
+    const attachmentId = Number(req.params.attachmentId);
+    if (!Number.isSafeInteger(attachmentId) || attachmentId <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Некорректный ID вложения",
+      });
+    }
+
+    let connection;
+    let originalPath = null;
+    let quarantinePath = null;
+    let movedToQuarantine = false;
+    let committed = false;
+    try {
+      connection = await pool.getConnection();
+      await connection.beginTransaction();
+      const [rows] = await connection.query(
+        `SELECT attachment_id, file_name, file_path
+         FROM order_attachments
+         WHERE attachment_id = ? AND order_id = ?
+         FOR UPDATE`,
+        [attachmentId, req.params.id],
+      );
+      const attachment = rows[0];
+      if (!attachment) {
+        await connection.rollback();
+        return res.status(404).json({
+          success: false,
+          message: "Вложение не найдено",
+        });
+      }
+
+      const uploadRoot =
+        process.env.UPLOADS_DIR || path.join(__dirname, "..", "uploads");
+      const orderDirectory = path.join(
+        uploadRoot,
+        "orders",
+        String(req.params.id),
+      );
+      originalPath = path.join(
+        orderDirectory,
+        path.basename(attachment.file_path),
+      );
+      quarantinePath = path.join(
+        orderDirectory,
+        `.deleting-${attachmentId}-${crypto.randomUUID()}`,
+      );
+
+      try {
+        await fs.promises.rename(originalPath, quarantinePath);
+        movedToQuarantine = true;
+      } catch (error) {
+        await connection.rollback();
+        return res.status(error.code === "ENOENT" ? 409 : 500).json({
+          success: false,
+          message:
+            error.code === "ENOENT"
+              ? "Физический файл вложения отсутствует; metadata не удалена"
+              : "Не удалось подготовить файл к удалению",
+        });
+      }
+
+      await connection.query(
+        "DELETE FROM order_attachments WHERE attachment_id = ? AND order_id = ?",
+        [attachmentId, req.params.id],
+      );
+      await logOrderAction(
+        connection,
+        req.params.id,
+        "attachment_deleted",
+        `Удалено вложение: ${attachment.file_name}`,
+        req.user?.user_id,
+      );
+      await connection.commit();
+      committed = true;
+
+      let cleanupPending = false;
+      try {
+        await fs.promises.unlink(quarantinePath);
+      } catch (error) {
+        cleanupPending = true;
+        console.error("Не удалось окончательно удалить quarantine-вложение:", {
+          attachment_id: attachmentId,
+          code: error.code,
+        });
+      }
+
+      return res.json({
+        success: true,
+        message: "Вложение удалено",
+        attachment_id: attachmentId,
+        cleanup_pending: cleanupPending,
+      });
+    } catch (error) {
+      if (connection && !committed) {
+        await connection.rollback().catch(() => undefined);
+      }
+      if (movedToQuarantine && !committed) {
+        await fs.promises.rename(quarantinePath, originalPath).catch((restoreError) => {
+          console.error("Не удалось восстановить вложение после rollback:", {
+            attachment_id: attachmentId,
+            code: restoreError.code,
+          });
+        });
+      }
+      console.error("Ошибка удаления вложения:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Не удалось удалить вложение",
+      });
+    } finally {
+      if (connection) connection.release();
+    }
+  },
+);
+
+router.get("/:id/pdf", authenticateJWT, authorizeOrderObject, async (req, res) => {
   const orderId = req.params.id;
   const requestId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}-${Math.random().toString(36).substr(2, 5)}`;
 
@@ -205,7 +542,10 @@ router.get("/:id/pdf", authenticateJWT, async (req, res) => {
     res.send(pdfBuffer);
   } catch (error) {
     console.error("Ошибка генерации PDF:", error);
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({
+      success: false,
+      message: "Не удалось сформировать PDF",
+    });
   }
 });
 
@@ -249,7 +589,7 @@ function generatePDFInWorker(payload) {
   });
 }
 
-router.get("/:id/history", authenticateJWT, async (req, res) => {
+router.get("/:id/history", authenticateJWT, authorizeOrderObject, async (req, res) => {
   const orderId = req.params.id;
 
   try {
@@ -270,7 +610,10 @@ router.get("/:id/history", authenticateJWT, async (req, res) => {
     res.json({ success: true, history: rows });
   } catch (error) {
     console.error("Ошибка получения истории заказа:", error);
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({
+      success: false,
+      message: "Не удалось получить историю заказа",
+    });
   }
 });
 

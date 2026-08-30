@@ -1,5 +1,9 @@
 const jwt = require("jsonwebtoken");
-const JWT_SECRET = process.env.JWT_SECRET || "super_secret_crm_key";
+const JWT_SECRET = process.env.JWT_SECRET;
+
+if (!JWT_SECRET) {
+  throw new Error("JWT_SECRET is required");
+}
 
 // Достаёт JWT из заголовка Authorization: Bearer <token>
 function extractBearerToken(req) {

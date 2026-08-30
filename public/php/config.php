@@ -1,13 +1,13 @@
 <?php
 // Настройки SMTP
-define('SMTP_HOST', 'smtp.yandex.ru');
-define('SMTP_PORT', 465);
-define('SMTP_USER', 'prokamen22@yandex.by'); // Ваш email
-define('SMTP_PASS', 'your_password_here'); // Пароль приложения
-define('SMTP_SECURE', 'ssl');
+define('SMTP_HOST', getenv('PROKAMEN_SMTP_HOST') ?: 'localhost');
+define('SMTP_PORT', (int) (getenv('PROKAMEN_SMTP_PORT') ?: 25));
+define('SMTP_USER', getenv('PROKAMEN_SMTP_USER') ?: '');
+define('SMTP_PASS', getenv('PROKAMEN_SMTP_PASSWORD') ?: '');
+define('SMTP_SECURE', getenv('PROKAMEN_SMTP_SECURE') ?: '');
 
 // Email получателя заявок
-define('RECIPIENT_EMAIL', 'prokamen22@yandex.by');
+define('RECIPIENT_EMAIL', getenv('PROKAMEN_RECIPIENT_EMAIL') ?: '');
 
 // Настройки для формы
 define('MAX_MESSAGE_LENGTH', 1000);

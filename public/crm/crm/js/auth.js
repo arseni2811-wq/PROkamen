@@ -20,7 +20,10 @@ document
       // Сохраняем данные пользователя для отображения в интерфейсе
       // ВАЖНО: роль и права проверяются на сервере через JWT, а не из localStorage
       localStorage.setItem("currentUser", JSON.stringify(data.user));
-      window.location.href = "dashboard.html";
+      window.location.href =
+        Number(data.user?.role_id) === 3
+          ? "production.html"
+          : "dashboard.html";
     } catch (error) {
       errorMessage.textContent =
         error.message || "Ошибка соединения с сервером";

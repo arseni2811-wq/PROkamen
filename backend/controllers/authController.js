@@ -2,7 +2,11 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const pool = require("../db");
 const { loginSchema } = require("../middleware/schemas");
-const JWT_SECRET = process.env.JWT_SECRET || "super_secret_crm_key";
+const JWT_SECRET = process.env.JWT_SECRET;
+
+if (!JWT_SECRET) {
+  throw new Error("JWT_SECRET is required");
+}
 
 // Вход
 async function login(req, res) {
@@ -35,7 +39,7 @@ async function login(req, res) {
 
     res.cookie("token", token, {
       httpOnly: true,
-      secure: false,
+      secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
       maxAge: 86400000,
     });
@@ -54,7 +58,7 @@ async function login(req, res) {
 function logout(req, res) {
   res.clearCookie("token", {
     httpOnly: true,
-    secure: false,
+    secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
   });
   res.json({ success: true, message: "Выход выполнен успешно." });

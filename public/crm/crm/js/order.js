@@ -133,7 +133,12 @@ async function changeOrderStatus(orderId, newStatus) {
     return false;
   }
   try {
-    await api.updateOrderStatus(orderId, newStatus);
+    await api.updateOrderStatus(
+      orderId,
+      newStatus,
+      null,
+      currentOrderView?.version,
+    );
     const res = await api.getOrder(orderId);
     const fresh = res.order || res;
     if (currentOrderView) Object.assign(currentOrderView, fresh);
@@ -306,6 +311,32 @@ function bindLiveDeadlineValidation() {
     i.addEventListener("input", validateLiveDeadlines);
   });
 }
+
+// =========================================================
+// ГЛОБАЛЬНЫЙ ПЕРЕХВАТЧИК авто-коррекции года (26 → 2026)
+// Делегирование на document: работает для ВСЕХ .deadline-input,
+// включая инпуты, пересозданные renderOrderData (innerHTML).
+// Браузер трактует ввод "26" в поле года как "0026-08-11" —
+// здесь год автоматически переписывается в 2000-2099.
+// =========================================================
+document.addEventListener("change", (e) => {
+  const inp = e.target;
+  if (!inp || inp.tagName !== "INPUT" || inp.type !== "date") return;
+  if (!inp.classList || !inp.classList.contains("deadline-input")) return;
+  if (!inp.value) return;
+  let [y, m, d] = inp.value.split("-");
+  const n = parseInt(y, 10);
+  // Год "0026" (двузначный ввод "26") → "2026"
+  if (y && m && d && n > 0 && n < 100) {
+    y = String(2000 + n);
+    inp.value = `${y}-${m}-${d}`;
+    // Если есть функция пересчёта цепочки — вызываем после коррекции
+    if (typeof recomputeDeadlineChain === "function") {
+      recomputeDeadlineChain(inp.dataset.stage);
+    }
+  }
+});
+
 function autoFillDeadlines(startDate) {
   if (!startDate) return;
   const sd = new Date(startDate + "T00:00:00");
@@ -372,10 +403,28 @@ async function renderAttachments(orderId) {
           "flex items-center justify-between p-2 bg-gray-50 border border-gray-200 rounded text-sm mb-1";
 
         const a = document.createElement("a");
-        a.href = file.url;
-        a.target = "_blank";
+        a.href = api.resolveUrl(file.url);
         a.className = "font-medium text-blue-600 hover:text-blue-800";
         a.textContent = icon + " " + (file.file_name || "Файл");
+        a.addEventListener("click", async (event) => {
+          event.preventDefault();
+          try {
+            const blob = await api.downloadAttachment(
+              orderId,
+              file.attachment_id,
+            );
+            const blobUrl = window.URL.createObjectURL(blob);
+            const download = document.createElement("a");
+            download.href = blobUrl;
+            download.download = file.file_name || "attachment";
+            document.body.appendChild(download);
+            download.click();
+            download.remove();
+            window.URL.revokeObjectURL(blobUrl);
+          } catch (error) {
+            alert("❌ " + error.message);
+          }
+        });
 
         const span = document.createElement("span");
         span.className = "text-xs text-gray-400";
@@ -383,8 +432,29 @@ async function renderAttachments(orderId) {
           ? new Date(file.created_at).toLocaleDateString("ru-RU")
           : "";
 
+        const deleteButton = document.createElement("button");
+        deleteButton.type = "button";
+        deleteButton.className =
+          "ml-2 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-lg font-black text-red-600 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50";
+        deleteButton.textContent = "×";
+        deleteButton.title = `Удалить файл «${file.file_name || "Файл"}»`;
+        deleteButton.setAttribute("aria-label", deleteButton.title);
+        AttachmentUI.bindDeleteButton(deleteButton, {
+          fileName: file.file_name || "Файл",
+          confirmDelete: AttachmentUI.showDeleteConfirmation,
+          deleteAttachment: () =>
+            api.deleteAttachment(orderId, file.attachment_id),
+          refresh: () => renderAttachments(orderId),
+          onError: (error) =>
+            alert("❌ Ошибка удаления: " + error.message),
+        });
+
+        const metadata = document.createElement("div");
+        metadata.className = "ml-3 flex shrink-0 items-center";
+        metadata.append(span, deleteButton);
+
         div.appendChild(a);
-        div.appendChild(span);
+        div.appendChild(metadata);
         container.appendChild(div);
       });
     };
@@ -511,10 +581,15 @@ async function handleCreateOrder(cu) {
     sb.innerHTML = "⏳ Сохранение на сервер...";
   }
   // Даты со всех инпутов (учитывая авто-сохранённые по кнопке сроков)
-  const dl =
+  const rawDeadlines =
     window.tempDeadlines && Object.keys(window.tempDeadlines).length
       ? window.tempDeadlines
       : collectDeadlines();
+  const dl = Object.fromEntries(
+    Object.entries(rawDeadlines)
+      .map(([stage, value]) => [stage, normalizeDateForInput(value)])
+      .filter(([, value]) => Boolean(value)),
+  );
   const gv = (id) =>
       document.getElementById(id)?.value?.trim?.() ?? "",
     sv = readMoney("totalSumInput"),
@@ -522,10 +597,15 @@ async function handleCreateOrder(cu) {
     cd = window.tempCalcData || {};
   const su = JSON.parse(localStorage.getItem("currentUser") || "{}"),
     st = JSON.parse(localStorage.getItem("crm_settings") || "{}"),
-    er = st.exchangeRate || null,
+    parsedExchangeRate = Number(
+      String(st.exchangeRate ?? "").replace(",", "."),
+    ),
+    er = Number.isFinite(parsedExchangeRate) && parsedExchangeRate > 0
+      ? parsedExchangeRate
+      : null,
     sp = Object.keys(cd).length > 0 ? cd : null;
   const body = {
-    manager_id: su?.user_id || cu?.user_id || null,
+    manager_id: Number(su?.user_id || cu?.user_id) || null,
     status_id: "lead",
     total_amount: sv,
     prepayment: pp,
@@ -568,7 +648,14 @@ async function handleCreateOrder(cu) {
   };
   console.log("[createOrder] полный payload:", body);
   try {
-    const d = await api.createOrder(body);
+    let idempotencyKey = sessionStorage.getItem("newOrderIdempotencyKey");
+    if (!idempotencyKey) {
+      idempotencyKey = globalThis.crypto?.randomUUID?.() ||
+        `new-order-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      sessionStorage.setItem("newOrderIdempotencyKey", idempotencyKey);
+    }
+    const d = await api.createOrder(body, idempotencyKey);
+    sessionStorage.removeItem("newOrderIdempotencyKey");
     // Очищаем черновик после успешного сохранения
     draftStorage.remove("НОВЫЙ");
     delete window.tempCalcData;
@@ -685,7 +772,11 @@ function renderOrderData(order, isNew) {
     if (order.deadline_date) sd.final_calculation = order.deadline_date;
     list.innerHTML = stageOrder
       .map((s, idx) => {
-        const v = normalizeDateForInput(sd[s]) || "",
+        // <input type="date"> принимает строго YYYY-MM-DD. БД может вернуть
+        // дату с таймзоной ("2026-08-11T00:00:00.000Z") — жёстко обрезаем
+        // до 10 символов, иначе браузер проигнорирует value (инпут пустой).
+        const safeDate = normalizeDateForInput(sd[s]),
+          v = safeDate ? safeDate.substring(0, 10) : "",
           isPast = idx < ci,
           isCurrent = idx === ci,
           isLast = idx === stageOrder.length - 1;
@@ -743,15 +834,15 @@ function renderOrderData(order, isNew) {
       .map(
         (i) =>
           '<div class="relative pl-6 border-l-2 border-yellow-500 mb-4"><div class="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-yellow-500 border-2 border-white shadow-sm"></div><div class="text-[10px] text-gray-400 font-bold uppercase mb-1">' +
-          (i.date || "") +
+          escapeHtml(i.date || "") +
           " | " +
-          (i.user || "Система") +
+          escapeHtml(i.user || "Система") +
           '</div><div class="text-sm font-medium text-gray-800">' +
-          (i.action || "") +
+          escapeHtml(i.action || "") +
           "</div>" +
           (i.comment
             ? '<div class="text-xs italic text-gray-500 bg-gray-50 p-1 rounded mt-1 border-l-2">«' +
-              i.comment +
+              escapeHtml(i.comment) +
               "»</div>"
             : "") +
           "</div>",
@@ -800,8 +891,15 @@ function setupOrderListeners(order, currentUser, isNew) {
   async function sos(payload, msg) {
     try {
       console.log(`[updateOrder] ${msg} → payload:`, payload);
-      await api.updateOrder(order.order_id || order.id, payload);
-      Object.assign(order, payload);
+      await api.updateOrder(order.order_id || order.id, {
+        ...payload,
+        version: order.version,
+      });
+      // PATCH-подобный PUT может затронуть связанные таблицы (например clients
+      // и order_finances), поэтому локального Object.assign недостаточно:
+      // client.full_name не обновляет alias client_name и UI показывал старое.
+      const refreshed = await api.getOrder(order.order_id || order.id);
+      Object.assign(order, refreshed.order || refreshed);
       renderOrderData(order, false);
       alert(msg);
       return true;
@@ -873,7 +971,7 @@ function setupOrderListeners(order, currentUser, isNew) {
         pi = readMoney("prepaymentInput");
       if (pi > si && !confirm("Предоплата больше суммы?")) return;
       if (order.id === "НОВЫЙ") {
-        alert("Черновик.");
+        alert("Черновик сохранён локально. Заказ ещё не создан на сервере.");
         return;
       }
       console.log("[finances] сумма/аванс (рубли):", { total_amount: si, prepayment: pi });
@@ -888,7 +986,7 @@ function setupOrderListeners(order, currentUser, isNew) {
       const gv = (id) =>
         document.getElementById(id)?.value?.trim?.() ?? "";
       if (order.id === "НОВЫЙ") {
-        alert("Черновик.");
+        alert("Черновик сохранён локально. Заказ ещё не создан на сервере.");
         return;
       }
       await sos(
@@ -942,7 +1040,12 @@ function setupOrderListeners(order, currentUser, isNew) {
         return;
       }
       try {
-        await api.updateOrderStatus(oid, "cancelled");
+        await api.updateOrderStatus(
+          oid,
+          "cancelled",
+          reason.trim() || null,
+          order.version,
+        );
         alert("Заказ отменен.");
         window.location.href = "dashboard.html";
       } catch (e) {
@@ -997,7 +1100,7 @@ async function openCalculatorModal(order) {
       "final_calculation",
       "archived",
     ].includes(order.status_id || order.status || "");
-  const data = es || {
+  const defaults = {
     length: 2900,
     width: 600,
     isThickEdge: false,
@@ -1018,6 +1121,25 @@ async function openCalculatorModal(order) {
     hole: 0,
     deliveryBYN: 150,
     installBYN: 300,
+  };
+  const rawData = { ...defaults, ...(es || {}) };
+  const safeNumber = (value, fallback = 0) => {
+    const numeric = Number(value);
+    return Number.isFinite(numeric) && numeric >= 0 ? numeric : fallback;
+  };
+  const data = {
+    ...rawData,
+    length: safeNumber(rawData.length, defaults.length),
+    width: safeNumber(rawData.width, defaults.width),
+    slabAmt: safeNumber(rawData.slabAmt, defaults.slabAmt),
+    customSlabPrice: safeNumber(rawData.customSlabPrice),
+    sinkUnder: safeNumber(rawData.sinkUnder),
+    sinkTop: safeNumber(rawData.sinkTop),
+    joint: safeNumber(rawData.joint),
+    hole: safeNumber(rawData.hole),
+    deliveryBYN: safeNumber(rawData.deliveryBYN, defaults.deliveryBYN),
+    installBYN: safeNumber(rawData.installBYN, defaults.installBYN),
+    stoneId: String(rawData.stoneId ?? "0"),
   };
   const defP = {
     cutStraight: 5,
@@ -1053,13 +1175,13 @@ async function openCalculatorModal(order) {
       String(data.stoneId) === String(s.material_id) ? "selected" : "";
     oh +=
       '<option value="' +
-      s.material_id +
+      escapeHtml(s.material_id) +
       '" data-price="' +
       Number(s.price_per_m2 || 0) +
       '" ' +
       sel +
       ">" +
-      s.title +
+      escapeHtml(s.title) +
       "</option>";
   });
   oh +=
@@ -1394,19 +1516,26 @@ async function openCalculatorModal(order) {
         (document.getElementById("stoneType").value = nd.stoneName);
     } else {
       try {
-        await api.updateOrder(order.order_id || order.id, {
+        const calculatorResult = await api.updateOrderCalculator(
+          order.order_id || order.id,
+          {
+          version: order.version,
           total_amount:
-            order.total_amount ?? order.sum ?? Math.round(nd.suggestedTotal),
+            Number(order.total_amount ?? order.sum ?? 0) > 0
+              ? Number(order.total_amount ?? order.sum)
+              : Math.round(nd.suggestedTotal),
           exchange_rate:
             JSON.parse(localStorage.getItem("crm_settings") || "{}")
               .exchangeRate || null,
           calculator_snapshot: nd,
+          },
+        );
+        const refreshed = await api.getOrder(order.order_id || order.id);
+        Object.assign(order, refreshed.order || refreshed, {
+          version: calculatorResult.version,
         });
-        order.calculatorData = nd;
-        order.calculator_snapshot = nd;
-        order.stone = nd.stoneName;
-        if (!order.total_amount || order.total_amount === 0)
-          order.total_amount = Math.round(nd.suggestedTotal);
+        if (currentOrderView) Object.assign(currentOrderView, order);
+        renderOrderData(order, false);
         alert("Снимок сохранён.");
       } catch (e) {
         console.error("Ошибка:", e);

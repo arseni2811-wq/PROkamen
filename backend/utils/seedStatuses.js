@@ -1,4 +1,5 @@
 const defaultStatuses = [
+  ["lead", "Лид", 1],
   ["new", "Новая заявка", 5],
   ["measurement", "Замер / Выезд", 15],
   ["quote_approval", "Согласование КП", 22],

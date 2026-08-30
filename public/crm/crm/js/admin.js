@@ -75,14 +75,20 @@ function renderCatalog() {
     tr.className =
       "border-b border-gray-100 hover:bg-gray-50 transition-colors";
     tr.innerHTML = `
-      <td class="p-3 font-bold text-gray-800">${stone.title}</td>
-      <td class="p-3 text-sm text-gray-600 font-mono">${stone.material_id}</td>
+      <td class="p-3 font-bold text-gray-800">${escapeHtml(stone.title)}</td>
+      <td class="p-3 text-sm text-gray-600 font-mono">${escapeHtml(stone.material_id)}</td>
       <td class="p-3 text-sm font-bold text-emerald-600">${Number(stone.price_per_m2 || 0).toFixed(2)} BYN/м²</td>
       <td class="p-3 text-right space-x-2">
-        <button onclick="editStone('${stone.material_id}')" class="text-blue-500 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 px-2 py-1 rounded transition-colors text-xs font-bold">✏️ Изменить</button>
-        <button onclick="deleteStone('${stone.material_id}')" class="text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 px-2 py-1 rounded transition-colors text-xs font-bold">🗑 Удалить</button>
+        <button class="edit-stone text-blue-500 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 px-2 py-1 rounded transition-colors text-xs font-bold">✏️ Изменить</button>
+        <button class="delete-stone text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 px-2 py-1 rounded transition-colors text-xs font-bold">🗑 Удалить</button>
       </td>
     `;
+    tr.querySelector(".edit-stone")?.addEventListener("click", () =>
+      editStone(stone.material_id),
+    );
+    tr.querySelector(".delete-stone")?.addEventListener("click", () =>
+      deleteStone(stone.material_id),
+    );
     tbody.appendChild(tr);
   });
 }
@@ -218,16 +224,36 @@ function renderPrices() {
   Object.keys(prices).forEach((key) => {
     const isSystem = Object.prototype.hasOwnProperty.call(serviceNamesMap, key);
     const displayName = isSystem ? serviceNamesMap[key] : key;
-
-    container.innerHTML += `
-      <div class="flex justify-between items-center p-1 hover:bg-gray-50 rounded">
-        <span class="text-gray-600 ${isSystem ? "" : "text-blue-700 font-medium"}">${displayName}</span>
-        <div class="flex items-center gap-2">
-          <input type="number" id="price_${key}" value="${prices[key]}" class="w-16 border-gray-300 border rounded p-1 text-center font-bold focus:border-yellow-500 outline-none">
-          ${!isSystem ? `<button onclick="deleteCustomService('${key}')" class="text-red-400 hover:text-red-600 text-lg font-bold" title="Удалить услугу">&times;</button>` : `<span class="w-4"></span>`}
-        </div>
-      </div>
-    `;
+    const row = document.createElement("div");
+    row.className =
+      "flex justify-between items-center p-1 hover:bg-gray-50 rounded";
+    const label = document.createElement("span");
+    label.className = `text-gray-600 ${isSystem ? "" : "text-blue-700 font-medium"}`;
+    label.textContent = displayName;
+    const controls = document.createElement("div");
+    controls.className = "flex items-center gap-2";
+    const input = document.createElement("input");
+    input.type = "number";
+    input.id = `price_${key}`;
+    input.value = Number(prices[key]) || 0;
+    input.className =
+      "w-16 border-gray-300 border rounded p-1 text-center font-bold focus:border-yellow-500 outline-none";
+    controls.appendChild(input);
+    if (!isSystem) {
+      const button = document.createElement("button");
+      button.className =
+        "text-red-400 hover:text-red-600 text-lg font-bold";
+      button.title = "Удалить услугу";
+      button.textContent = "×";
+      button.addEventListener("click", () => deleteCustomService(key));
+      controls.appendChild(button);
+    } else {
+      const spacer = document.createElement("span");
+      spacer.className = "w-4";
+      controls.appendChild(spacer);
+    }
+    row.append(label, controls);
+    container.appendChild(row);
   });
 }
 

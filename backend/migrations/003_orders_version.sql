@@ -1,0 +1,2 @@
+ALTER TABLE orders
+  ADD COLUMN version INT UNSIGNED NOT NULL DEFAULT 1 AFTER product_type;

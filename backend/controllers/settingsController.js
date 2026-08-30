@@ -11,7 +11,10 @@ async function getExchangeRate(req, res) {
     res.json({ success: true, exchange_rate: rate });
   } catch (error) {
     console.error("Ошибка получения курса валют:", error);
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({
+      success: false,
+      message: "Не удалось получить курс валют",
+    });
   }
 }
 
@@ -28,7 +31,10 @@ async function updateExchangeRate(req, res) {
     res.json({ success: true, message: "Курс валют обновлен", exchange_rate });
   } catch (error) {
     console.error("Ошибка обновления курса валют:", error);
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({
+      success: false,
+      message: "Не удалось обновить курс валют",
+    });
   }
 }
 

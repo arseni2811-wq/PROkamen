@@ -2,34 +2,46 @@ const pool = require("./db");
 const bcrypt = require("bcrypt");
 
 async function setupUsers() {
+  if (process.env.ALLOW_USER_RESEED !== "1") {
+    throw new Error(
+      "User seeding is disabled. Set ALLOW_USER_RESEED=1 explicitly.",
+    );
+  }
   console.log("⏳ Запуск инициализации пользователей...");
   const saltRounds = 10;
 
-  try {
-    // 1. Отключаем проверку связей, очищаем и включаем обратно
-    await pool.query("SET FOREIGN_KEY_CHECKS = 0");
-    await pool.query("DELETE FROM users");
-    await pool.query("SET FOREIGN_KEY_CHECKS = 1");
-    console.log("🗑️ Старые пользователи успешно удалены.");
+  const requiredPasswords = {
+    admin: process.env.PROKAMEN_ADMIN_PASSWORD,
+    manager: process.env.PROKAMEN_MANAGER_PASSWORD,
+    worker: process.env.PROKAMEN_WORKER_PASSWORD,
+  };
+  const missing = Object.entries(requiredPasswords)
+    .filter(([, value]) => !value)
+    .map(([name]) => name);
+  if (missing.length > 0) {
+    throw new Error(`Missing password environment variables for: ${missing.join(", ")}`);
+  }
 
-    // 2. Описываем новых пользователей, их логины и роли
+  try {
+    // Существующие связанные пользователи не удаляются: скрипт обновляет
+    // только три явно названные учётные записи.
     const newUsers = [
       {
         login: "admin",
         full_name: "Администратор PRO Камень",
-        password: "mazda2877",
+        password: requiredPasswords.admin,
         role_id: 1, // Роль: Администратор
       },
       {
         login: "manager",
         full_name: "Ведущий Менеджер",
-        password: "2877",
+        password: requiredPasswords.manager,
         role_id: 2, // Роль: Менеджер
       },
       {
         login: "worker",
         full_name: "Мастер Цеха (Рабочий)",
-        password: "pro",
+        password: requiredPasswords.worker,
         role_id: 3, // Роль: Рабочий
       },
     ];
@@ -39,7 +51,12 @@ async function setupUsers() {
       const hash = await bcrypt.hash(u.password, saltRounds);
 
       await pool.query(
-        "INSERT INTO users (role_id, full_name, login, password_hash) VALUES (?, ?, ?, ?)",
+        `INSERT INTO users (role_id, full_name, login, password_hash)
+         VALUES (?, ?, ?, ?)
+         ON DUPLICATE KEY UPDATE
+           role_id = VALUES(role_id),
+           full_name = VALUES(full_name),
+           password_hash = VALUES(password_hash)`,
         [u.role_id, u.full_name, u.login, hash],
       );
 
@@ -51,9 +68,13 @@ async function setupUsers() {
     );
   } catch (error) {
     console.error("❌ Ошибка при инициализации базы:", error);
+    process.exitCode = 1;
   } finally {
-    process.exit(); // Закрываем процесс
+    await pool.end();
   }
 }
 
-setupUsers();
+setupUsers().catch((error) => {
+  console.error(error.message);
+  process.exitCode = 1;
+});

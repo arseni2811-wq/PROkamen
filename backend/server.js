@@ -4,14 +4,17 @@ const cookieParser = require("cookie-parser");
 const path = require("path");
 const fs = require("fs");
 const pool = require("./db");
+const { authenticateJWT } = require("./middleware/auth");
+const { authorize } = require("./middleware/authorize");
+const { requestContext } = require("./middleware/requestContext");
+const { authorizeAttachmentDownload } = require("./middleware/orderAccess");
 
 const app = express();
-const port = 3000;
+const port = Number(process.env.PORT || 3000);
 
 // =========================================================
 // КОНФИГУРАЦИЯ
 // =========================================================
-const JWT_SECRET = process.env.JWT_SECRET || "super_secret_crm_key";
 const ALLOWED_ORIGINS = (
   process.env.FRONTEND_ORIGIN ||
   "http://localhost:5500,http://127.0.0.1:5500,http://localhost:5501,http://127.0.0.1:5501,http://localhost:3000,http://127.0.0.1:3000"
@@ -39,11 +42,18 @@ app.use(
     credentials: true,
   }),
 );
+app.use(requestContext);
 app.use(express.json());
 app.use(cookieParser());
 
-// Раздача статики для загруженных файлов
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+// Вложения заказов содержат клиентские данные и не должны быть публичной
+// статикой. Ссылка из CRM открывается с той же httpOnly cookie.
+app.use(
+  "/uploads",
+  authenticateJWT,
+  authorizeAttachmentDownload,
+  express.static(process.env.UPLOADS_DIR || path.join(__dirname, "uploads")),
+);
 
 // =========================================================
 // ПОДКЛЮЧЕНИЕ МАРШРУТОВ
@@ -66,7 +76,7 @@ app.get("/api/health", async (req, res) => {
   } catch (err) {
     res
       .status(500)
-      .json({ success: false, status: "error", message: err.message });
+      .json({ success: false, status: "error", message: "Database unavailable" });
   }
 });
 
@@ -92,6 +102,51 @@ app.use("/api", settingsRoutes);
 // т.е. от папки файла server.js, а не от текущего process.cwd().
 // =========================================================
 const PUBLIC_DIR = path.join(__dirname, "..", "public");
+
+// Служебные HTML-страницы исключаем из индексации также HTTP-заголовком.
+// Это дополняет meta robots и продолжает работать для ответов 401/403.
+function setPrivateNoIndexHeaders(req, res, next) {
+  res.set("X-Robots-Tag", "noindex, nofollow");
+  res.set("Cache-Control", "private, no-store");
+  next();
+}
+
+app.use("/crm", setPrivateNoIndexHeaders);
+
+// Внутренний прайс и его CSV-источник доступны только администратору.
+app.get(
+  ["/pages/price.html", "/assets/data/price.csv"],
+  setPrivateNoIndexHeaders,
+  authenticateJWT,
+  authorize(ROLES.ADMIN),
+);
+
+// HTML административной страницы доступен только администратору CRM.
+app.get(
+  "/pages/admin.html",
+  setPrivateNoIndexHeaders,
+  authenticateJWT,
+  authorize(ROLES.ADMIN),
+);
+
+// Страница входа и ресурсы CRM остаются доступными, но рабочие HTML-экраны
+// сервер отдаёт только после проверки JWT из httpOnly cookie/Bearer header.
+app.get(
+  "/crm/crm/admin.html",
+  authenticateJWT,
+  authorize(ROLES.ADMIN),
+);
+app.get(
+  [
+    "/crm/crm/archive.html",
+    "/crm/crm/calculator.html",
+    "/crm/crm/clients.html",
+    "/crm/crm/dashboard.html",
+    "/crm/crm/order.html",
+    "/crm/crm/production.html",
+  ],
+  authenticateJWT,
+);
 
 // ----- Отладочный логгер статики (включить: DEBUG_STATIC=1 node server.js)
 // Показывает, какой URL реально запрашивает браузер и существует ли
@@ -215,7 +270,7 @@ app.use((err, req, res, next) => {
 });
 
 // Обработка необработанных Promise rejections
-process.on("UnhandledPromiseRejection", (err) => {
+process.on("unhandledRejection", (err) => {
   console.error("❌ Необработанная ошибка Promise:", err);
   // В production здесь можно добавить уведомление админу
 });
@@ -237,6 +292,20 @@ process.on("uncaughtException", (err) => {
 // =========================================================
 async function ensureDatabaseSchema() {
   try {
+    // Обязательные versioned migrations проверяются до legacy compatibility
+    // DDL, чтобы обычный запуск не изменял немигрированную рабочую БД.
+    const [versionColumns] = await pool.query(
+      "SHOW COLUMNS FROM orders LIKE 'version'",
+    );
+    const [idempotencyTables] = await pool.query(
+      "SHOW TABLES LIKE 'order_idempotency_keys'",
+    );
+    if (versionColumns.length === 0 || idempotencyTables.length === 0) {
+      throw new Error(
+        "Required migrations are missing. Run ALLOW_SCHEMA_MIGRATIONS=1 npm run migrate before startup.",
+      );
+    }
+
     // Колонки для orders
     const [exchangeRows] = await pool.query(
       "SHOW COLUMNS FROM orders LIKE 'exchange_rate'",
@@ -473,29 +542,48 @@ async function ensureDatabaseSchema() {
     // Синхронизация справочника статусов с фронтендом канбана
     const { ensureOrderStatuses } = require("./utils/seedStatuses");
     await ensureOrderStatuses(pool);
+
   } catch (error) {
     console.error("Ошибка инициализации схемы БД:", error);
+    throw error;
   }
 }
 
 // =========================================================
 // ЗАПУСК СЕРВЕРА
 // =========================================================
-ensureDatabaseSchema().finally(() => {
-  app.listen(port, () => {
-    console.log(`🚀 Защищенный бэкенд запущен: http://localhost:${port}`);
-    console.log(`🔒 JWT-аутентификация активна`);
-    console.log(`🔐 Ролевая модель защищена (ADMIN=1, MANAGER=2, WORKER=3)`);
-    console.log(`✅ Zod-валидация активна для всех мутирующих эндпоинтов`);
-    console.log(`✅ State Machine для статусов заказов активна`);
-    console.log(`✅ Финансовые расчеты в целых числах (центы)`);
-    console.log(`✅ Модульная архитектура (routes, controllers, middleware)`);
-    console.log(
-      `🌐 Разрешённые frontend-адреса: ${ALLOWED_ORIGINS.join(", ")}`,
-    );
-    console.log(`📁 Загрузка файлов: /uploads/orders/`);
-    console.log(
-      `📄 Статика: ${PUBLIC_DIR} (fallback: index.html для страниц, 404 для *.css/*.js/*.jpg/*.csv)`,
-    );
+async function startServer(listenPort = port) {
+  await ensureDatabaseSchema();
+  return new Promise((resolve, reject) => {
+    const server = app.listen(listenPort, () => {
+      const address = server.address();
+      const actualPort =
+        address && typeof address === "object" ? address.port : listenPort;
+      console.log(`🚀 Защищенный бэкенд запущен: http://localhost:${actualPort}`);
+      console.log(`🔒 JWT-аутентификация активна`);
+      console.log(`🔐 Ролевые ограничения справочников активны`);
+      console.log(`✅ Zod-валидация активна для всех мутирующих эндпоинтов`);
+      console.log(`✅ State Machine для статусов заказов активна`);
+      console.log(`✅ Финансовые расчеты в целых числах (центы)`);
+      console.log(`✅ Модульная архитектура (routes, controllers, middleware)`);
+      console.log(
+        `🌐 Разрешённые frontend-адреса: ${ALLOWED_ORIGINS.join(", ")}`,
+      );
+      console.log(`📁 Загрузка файлов: /uploads/orders/`);
+      console.log(
+        `📄 Статика: ${PUBLIC_DIR} (fallback: index.html для страниц, 404 для *.css/*.js/*.jpg/*.csv)`,
+      );
+      resolve(server);
+    });
+    server.once("error", reject);
   });
-});
+}
+
+if (require.main === module) {
+  startServer().catch((error) => {
+    console.error("Сервер не запущен: схема БД не готова", error.message);
+    process.exitCode = 1;
+  });
+}
+
+module.exports = { app, ensureDatabaseSchema, startServer };

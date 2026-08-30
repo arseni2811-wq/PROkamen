@@ -41,7 +41,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   } catch (error) {
     console.error("Ошибка загрузки архива:", error);
     if (tbody) {
-      tbody.innerHTML = `<tr><td colspan="7" class="text-center py-8 text-red-500">${error.message}</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="7" class="text-center py-8 text-red-500">${escapeHtml(error.message)}</td></tr>`;
     }
   }
 });
@@ -80,13 +80,13 @@ function renderArchive(orders) {
         (window.location.href = `order.html?id=${order.order_id}`);
 
       tr.innerHTML = `
-        <td class="p-3 font-bold text-blue-600">#${order.order_id}</td>
+        <td class="p-3 font-bold text-blue-600">#${escapeHtml(order.order_id)}</td>
         <td class="p-3 text-sm text-gray-500">${order.deadline_date ? new Date(order.deadline_date).toLocaleDateString("ru-RU") : "---"}</td>
         <td class="p-3">
-          <div class="font-bold text-sm text-gray-800">${order.client_name || "Не указан"}</div>
-          <div class="text-xs text-gray-500">${order.client_phone || ""}</div>
+          <div class="font-bold text-sm text-gray-800">${escapeHtml(order.client_name || "Не указан")}</div>
+          <div class="text-xs text-gray-500">${escapeHtml(order.client_phone || "")}</div>
         </td>
-        <td class="p-3 text-sm text-gray-600">${order.status_name || "-"}</td>
+        <td class="p-3 text-sm text-gray-600">${escapeHtml(order.status_name || "-")}</td>
         <td class="p-3 text-sm text-gray-600">${order.total_amount ? `${Number(order.total_amount).toLocaleString("ru-RU")} BYN` : "-"}</td>
         <td class="p-3">${statusBadge}</td>
         <td class="p-3 text-sm font-black text-gray-900">${finalPrice.toFixed(2)} BYN</td>

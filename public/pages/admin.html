@@ -3,6 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex,nofollow" />
     <title>Admin Panel — PRO Камень</title>
     <link rel="stylesheet" href="/css/base.css" />
     <link rel="stylesheet" href="/css/layout.css" />
@@ -614,7 +615,10 @@
             if (data.success) {
               sessionStorage.setItem(
                 STORAGE_KEY,
-                JSON.stringify({ token: data.token, time: Date.now() }),
+                JSON.stringify({
+                  csrfToken: data.csrf_token,
+                  time: Date.now(),
+                }),
               );
               showPanel();
             } else {
@@ -646,6 +650,26 @@
       function isAuthenticated() {
         const session = sessionStorage.getItem(STORAGE_KEY);
         return !!session;
+      }
+
+      function getCsrfToken() {
+        try {
+          return (
+            JSON.parse(sessionStorage.getItem(STORAGE_KEY) || "{}")
+              .csrfToken || ""
+          );
+        } catch (error) {
+          return "";
+        }
+      }
+
+      function escapeHtml(value) {
+        return String(value ?? "")
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#39;");
       }
 
       // ========== НАВИГАЦИЯ ПО ТАБАМ ==========
@@ -688,13 +712,13 @@
           items.forEach((item) => {
             html += `
                         <tr>
-                            <td><img src="${escape(item.image)}" alt="${escape(item.title)}"></td>
-                            <td>${escape(item.title)}</td>
-                            <td>${escape(item.material)}</td>
-                            <td>${escape(item.fabricator || "—")}</td>
+                            <td><img src="${escapeHtml(item.image)}" alt="${escapeHtml(item.title)}"></td>
+                            <td>${escapeHtml(item.title)}</td>
+                            <td>${escapeHtml(item.material)}</td>
+                            <td>${escapeHtml(item.fabricator || "—")}</td>
                             <td>
                                 <div class="action-buttons">
-                                    <button class="btn btn-danger" onclick="deleteCatalogItem('${escape(item.id)}')">
+                                    <button class="btn btn-danger delete-catalog" data-id="${escapeHtml(item.id)}">
                                         Удалить
                                     </button>
                                 </div>
@@ -704,6 +728,9 @@
           });
           html += "</tbody></table>";
           listDiv.innerHTML = html;
+          listDiv.querySelectorAll(".delete-catalog").forEach((button) => {
+            button.addEventListener("click", () => deleteCatalogItem(button.dataset.id));
+          });
         } catch (err) {
           console.error(err);
           document.getElementById("catalogList").innerHTML =
@@ -721,6 +748,7 @@
 
         const form = new FormData();
         form.append("action", "add_catalog");
+        form.append("csrf_token", getCsrfToken());
         form.append("title", document.getElementById("catalog_title").value);
         form.append(
           "material",
@@ -771,7 +799,10 @@
         try {
           const response = await fetch(API_ENDPOINT, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: {
+              "Content-Type": "application/json",
+              "X-CSRF-Token": getCsrfToken(),
+            },
             body: JSON.stringify({ action: "delete_catalog", id }),
           });
           const data = await response.json();
@@ -812,13 +843,13 @@
             const firstImage = images[0] || "/assets/images/ui/ph-3x2.webp";
             html += `
                         <tr>
-                            <td><img src="${escape(firstImage)}" alt="${escape(item.title)}"></td>
-                            <td>${escape(item.title)}</td>
-                            <td>${escape(item.material || "—")}</td>
-                            <td>${escape(item.location || "—")}</td>
+                            <td><img src="${escapeHtml(firstImage)}" alt="${escapeHtml(item.title)}"></td>
+                            <td>${escapeHtml(item.title)}</td>
+                            <td>${escapeHtml(item.material || "—")}</td>
+                            <td>${escapeHtml(item.location || "—")}</td>
                             <td>
                                 <div class="action-buttons">
-                                    <button class="btn btn-danger" onclick="deleteWork('${escape(item.id)}')">
+                                    <button class="btn btn-danger delete-work" data-id="${escapeHtml(item.id)}">
                                         Удалить
                                     </button>
                                 </div>
@@ -828,6 +859,9 @@
           });
           html += "</tbody></table>";
           listDiv.innerHTML = html;
+          listDiv.querySelectorAll(".delete-work").forEach((button) => {
+            button.addEventListener("click", () => deleteWork(button.dataset.id));
+          });
         } catch (err) {
           console.error(err);
           document.getElementById("worksList").innerHTML =
@@ -845,6 +879,7 @@
 
         const form = new FormData();
         form.append("action", "add_work");
+        form.append("csrf_token", getCsrfToken());
         form.append("title", document.getElementById("works_title").value);
         form.append(
           "material",
@@ -901,7 +936,10 @@
         try {
           const response = await fetch(API_ENDPOINT, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: {
+              "Content-Type": "application/json",
+              "X-CSRF-Token": getCsrfToken(),
+            },
             body: JSON.stringify({ action: "delete_work", id }),
           });
           const data = await response.json();

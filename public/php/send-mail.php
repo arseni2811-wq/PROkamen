@@ -7,6 +7,37 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit('Method Not Allowed');
 }
 
+function consumeContactRateLimit($maxAttempts = 10, $windowSeconds = 900) {
+    $ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+    $file = sys_get_temp_dir() . '/prokamen_contact_' . hash('sha256', $ip) . '.json';
+    $handle = @fopen($file, 'c+');
+    if ($handle === false || !flock($handle, LOCK_EX)) {
+        if (is_resource($handle)) fclose($handle);
+        return 0;
+    }
+    $raw = stream_get_contents($handle);
+    $now = time();
+    $bucket = $raw ? json_decode($raw, true) : null;
+    if (!is_array($bucket) || ($bucket['reset_at'] ?? 0) <= $now) {
+        $bucket = ['count' => 0, 'reset_at' => $now + $windowSeconds];
+    }
+    $bucket['count']++;
+    ftruncate($handle, 0);
+    rewind($handle);
+    fwrite($handle, json_encode($bucket));
+    fflush($handle);
+    flock($handle, LOCK_UN);
+    fclose($handle);
+    return $bucket['count'] > $maxAttempts ? max(1, $bucket['reset_at'] - $now) : 0;
+}
+
+$retryAfter = consumeContactRateLimit();
+if ($retryAfter > 0) {
+    header('Retry-After: ' . $retryAfter);
+    http_response_code(429);
+    exit('Too Many Requests');
+}
+
 // Функция для проверки доступности почтового сервера
 function checkMailServer($host = 'localhost', $port = 25) {
     $connection = @fsockopen($host, $port, $errno, $errstr, 5);
@@ -30,7 +61,12 @@ if (!checkMailServer()) {
 // ==========================
 // 1. Настройки
 // ==========================
-$to = "prokamen22@yandex.by"; // e-mail получателя (куда придут заявки)
+$to = getenv('PROKAMEN_RECIPIENT_EMAIL') ?: '';
+if (!$to || !filter_var($to, FILTER_VALIDATE_EMAIL)) {
+    error_log("Получатель формы не настроен");
+    http_response_code(503);
+    exit("Сервис отправки временно недоступен");
+}
 $subject = "=?UTF-8?B?".base64_encode("Новая заявка с сайта PRO Камень")."?="; // тема письма в UTF-8
 
 // ==========================
@@ -194,7 +230,7 @@ foreach($headers as $name => $value) {
 // ==========================
 try {
     // Логируем попытку отправки
-    error_log("[" . date('Y-m-d H:i:s') . "] Попытка отправки письма от {$name} <{$email}>");
+    error_log("[" . date('Y-m-d H:i:s') . "] Попытка отправки формы");
     
     // Проверяем настройки SMTP
     $smtp_host = ini_get('SMTP');
@@ -219,8 +255,6 @@ try {
 } catch (Exception $e) {
     // Детальное логирование ошибки
     error_log("[" . date('Y-m-d H:i:s') . "] Ошибка отправки формы: " . $e->getMessage());
-    error_log("Данные формы: name={$name}, phone={$phone}, email={$email}");
-    error_log("Заголовки: " . print_r($headers, true));
     
     http_response_code(500);
     echo "Ошибка отправки! Пожалуйста, попробуйте позже или свяжитесь с нами по телефону.";

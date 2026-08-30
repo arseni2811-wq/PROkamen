@@ -10,8 +10,81 @@
 
 // Динамический базовый URL: использует текущий hostname браузера, но порт 3000
 // Это решает проблему CORS при открытии на 127.0.0.1 vs localhost
-const API_BASE_URL =
-  window.location.protocol + "//" + window.location.hostname + ":3000";
+const IS_LOCAL_LIVE_SERVER = ["5500", "5501"].includes(window.location.port);
+const API_BASE_URL = IS_LOCAL_LIVE_SERVER
+  ? window.location.protocol + "//" + window.location.hostname + ":3000"
+  : window.location.origin;
+
+function escapeHtml(value) {
+  return String(value ?? "").replace(
+    /[&<>"']/g,
+    (char) =>
+      ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;",
+      })[char],
+  );
+}
+
+const validationFieldLabels = {
+  manager_id: "менеджер",
+  total_amount: "сумма заказа",
+  prepayment: "предоплата",
+  installation_address: "адрес монтажа",
+  order_source: "источник заявки",
+  stone_name: "камень",
+  product_type: "тип изделия",
+  deadline_date: "финальный срок",
+  deadlines: "график работ",
+  exchange_rate: "курс валют",
+  calculator_snapshot: "данные калькулятора",
+  client: "клиент",
+  "client.full_name": "ФИО клиента",
+  "client.phone": "телефон клиента",
+  "client.email": "email клиента",
+  "client.address": "адрес клиента",
+  "client.social_networks": "соцсети клиента",
+  items: "позиции заказа",
+  "items[].product_type_id": "тип изделия позиции",
+  "items[].material_id": "материал позиции",
+  "items[].length_mm": "длина изделия",
+  "items[].width_mm": "ширина изделия",
+  "items[].area_m2": "площадь изделия",
+  "items[].edge_profile_id": "профиль кромки",
+  "items[].edge_length_m": "длина кромки",
+  "items[].item_cost": "стоимость позиции",
+};
+
+function validationFieldLabel(path) {
+  const normalized = String(path || "")
+    .replace(/\.\d+(?=\.|$)/g, "[]")
+    .replace(/^\./, "");
+  return validationFieldLabels[normalized] || normalized || "данные формы";
+}
+
+function formatValidationDetails(data) {
+  if (Array.isArray(data?.details)) {
+    return data.details
+      .map((issue) => {
+        const path = Array.isArray(issue?.path)
+          ? issue.path.join(".")
+          : String(issue?.path || "");
+        return `${validationFieldLabel(path)}: ${issue?.message || "некорректное значение"}`;
+      })
+      .filter(Boolean);
+  }
+  if (data?.errors && typeof data.errors === "object") {
+    return Object.entries(data.errors).flatMap(([path, messages]) =>
+      (Array.isArray(messages) ? messages : [messages])
+        .filter(Boolean)
+        .map((message) => `${validationFieldLabel(path)}: ${message}`),
+    );
+  }
+  return [];
+}
 
 /**
  * Единая функция для всех API-запросов.
@@ -27,22 +100,25 @@ async function apiFetch(endpoint, options = {}) {
   // из-за sameSite/cross-origin → иначе запрос падает с 401).
   const token = localStorage.getItem("crm_token");
 
-  const config = {
-    credentials: "include", // обязательно для httpOnly cookie с JWT
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...(options.headers || {}),
-    },
-    ...options,
+  const isFormData = options.body instanceof FormData;
+  const headers = {
+    Accept: "application/json",
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...(options.headers || {}),
   };
-
-  // Если передаётся FormData — удаляем Content-Type, пусть браузер сам
-  if (options.body instanceof FormData) {
-    const headers = { ...(options.headers || {}) };
+  // Для JSON Content-Type обязателен, иначе express.json() не разбирает body.
+  // Для FormData заголовок не задаём: браузер сам добавит multipart boundary.
+  if (!isFormData && options.body !== undefined && options.body !== null) {
+    headers["Content-Type"] = "application/json";
+  } else if (isFormData) {
     delete headers["Content-Type"];
-    config.headers = headers;
   }
+
+  const config = {
+    ...options,
+    credentials: "include", // обязательно для httpOnly cookie с JWT
+    headers,
+  };
 
   try {
     const response = await fetch(url, config);
@@ -85,9 +161,12 @@ async function apiFetch(endpoint, options = {}) {
     const data = await response.json().catch(() => ({}));
 
     if (!response.ok) {
-      const details = data.errors || data.error || null;
+      const details = data.details || data.errors || data.error || null;
+      const validationDetails = formatValidationDetails(data);
       let errorMessage = data.message || `Ошибка сервера: ${response.status}`;
-      if (!data.message && details) {
+      if (validationDetails.length > 0) {
+        errorMessage = `${errorMessage}: ${validationDetails.join("; ")}`;
+      } else if (!data.message && details) {
         if (typeof details === "string") {
           errorMessage = details;
         } else if (typeof details === "object") {
@@ -118,6 +197,8 @@ async function apiFetch(endpoint, options = {}) {
 // =========================================================
 
 const api = {
+  resolveUrl: (path) => new URL(path, `${API_BASE_URL}/`).href,
+
   // --- АВТОРИЗАЦИЯ ---
   login: (login, password) =>
     apiFetch("/api/login", {
@@ -142,11 +223,14 @@ const api = {
   // --- ЗАКАЗЫ ---
   getOrders: () => apiFetch("/api/orders"),
 
+  getProductionOrders: () => apiFetch("/api/orders/production"),
+
   getOrder: (id) => apiFetch(`/api/orders/${id}`),
 
-  createOrder: (data) =>
+  createOrder: (data, idempotencyKey = null) =>
     apiFetch("/api/orders", {
       method: "POST",
+      headers: idempotencyKey ? { "Idempotency-Key": idempotencyKey } : {},
       body: JSON.stringify(data),
     }),
 
@@ -156,10 +240,16 @@ const api = {
       body: JSON.stringify(data),
     }),
 
-  updateOrderStatus: (id, status_id) =>
+  updateOrderCalculator: (id, data) =>
+    apiFetch(`/api/orders/${id}/calculator`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    }),
+
+  updateOrderStatus: (id, status_id, comment = null, version) =>
     apiFetch(`/api/orders/${id}/status`, {
       method: "PUT",
-      body: JSON.stringify({ status_id }),
+      body: JSON.stringify({ status_id, comment, version }),
     }),
 
   // --- ФАЙЛЫ ---
@@ -175,12 +265,35 @@ const api = {
 
   getAttachments: (orderId) => apiFetch(`/api/orders/${orderId}/attachments`),
 
+  downloadAttachment: async (orderId, attachmentId) => {
+    const token = localStorage.getItem("crm_token");
+    const response = await fetch(
+      `${API_BASE_URL}/api/orders/${orderId}/attachments/${attachmentId}/download`,
+      {
+        credentials: "include",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      },
+    );
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || "Не удалось скачать вложение");
+    }
+    return response.blob();
+  },
+
+  deleteAttachment: (orderId, attachmentId) =>
+    apiFetch(`/api/orders/${orderId}/attachments/${attachmentId}`, {
+      method: "DELETE",
+    }),
+
   downloadPdf: async (orderId) => {
     try {
+      const token = localStorage.getItem("crm_token");
       const response = await fetch(
         `${API_BASE_URL}/api/orders/${orderId}/pdf`,
         {
           credentials: "include",
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
         },
       );
 
