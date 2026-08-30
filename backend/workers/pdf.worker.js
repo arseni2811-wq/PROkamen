@@ -220,7 +220,35 @@ async function fillPDFDocument(
 
   let rowY = tableTop + 25;
 
-  if (snapshot && snapshot.isInitialized) {
+  if (snapshot && snapshot.schemaVersion === 2) {
+    doc
+      .fillColor("#333333")
+      .fontSize(9)
+      .font(FONT_REGULAR)
+      .text(`Материал: ${snapshot.material?.title || "Не указан"}`, col1 + 5, rowY)
+      .text(`${snapshot.material?.slabCount || 0} слэба`, col2 + 5, rowY)
+      .text(
+        `${(Number(snapshot.totals?.materialBynCents || 0) / 100).toLocaleString("ru-RU")} BYN`,
+        col3 + 5,
+        rowY,
+      );
+    rowY += 18;
+
+    for (const line of (snapshot.lines || []).filter(
+      (item) => Number(item.amountBynCents) > 0,
+    )) {
+      const quantity = Number(line.quantity || 0).toLocaleString("ru-RU");
+      doc
+        .text(String(line.name || "Работа"), col1 + 5, rowY, { width: 285 })
+        .text(`${quantity} ${line.unit || ""}`, col2 + 5, rowY)
+        .text(
+          `${(Number(line.amountBynCents) / 100).toLocaleString("ru-RU")} BYN`,
+          col3 + 5,
+          rowY,
+        );
+      rowY += 18;
+    }
+  } else if (snapshot && snapshot.isInitialized) {
     doc
       .fillColor("#333333")
       .fontSize(9)
@@ -297,6 +325,16 @@ async function fillPDFDocument(
     });
 
   doc.y = rowY + 60;
+  doc
+    .fontSize(8)
+    .font(FONT_REGULAR)
+    .fillColor("#666666")
+    .text(
+      "Стоимость указана в BYN и зафиксирована по снимку расчёта. Окончательная комплектация и объёмы подтверждаются после замера.",
+      50,
+      doc.y,
+      { width: 495 },
+    );
   doc.moveDown(2);
 
   doc

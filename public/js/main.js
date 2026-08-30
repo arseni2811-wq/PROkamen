@@ -101,6 +101,7 @@ export async function renderHeaderFooter(activePath) {
         <li class="nav__item"><a href="/">Главная</a></li>
         <li class="nav__item"><a href="/pages/catalog.html">Коллекция</a></li>
         <li class="nav__item"><a href="/pages/services.html">Услуги</a></li>
+        <li class="nav__item"><a href="/pages/calculator.html">Калькулятор</a></li>
         <li class="nav__item"><a href="/pages/works.html">Наши работы</a></li>
         <li class="nav__item"><a href="/pages/about.html">О проекте</a></li>
         <li class="nav__item"><a href="/pages/contacts.html">Контакты</a></li>

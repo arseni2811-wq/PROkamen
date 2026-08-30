@@ -30,6 +30,7 @@ function pricebook(rate = 3) {
       { systemCode: "joint_short", displayName: "Стык", category: "production", unit: "pcs", basePriceUsdCents: 4000, calculationMode: "unit", active: true, publicAvailable: true },
       { systemCode: "edge_standard", displayName: "Кромка", category: "production", unit: "m", basePriceUsdCents: 2000, calculationMode: "unit", active: true, publicAvailable: true },
       { systemCode: "manual_polish_small", displayName: "Ручная полировка", category: "production", unit: "service", basePriceUsdCents: 5000, calculationMode: "unit", active: true, publicAvailable: false },
+      { systemCode: "manual_polish_large", displayName: "Ручная полировка более 1 м²", category: "production", unit: "service", basePriceUsdCents: 8000, calculationMode: "unit", active: true, publicAvailable: false },
       { systemCode: "install_countertop", displayName: "Монтаж", category: "installation", unit: "m", basePriceUsdCents: 2500, calculationMode: "unit", active: true, publicAvailable: true },
     ],
   };
@@ -99,9 +100,27 @@ test("нулевые и неверные значения не создают Na
   assert.throws(() => calculate(config({ items: [{ lengthMm: -1, widthMm: 600 }] }), pricebook()));
 });
 
-test("граница ручной полировки 1.00 м² выбирается вызывающей схемой однозначно", () => {
-  const result = calculate(config({ operations: [{ code: "manual_polish_small", quantity: 1 }] }), pricebook());
-  assert.equal(result.lines.find((x) => x.code === "manual_polish_small").amountUsdCents, 5000);
+test("ровно 1.00 м² использует малый тариф ручной полировки, свыше — большой", () => {
+  const atBoundary = calculate(config({
+    items: [{ pieces: [{ lengthMm: 1000, widthMm: 1000 }], operations: [] }],
+    operations: [{ code: "manual_polish_area", quantity: 1 }],
+  }), pricebook());
+  const aboveBoundary = calculate(config({
+    items: [{ pieces: [{ lengthMm: 1001, widthMm: 1000 }], operations: [] }],
+    operations: [{ code: "manual_polish_area", quantity: 1 }],
+  }), pricebook());
+  assert.equal(atBoundary.lines.find((x) => x.code === "manual_polish_small").amountUsdCents, 5000);
+  assert.equal(aboveBoundary.lines.find((x) => x.code === "manual_polish_large").amountUsdCents, 8000);
+});
+
+test("ручная наценка и дополнительная стоимость материала входят в техническую сумму", () => {
+  const result = calculate(config({
+    materialMarkupBps: 2000,
+    additionalMaterialBynCents: 12000,
+  }), pricebook());
+  assert.equal(result.material.markupBps, 2000);
+  assert.equal(result.material.additionalMaterialBynCents, 12000);
+  assert.ok(result.totals.materialBynCents >= 12000);
 });
 
 test("сохранённый снимок не меняется после изменения курса", () => {

@@ -136,13 +136,6 @@ const calculatorSnapshotSchema = z
   })
   .passthrough();
 
-const calculatorUpdateSchema = z.object({
-  version: z.coerce.number().int().positive(),
-  total_amount: z.coerce.number().finite().min(0).max(20000000),
-  exchange_rate: z.coerce.number().positive().max(999999.9999).nullable(),
-  calculator_snapshot: calculatorSnapshotSchema,
-});
-
 // Схема для материала
 const materialSchema = z.object({
   material_id: z.string().optional(),
@@ -204,6 +197,7 @@ const calculatorItemV2Schema = z
     shape: z.enum(["straight", "l", "u"]),
     pieces: z.array(calculatorPieceSchema).min(1).max(3),
     processedEdgeM: z.coerce.number().finite().min(0).max(1000).optional(),
+    edgeCode: z.enum(["edge_standard", "edge_round", "edge_reinforced"]).optional().nullable(),
     straightCutM: z.coerce.number().finite().min(0).max(1000).optional(),
     operations: z.array(calculatorOperationSchema).max(100).default([]),
   })
@@ -228,9 +222,21 @@ const calculatorConfigurationV2Schema = z
     additionalLines: z.array(calculatorAdditionalLineSchema).max(100).default([]),
     manualSlabCount: z.coerce.number().finite().min(0).max(100).multipleOf(0.5).optional().nullable(),
     manualMaterialPriceUsdCents: z.coerce.number().int().min(0).max(2000000000).optional(),
+    materialMarkupBps: z.coerce.number().int().min(0).max(100000).optional(),
+    additionalMaterialBynCents: z.coerce.number().int().min(0).max(2000000000).optional(),
     managerAdjustmentBynCents: z.coerce.number().int().min(-2000000000).max(2000000000).optional(),
   })
   .strict();
+
+const calculatorUpdateSchema = z.object({
+  version: z.coerce.number().int().positive(),
+  total_amount: z.coerce.number().finite().min(0).max(20000000),
+  exchange_rate: z.coerce.number().positive().max(999999.9999).nullable(),
+  calculator_snapshot: z.union([
+    calculatorSnapshotSchema,
+    z.object({ schemaVersion: z.literal(2) }).passthrough(),
+  ]),
+});
 
 const calculatorPreviewSchema = z
   .object({
@@ -292,6 +298,40 @@ const calculatorSettingsUpdateSchema = z
   })
   .strict();
 
+const calculatorMaterialUpdateSchema = z
+  .object({
+    category: z.enum(["quartz", "granite", "onyx", "marble"]),
+    manufacturer: z.string().trim().max(100).optional().nullable(),
+    series: z.string().trim().max(100).optional().nullable(),
+    title: z.string().trim().min(1).max(100),
+    sku: z.string().trim().max(100).optional().nullable(),
+    description: z.string().max(5000).optional().nullable(),
+    image: z.string().trim().max(500).optional().nullable(),
+    color: z.string().trim().max(50).optional().nullable(),
+    slabFormatId: z.coerce.number().int().positive().optional().nullable(),
+    lengthMm: z.coerce.number().int().positive().max(10000).optional().nullable(),
+    widthMm: z.coerce.number().int().positive().max(5000).optional().nullable(),
+    thicknessMm: z.coerce.number().int().positive().max(200).optional().nullable(),
+    priceUnit: z.enum(["slab", "half_slab", "sqm", "manual"]),
+    basePriceUsdCents: z.coerce.number().int().min(0).max(2000000000),
+    markupBps: z.coerce.number().int().min(0).max(100000),
+    active: z.boolean(),
+    publicAvailable: z.boolean(),
+    sortOrder: z.coerce.number().int().min(-100000).max(100000),
+  })
+  .strict();
+
+const calculatorSlabFormatUpdateSchema = z
+  .object({
+    name: z.string().trim().min(1).max(80),
+    lengthMm: z.coerce.number().int().positive().max(10000).optional().nullable(),
+    widthMm: z.coerce.number().int().positive().max(5000).optional().nullable(),
+    thicknessMm: z.coerce.number().int().positive().max(200).optional().nullable(),
+    active: z.boolean(),
+    sortOrder: z.coerce.number().int().min(-100000).max(100000),
+  })
+  .strict();
+
 module.exports = {
   orderSchema,
   orderUpdateSchema,
@@ -304,4 +344,6 @@ module.exports = {
   publicCalculatorLeadSchema,
   calculatorRateUpdateSchema,
   calculatorSettingsUpdateSchema,
+  calculatorMaterialUpdateSchema,
+  calculatorSlabFormatUpdateSchema,
 };

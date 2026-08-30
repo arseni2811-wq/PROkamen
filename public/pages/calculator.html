@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="ru" data-calculator-mode="public">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="Рассчитайте ориентировочную стоимость столешницы или подоконника из камня." />
+    <title>Калькулятор изделий — ПРО Камень</title>
+    <link rel="stylesheet" href="../css/calculator.css" />
+  </head>
+  <body>
+    <header class="calc-header"><div class="calc-header__inner"><a class="calc-brand" href="../index.html">ПРО КАМЕНЬ</a><a class="calc-back" href="../index.html">На главную</a></div></header>
+    <main class="calc-shell">
+      <h1 class="calc-title">Рассчитайте изделие из камня</h1>
+      <p class="calc-lead">Выберите форму, размеры и материал. Итог — ориентир «от» в BYN; точную стоимость подтвердит менеджер после замера.</p>
+      <div class="calc-progress" aria-hidden="true"><span class="active"></span><span class="active"></span><span class="active"></span><span class="active"></span></div>
+      <div id="calculatorApp" class="calc-grid" aria-live="polite"></div>
+    </main>
+    <script src="../js/calculator-app.js" defer></script>
+  </body>
+</html>

@@ -246,6 +246,43 @@ const api = {
       body: JSON.stringify(data),
     }),
 
+  getCalculatorCatalog: () => apiFetch("/api/calculator/catalog"),
+
+  previewCalculator: (data) =>
+    apiFetch("/api/calculator/preview", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  getCalculatorAdmin: () => apiFetch("/api/calculator/admin"),
+
+  updateCalculatorRate: (code, data) =>
+    apiFetch(`/api/calculator/admin/rates/${encodeURIComponent(code)}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    }),
+
+  updateCalculatorSettings: (data) =>
+    apiFetch("/api/calculator/admin/settings", {
+      method: "PUT",
+      body: JSON.stringify(data),
+    }),
+
+  publishCalculatorPricebook: () =>
+    apiFetch("/api/calculator/admin/publish", { method: "POST" }),
+
+  updateCalculatorMaterial: (id, data) =>
+    apiFetch(`/api/calculator/admin/materials/${encodeURIComponent(id)}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    }),
+
+  updateCalculatorFormat: (code, data) =>
+    apiFetch(`/api/calculator/admin/formats/${encodeURIComponent(code)}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    }),
+
   updateOrderStatus: (id, status_id, comment = null, version) =>
     apiFetch(`/api/orders/${id}/status`, {
       method: "PUT",

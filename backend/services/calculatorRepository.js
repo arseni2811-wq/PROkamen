@@ -137,7 +137,59 @@ async function getPublicCatalog() {
             thickness_mm AS thicknessMm, is_custom AS custom
      FROM calculator_slab_formats WHERE is_active = 1 ORDER BY sort_order`,
   );
-  return { categories, materials, formats };
+  const [operations] = await pool.query(
+    `SELECT r.system_code AS code, r.display_name AS name,
+            r.category, r.unit_code AS unit
+     FROM calculator_rates r
+     JOIN calculator_pricebooks p ON p.pricebook_id = r.pricebook_id
+     WHERE p.status = 'published' AND r.is_active = 1
+       AND r.public_available = 1
+     ORDER BY r.sort_order, r.rate_id`,
+  );
+  return { categories, materials, formats, operations };
+}
+
+async function getInternalCatalog() {
+  const [categories] = await pool.query(
+    `SELECT type_id AS id, type_name_ru AS name
+     FROM dict_material_types WHERE is_active = 1
+     ORDER BY sort_order, type_name_ru`,
+  );
+  const [materials] = await pool.query(
+    `SELECT material_id AS id, type_id AS category, fabricator AS manufacturer,
+            series_name AS series, title, sku, description, image_path AS image,
+            color, slab_format_id AS slabFormatId, thickness_mm AS thicknessMm
+     FROM materials WHERE is_active = 1
+     ORDER BY sort_order, title`,
+  );
+  const [formats] = await pool.query(
+    `SELECT format_id AS id, system_code AS code, display_name AS name,
+            length_mm AS lengthMm, width_mm AS widthMm,
+            thickness_mm AS thicknessMm, is_custom AS custom
+     FROM calculator_slab_formats WHERE is_active = 1 ORDER BY sort_order`,
+  );
+  const [operations] = await pool.query(
+    `SELECT r.system_code AS code, r.display_name AS name,
+            r.category, r.unit_code AS unit
+     FROM calculator_rates r
+     JOIN calculator_pricebooks p ON p.pricebook_id = r.pricebook_id
+     WHERE p.status = 'published' AND r.is_active = 1
+       AND r.manager_available = 1
+     ORDER BY r.sort_order, r.rate_id`,
+  );
+  return {
+    categories,
+    materials,
+    formats,
+    operations: operations
+      .filter((item) => !["manual_polish_small", "manual_polish_large"].includes(item.code))
+      .concat({
+        code: "manual_polish_area",
+        name: "Ручная полировка площади",
+        category: "production",
+        unit: "service",
+      }),
+  };
 }
 
 async function getAdminPricebook() {
@@ -158,7 +210,76 @@ async function getAdminPricebook() {
   const [formats] = await pool.query(
     "SELECT * FROM calculator_slab_formats ORDER BY sort_order, format_id",
   );
-  return { pricebook, rates: rates.map(mapRate), materials: materials.map(mapMaterial), formats };
+  const [history] = await pool.query(
+    `SELECT change_id AS id, entity_type AS entityType,
+            entity_key AS entityKey, action, before_json AS beforeValue,
+            after_json AS afterValue, created_at AS createdAt
+     FROM calculator_change_history ORDER BY change_id DESC LIMIT 100`,
+  );
+  return { pricebook, rates: rates.map(mapRate), materials: materials.map(mapMaterial), formats, history };
+}
+
+async function updateMaterial(actorId, materialId, changes) {
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+    const [[before]] = await connection.query(
+      "SELECT * FROM materials WHERE material_id = ? FOR UPDATE",
+      [materialId],
+    );
+    if (!before) throw Object.assign(new Error("Материал не найден"), { status: 404 });
+    await connection.query(
+      `UPDATE materials SET type_id = ?, fabricator = ?, series_name = ?,
+       title = ?, sku = ?, description = ?, image_path = ?, color = ?,
+       slab_format_id = ?, length_mm = ?, width_mm = ?, thickness_mm = ?,
+       price_unit = ?, base_price_usd_cents = ?, markup_bps = ?,
+       is_active = ?, public_available = ?, sort_order = ?,
+       price_changed_at = CURRENT_TIMESTAMP WHERE material_id = ?`,
+      [changes.category, changes.manufacturer, changes.series, changes.title,
+       changes.sku, changes.description, changes.image, changes.color,
+       changes.slabFormatId, changes.lengthMm, changes.widthMm,
+       changes.thicknessMm, changes.priceUnit, changes.basePriceUsdCents,
+       changes.markupBps, changes.active, changes.publicAvailable,
+       changes.sortOrder, materialId],
+    );
+    await connection.query(
+      `INSERT INTO calculator_change_history
+       (actor_id, entity_type, entity_key, action, before_json, after_json)
+       VALUES (?, 'material', ?, 'update', ?, ?)`,
+      [actorId, materialId, JSON.stringify(before), JSON.stringify(changes)],
+    );
+    await connection.commit();
+  } catch (error) {
+    await connection.rollback(); throw error;
+  } finally { connection.release(); }
+}
+
+async function updateSlabFormat(actorId, systemCode, changes) {
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+    const [[before]] = await connection.query(
+      "SELECT * FROM calculator_slab_formats WHERE system_code = ? FOR UPDATE",
+      [systemCode],
+    );
+    if (!before) throw Object.assign(new Error("Формат не найден"), { status: 404 });
+    await connection.query(
+      `UPDATE calculator_slab_formats SET display_name = ?, length_mm = ?,
+       width_mm = ?, thickness_mm = ?, is_active = ?, sort_order = ?
+       WHERE system_code = ?`,
+      [changes.name, changes.lengthMm, changes.widthMm, changes.thicknessMm,
+       changes.active, changes.sortOrder, systemCode],
+    );
+    await connection.query(
+      `INSERT INTO calculator_change_history
+       (actor_id, entity_type, entity_key, action, before_json, after_json)
+       VALUES (?, 'slab_format', ?, 'update', ?, ?)`,
+      [actorId, systemCode, JSON.stringify(before), JSON.stringify(changes)],
+    );
+    await connection.commit();
+  } catch (error) {
+    await connection.rollback(); throw error;
+  } finally { connection.release(); }
 }
 
 async function ensureDraft(connection, actorId) {
@@ -305,7 +426,10 @@ async function publishDraft(actorId) {
 module.exports = {
   getPublishedPricebook,
   getPublicCatalog,
+  getInternalCatalog,
   getAdminPricebook,
+  updateMaterial,
+  updateSlabFormat,
   updateDraftRate,
   updateDraftSettings,
   publishDraft,

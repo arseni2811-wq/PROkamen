@@ -141,6 +141,82 @@ async function main() {
       authorization: `Bearer ${workerLogin.token}`,
       "content-type": "application/json",
     };
+
+    const [[normalFormat]] = await pool.query(
+      "SELECT format_id FROM calculator_slab_formats WHERE system_code = 'normal'",
+    );
+    await pool.query(
+      `INSERT INTO materials
+       (material_id, type_id, title, fabricator, price_per_m2, slab_format_id,
+        price_unit, base_price_usd_cents, is_active, public_available)
+       VALUES ('integration-calculator', 'quartz', 'Integration Quartz',
+               'Test', 0, ?, 'slab', 10000, 1, 1),
+              ('integration-inactive', 'quartz', 'Inactive Quartz',
+               'Test', 0, ?, 'slab', 10000, 0, 0)`,
+      [normalFormat.format_id, normalFormat.format_id],
+    );
+    const calculatorPayload = {
+      materialId: "integration-calculator",
+      slabFormatCode: "normal",
+      configuration: {
+        items: [{
+          productType: "countertop",
+          shape: "straight",
+          pieces: [{ lengthMm: 1000, widthMm: 600 }],
+          edgeCode: "edge_standard",
+          processedEdgeM: 1,
+          operations: [],
+        }],
+        operations: [{ code: "hole_faucet", quantity: 1 }],
+        additionalLines: [],
+      },
+    };
+    const publicCatalog = await readJson(
+      await fetch(`${baseUrl}/api/public/calculator/catalog`),
+      200,
+    );
+    assert(
+      publicCatalog.materials.some((item) => item.id === "integration-calculator"),
+      "Public calculator material was not returned",
+    );
+    assert(
+      !JSON.stringify(publicCatalog).toLowerCase().includes("usd"),
+      "Public catalog leaked USD fields",
+    );
+    const publicPreview = await readJson(
+      await fetch(`${baseUrl}/api/public/calculator/preview`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(calculatorPayload),
+      }),
+      200,
+    );
+    assert(
+      !JSON.stringify(publicPreview).toLowerCase().includes("usd"),
+      "Public preview leaked USD fields",
+    );
+    const internalPreview = await readJson(
+      await fetch(`${baseUrl}/api/calculator/preview`, {
+        method: "POST",
+        headers: managerHeaders,
+        body: JSON.stringify(calculatorPayload),
+      }),
+      200,
+    );
+    assert(
+      internalPreview.calculation.totals.technicalTotalCents > 0,
+      "Internal calculator did not return technical totals",
+    );
+    assert(
+      (await fetch(`${baseUrl}/api/calculator/admin`, { headers: managerHeaders })).status === 403,
+      "Manager accessed calculator administration",
+    );
+    const inactivePreview = await fetch(`${baseUrl}/api/public/calculator/preview`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ ...calculatorPayload, materialId: "integration-inactive" }),
+    });
+    assert(inactivePreview.status === 404, "Inactive material was calculated publicly");
     const spoofedManager = await readJson(
       await fetch(`${baseUrl}/api/orders`, {
         method: "POST",
@@ -426,6 +502,54 @@ async function main() {
       [multiItemOrder.order_id],
     );
     assert(multiItemRows[0].count === 2, "Ambiguous calculator save replaced multiple items");
+    const v2Configuration = {
+      ...calculatorPayload.configuration,
+      items: [
+        calculatorPayload.configuration.items[0],
+        {
+          productType: "windowsill",
+          shape: "l",
+          pieces: [
+            { lengthMm: 1200, widthMm: 350 },
+            { lengthMm: 600, widthMm: 350 },
+          ],
+          edgeCode: "edge_round",
+          processedEdgeM: 1.8,
+          operations: [],
+        },
+      ],
+    };
+    const v2Preview = await readJson(
+      await fetch(`${baseUrl}/api/calculator/preview`, {
+        method: "POST",
+        headers: authHeaders,
+        body: JSON.stringify({ ...calculatorPayload, configuration: v2Configuration }),
+      }),
+      200,
+    );
+    await readJson(
+      await fetch(`${baseUrl}/api/orders/${multiItemOrder.order_id}/calculator`, {
+        method: "PUT",
+        headers: authHeaders,
+        body: JSON.stringify({
+          version: 1,
+          total_amount: v2Preview.calculation.totals.finalQuoteTotalCents / 100,
+          exchange_rate: v2Preview.calculation.exchangeRate,
+          calculator_snapshot: v2Preview.calculation,
+        }),
+      }),
+      200,
+    );
+    const savedV2Order = await readJson(
+      await fetch(`${baseUrl}/api/orders/${multiItemOrder.order_id}`, { headers: authHeaders }),
+      200,
+    );
+    assert(savedV2Order.order.items.length === 2, "Schema v2 did not save multiple items");
+    assert(savedV2Order.order.calculator_snapshot.schemaVersion === 2, "Schema v2 snapshot was not persisted");
+    const v2Pdf = await fetch(`${baseUrl}/api/orders/${multiItemOrder.order_id}/pdf`, {
+      headers: { authorization: authHeaders.authorization },
+    });
+    assert(v2Pdf.status === 200, "Schema v2 PDF was not generated from the snapshot");
     await pool.query("DELETE FROM orders WHERE order_id = ?", [multiItemOrder.order_id]);
 
     await readJson(

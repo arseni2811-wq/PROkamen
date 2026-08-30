@@ -19,6 +19,12 @@ async function getPublicCatalog(req, res, next) {
   } catch (error) { next(error); }
 }
 
+async function getInternalCatalog(req, res, next) {
+  try {
+    res.json({ success: true, ...(await repository.getInternalCatalog()) });
+  } catch (error) { next(error); }
+}
+
 async function publicPreview(req, res, next) {
   try {
     const pricebook = await loadPricebook(req.validatedBody, true);
@@ -26,6 +32,8 @@ async function publicPreview(req, res, next) {
       ...req.validatedBody.configuration,
       manualSlabCount: null,
       manualMaterialPriceUsdCents: 0,
+      materialMarkupBps: 0,
+      additionalMaterialBynCents: 0,
       managerAdjustmentBynCents: 0,
       additionalLines: [],
     };
@@ -47,6 +55,8 @@ async function submitPublicLead(req, res, next) {
       ...req.validatedBody.configuration,
       manualSlabCount: null,
       manualMaterialPriceUsdCents: 0,
+      materialMarkupBps: 0,
+      additionalMaterialBynCents: 0,
       managerAdjustmentBynCents: 0,
       additionalLines: [],
     };
@@ -88,4 +98,18 @@ async function publish(req, res, next) {
   catch (error) { next(error); }
 }
 
-module.exports = { getPublicCatalog, publicPreview, internalPreview, submitPublicLead, getAdminData, updateRate, updateSettings, publish };
+async function updateMaterial(req, res, next) {
+  try {
+    await repository.updateMaterial(req.user.user_id, req.params.id, req.validatedBody);
+    res.json({ success: true });
+  } catch (error) { next(error); }
+}
+
+async function updateSlabFormat(req, res, next) {
+  try {
+    await repository.updateSlabFormat(req.user.user_id, req.params.code, req.validatedBody);
+    res.json({ success: true });
+  } catch (error) { next(error); }
+}
+
+module.exports = { getPublicCatalog, getInternalCatalog, publicPreview, internalPreview, submitPublicLead, getAdminData, updateRate, updateSettings, publish, updateMaterial, updateSlabFormat };

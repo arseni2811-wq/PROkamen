@@ -1016,6 +1016,120 @@ async function updateOrderCalculator(req, res) {
        FROM order_items WHERE order_id = ? ORDER BY item_id FOR UPDATE`,
       [orderId],
     );
+    if (snapshot.schemaVersion === 2) {
+      const configurationItems = snapshot.configuration?.items || [];
+      const materialId = snapshot.material?.id;
+      const [materials] = await connection.query(
+        "SELECT material_id, type_id FROM materials WHERE material_id = ? AND is_active = 1",
+        [materialId],
+      );
+      if (!materials[0] || configurationItems.length === 0) {
+        await connection.rollback();
+        return res.status(404).json({
+          success: false,
+          message: "Материал или изделия снимка недоступны",
+        });
+      }
+
+      await connection.query("DELETE FROM order_items WHERE order_id = ?", [orderId]);
+      const totalArea = Number(snapshot.metrics?.areaM2 || 0);
+      for (const item of configurationItems) {
+        const pieces = Array.isArray(item.pieces) ? item.pieces : [];
+        const itemArea = pieces.reduce(
+          (sum, piece) =>
+            sum + Number(piece.lengthMm || 0) * Number(piece.widthMm || 0) / 1000000,
+          0,
+        );
+        const lengthMm = Math.round(Math.max(...pieces.map((piece) => Number(piece.lengthMm || 0))));
+        const widthMm = Math.round(Math.max(...pieces.map((piece) => Number(piece.widthMm || 0))));
+        const edgeLengthM = Number(item.processedEdgeM || 0);
+        const itemCost = totalArea > 0 ? totalAmount * itemArea / totalArea : 0;
+        await connection.query(
+          `INSERT INTO order_items
+           (order_id, product_type_id, material_id, stone_category, length_mm,
+            width_mm, area_m2, edge_profile_id, edge_length_m, item_cost)
+           VALUES (?, 1, ?, ?, ?, ?, ?, 1, ?, ?)`,
+          [
+            orderId,
+            materialId,
+            materials[0].type_id === "quartz" ? "quartz" : "other",
+            lengthMm,
+            widthMm,
+            itemArea,
+            edgeLengthM,
+            itemCost,
+          ],
+        );
+      }
+
+      const [orderUpdate] = await connection.query(
+        `UPDATE orders
+         SET calculator_snapshot = ?, stone_name = ?, total_amount = ?,
+             exchange_rate = ?, product_type = ?, version = version + 1
+         WHERE order_id = ? AND version = ?`,
+        [
+          JSON.stringify(snapshot),
+          snapshot.material.title || null,
+          totalAmount,
+          exchangeRate,
+          configurationItems.map((item) =>
+            item.productType === "windowsill" ? "Подоконник" : "Столешница",
+          ).join(", "),
+          orderId,
+          expectedVersion,
+        ],
+      );
+      if (orderUpdate.affectedRows !== 1) {
+        await connection.rollback();
+        return res.status(409).json({
+          success: false,
+          message: "Заказ был изменен другим пользователем",
+        });
+      }
+
+      const totalRevenueCents = toCents(totalAmount);
+      const prepaymentCents = toCents(currentOrder.prepayment);
+      await connection.query(
+        `INSERT INTO order_finances
+         (order_id, stone_category, material_cost_cents, production_cost_cents,
+          total_revenue_cents, prepayment_cents, balance_cents, currency,
+          exchange_rate, calculation_snapshot)
+         VALUES (?, ?, ?, ?, ?, ?, ?, 'BYN', ?, ?)
+         ON DUPLICATE KEY UPDATE
+           stone_category = VALUES(stone_category),
+           material_cost_cents = VALUES(material_cost_cents),
+           production_cost_cents = VALUES(production_cost_cents),
+           total_revenue_cents = VALUES(total_revenue_cents),
+           prepayment_cents = VALUES(prepayment_cents),
+           balance_cents = VALUES(balance_cents),
+           exchange_rate = VALUES(exchange_rate),
+           calculation_snapshot = VALUES(calculation_snapshot)`,
+        [
+          orderId,
+          materials[0].type_id === "quartz" ? "quartz" : "other",
+          Number(snapshot.totals?.materialBynCents || 0),
+          Number(snapshot.totals?.productionBynCents || 0),
+          totalRevenueCents,
+          prepaymentCents,
+          totalRevenueCents - prepaymentCents,
+          exchangeRate,
+          JSON.stringify(snapshot),
+        ],
+      );
+      await logOrderAction(
+        connection,
+        orderId,
+        "Обновление калькулятора",
+        `Сохранён снимок калькулятора v2: ${configurationItems.length} изделие(й)`,
+        req.user?.user_id,
+      );
+      await connection.commit();
+      return res.json({
+        success: true,
+        message: "Расчёт и снимок заказа сохранены",
+        version: Number(expectedVersion) + 1,
+      });
+    }
     if (items.length > 1) {
       await connection.rollback();
       return res.status(409).json({

@@ -72,7 +72,7 @@ async function main() {
       if (
         statusRows[0].count !== 1 ||
         uniqueRows[0].count !== 1 ||
-        migrationRows[0].count !== 5 ||
+        migrationRows[0].count !== 6 ||
         versionRows.length !== 1 ||
         Number(versionRows[0].COLUMN_DEFAULT) !== 1 ||
         versionRows[0].IS_NULLABLE !== "NO" ||
@@ -147,7 +147,7 @@ async function main() {
         "SHOW TABLES LIKE 'order_idempotency_keys'",
       );
       if (
-        legacyMigrations[0].count !== 5 ||
+        legacyMigrations[0].count !== 6 ||
         legacyVersion.length !== 1 ||
         legacyIdempotency.length !== 1
       ) {
@@ -158,7 +158,7 @@ async function main() {
           success: true,
           database: legacyDatabase,
           baseline_adoption: true,
-          incremental_migrations: 4,
+          incremental_migrations: 5,
         }),
       );
     } finally {

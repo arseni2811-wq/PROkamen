@@ -1087,6 +1087,14 @@ function setupOrderListeners(order, currentUser, isNew) {
 // 10. КАЛЬКУЛЯТОР
 // =========================================================
 async function openCalculatorModal(order) {
+  const orderId = order.order_id || order.id;
+  if (!orderId || orderId === "НОВЫЙ") {
+    alert("Сначала сохраните заказ, затем откройте технический калькулятор.");
+    return;
+  }
+  window.location.href = `calculator.html?orderId=${encodeURIComponent(orderId)}`;
+  return;
+
   const raw = order.calculator_snapshot || order.calculatorData,
     es = raw && raw.isInitialized ? raw : null;
   const io =
@@ -1141,17 +1149,7 @@ async function openCalculatorModal(order) {
     installBYN: safeNumber(rawData.installBYN, defaults.installBYN),
     stoneId: String(rawData.stoneId ?? "0"),
   };
-  const defP = {
-    cutStraight: 5,
-    cut45: 10,
-    edge20: 20,
-    edge40: 40,
-    sinkUnder: 85,
-    sinkTop: 40,
-    joint: 40,
-    hole: 10,
-    plinth: 10,
-  };
+  const defP = {};
   let materials = [],
     PRICES = defP;
   try {
@@ -1289,8 +1287,7 @@ async function openCalculatorModal(order) {
     if (ac.checked) {
       si.classList.add("bg-gray-100", "text-gray-500");
       si.classList.remove("bg-yellow-50", "border-yellow-400");
-      si.value =
-        L > 0 && W > 0 ? Math.ceil(L / 3.1) * Math.ceil(W / 0.7) * 0.5 : 0;
+      si.value = 0;
     } else {
       si.classList.remove("bg-gray-100", "text-gray-500");
       si.classList.add("bg-yellow-50", "border-yellow-400");

@@ -67,6 +67,7 @@ function normalizePieces(configuration) {
       shape: item.shape || "straight",
       pieces,
       operations: Array.isArray(item.operations) ? item.operations : [],
+      edgeCode: item.edgeCode || null,
       processedEdgeM: asNonNegativeNumber(item.processedEdgeM, "Длина кромки"),
       straightCutM:
         item.straightCutM === undefined
@@ -106,7 +107,14 @@ function calculateRateLine(rate, quantity) {
   };
 }
 
-function calculateMaterial(material, slabCount, areaM2, markupBps, manualUsdCents) {
+function calculateMaterial(
+  material,
+  slabCount,
+  areaM2,
+  minimumMarkupBps,
+  managerMarkupBps,
+  manualUsdCents,
+) {
   let baseUsdCents;
   switch (material.priceUnit) {
     case "slab":
@@ -126,7 +134,8 @@ function calculateMaterial(material, slabCount, areaM2, markupBps, manualUsdCent
   }
   const effectiveMarkupBps = Math.max(
     asNonNegativeInteger(material.markupBps, "Наценка материала"),
-    asNonNegativeInteger(markupBps, "Минимальная наценка"),
+    asNonNegativeInteger(minimumMarkupBps, "Минимальная наценка"),
+    asNonNegativeInteger(managerMarkupBps, "Наценка менеджера"),
   );
   return {
     baseUsdCents,
@@ -165,6 +174,7 @@ function calculate(configuration, pricebook, mode = "internal") {
     slabCount,
     areaWithWasteM2,
     pricebook.settings.minimumMaterialMarkupBps,
+    configuration.materialMarkupBps,
     configuration.manualMaterialPriceUsdCents,
   );
 
@@ -182,6 +192,12 @@ function calculate(configuration, pricebook, mode = "internal") {
           asNonNegativeNumber(operation.quantity, operation.code),
       );
     }
+    if (item.edgeCode && item.processedEdgeM > 0) {
+      quantities.set(
+        item.edgeCode,
+        (quantities.get(item.edgeCode) || 0) + item.processedEdgeM,
+      );
+    }
   }
   for (const operation of configuration.operations || []) {
     quantities.set(
@@ -189,6 +205,13 @@ function calculate(configuration, pricebook, mode = "internal") {
       (quantities.get(operation.code) || 0) +
         asNonNegativeNumber(operation.quantity, operation.code),
     );
+  }
+
+  if (quantities.has("manual_polish_area")) {
+    const quantity = quantities.get("manual_polish_area");
+    quantities.delete("manual_polish_area");
+    const code = areaM2 <= 1 ? "manual_polish_small" : "manual_polish_large";
+    quantities.set(code, (quantities.get(code) || 0) + quantity);
   }
 
   const lines = [];
@@ -236,7 +259,13 @@ function calculate(configuration, pricebook, mode = "internal") {
     (sum, line) => sum + asNonNegativeInteger(line.amountBynCents, line.code),
     0,
   );
-  const materialBynCents = usdToBynCents(material.totalUsdCents, pricebook.exchangeRateScaled);
+  const additionalMaterialBynCents = asNonNegativeInteger(
+    configuration.additionalMaterialBynCents,
+    "Дополнительная стоимость материала",
+  );
+  const materialBynCents =
+    usdToBynCents(material.totalUsdCents, pricebook.exchangeRateScaled) +
+    additionalMaterialBynCents;
   const productionBynCents = usdToBynCents(productionUsdCents, pricebook.exchangeRateScaled);
   const technicalTotalCents = materialBynCents + productionBynCents + manualBynCents;
   const reserveCents = Math.round(
@@ -276,6 +305,7 @@ function calculate(configuration, pricebook, mode = "internal") {
       markupBps: material.markupBps,
       materialUsdCents: material.totalUsdCents,
       materialBynCents,
+      additionalMaterialBynCents,
     },
     metrics: { areaM2, areaWithWasteM2, slabAreaM2 },
     lines: lines.map((line) => ({
@@ -295,6 +325,7 @@ function calculate(configuration, pricebook, mode = "internal") {
       publicFromTotalCents,
     },
     settings: { ...pricebook.settings },
+    publicWording: pricebook.publicWording,
   };
   return mode === "public" ? toPublicResult(result) : result;
 }
@@ -305,7 +336,7 @@ function toPublicResult(result) {
     pricebookVersion: result.pricebookVersion,
     calculatedAt: result.calculatedAt,
     currency: "BYN",
-    wording: "Ориентировочная стоимость от",
+    wording: result.publicWording || "Ориентировочная стоимость от",
     publicFromTotalCents: result.totals.publicFromTotalCents,
     publicFromTotal: result.totals.publicFromTotalCents / 100,
     metrics: result.metrics,
