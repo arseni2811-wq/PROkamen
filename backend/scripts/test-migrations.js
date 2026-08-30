@@ -63,15 +63,23 @@ async function main() {
          GROUP BY INDEX_NAME`,
         [database],
       );
+      const [calculatorTables] = await check.query(
+        "SHOW TABLES LIKE 'calculator_pricebooks'",
+      );
+      const [calculatorRates] = await check.query(
+        "SELECT COUNT(*) AS count FROM calculator_rates",
+      );
       if (
         statusRows[0].count !== 1 ||
         uniqueRows[0].count !== 1 ||
-        migrationRows[0].count !== 4 ||
+        migrationRows[0].count !== 5 ||
         versionRows.length !== 1 ||
         Number(versionRows[0].COLUMN_DEFAULT) !== 1 ||
         versionRows[0].IS_NULLABLE !== "NO" ||
         idempotencyRows.length !== 1 ||
-        idempotencyRows[0].column_count !== 2
+        idempotencyRows[0].column_count !== 2 ||
+        calculatorTables.length !== 1 ||
+        Number(calculatorRates[0].count) < 30
       ) {
         throw new Error(
           `Migration verification failed: ${JSON.stringify({
@@ -80,6 +88,7 @@ async function main() {
             migrations: migrationRows[0],
             version: versionRows[0],
             idempotency_unique: idempotencyRows[0],
+            calculator_rates: calculatorRates[0],
           })}`,
         );
       }
@@ -92,6 +101,7 @@ async function main() {
           unique_order_finance: true,
           orders_version: true,
           idempotency_unique: true,
+          calculator_pricebook: true,
           rerun_idempotent: true,
         }),
       );
@@ -137,7 +147,7 @@ async function main() {
         "SHOW TABLES LIKE 'order_idempotency_keys'",
       );
       if (
-        legacyMigrations[0].count !== 4 ||
+        legacyMigrations[0].count !== 5 ||
         legacyVersion.length !== 1 ||
         legacyIdempotency.length !== 1
       ) {
@@ -148,7 +158,7 @@ async function main() {
           success: true,
           database: legacyDatabase,
           baseline_adoption: true,
-          incremental_migrations: 3,
+          incremental_migrations: 4,
         }),
       );
     } finally {

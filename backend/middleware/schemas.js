@@ -184,6 +184,114 @@ const loginSchema = z.object({
   password: z.string().min(1),
 });
 
+const calculatorOperationSchema = z
+  .object({
+    code: z.string().trim().min(1).max(80),
+    quantity: z.coerce.number().finite().min(0).max(100000),
+  })
+  .strict();
+
+const calculatorPieceSchema = z
+  .object({
+    lengthMm: z.coerce.number().finite().positive().max(20000),
+    widthMm: z.coerce.number().finite().positive().max(5000),
+  })
+  .strict();
+
+const calculatorItemV2Schema = z
+  .object({
+    productType: z.enum(["countertop", "windowsill"]),
+    shape: z.enum(["straight", "l", "u"]),
+    pieces: z.array(calculatorPieceSchema).min(1).max(3),
+    processedEdgeM: z.coerce.number().finite().min(0).max(1000).optional(),
+    straightCutM: z.coerce.number().finite().min(0).max(1000).optional(),
+    operations: z.array(calculatorOperationSchema).max(100).default([]),
+  })
+  .strict();
+
+const calculatorAdditionalLineSchema = z
+  .object({
+    name: z.string().trim().min(1).max(160),
+    quantity: z.coerce.number().finite().min(0).max(100000),
+    unit: z.string().trim().min(1).max(30),
+    unitPriceCents: z.coerce.number().int().min(0).max(2000000000),
+    currency: z.enum(["BYN", "USD"]),
+    category: z.enum(["additional", "logistics", "installation"]).optional(),
+    comment: z.string().trim().max(500).optional().nullable(),
+  })
+  .strict();
+
+const calculatorConfigurationV2Schema = z
+  .object({
+    items: z.array(calculatorItemV2Schema).min(1).max(20),
+    operations: z.array(calculatorOperationSchema).max(200).default([]),
+    additionalLines: z.array(calculatorAdditionalLineSchema).max(100).default([]),
+    manualSlabCount: z.coerce.number().finite().min(0).max(100).multipleOf(0.5).optional().nullable(),
+    manualMaterialPriceUsdCents: z.coerce.number().int().min(0).max(2000000000).optional(),
+    managerAdjustmentBynCents: z.coerce.number().int().min(-2000000000).max(2000000000).optional(),
+  })
+  .strict();
+
+const calculatorPreviewSchema = z
+  .object({
+    materialId: z.string().trim().min(1).max(50),
+    slabFormatCode: z.enum(["normal", "jumbo", "super_jumbo", "custom"]),
+    customFormat: z
+      .object({
+        lengthMm: z.coerce.number().finite().positive().max(10000),
+        widthMm: z.coerce.number().finite().positive().max(5000),
+        thicknessMm: z.coerce.number().finite().positive().max(200),
+      })
+      .strict()
+      .optional(),
+    configuration: calculatorConfigurationV2Schema,
+  })
+  .strict()
+  .superRefine((value, context) => {
+    if (value.slabFormatCode === "custom" && !value.customFormat) {
+      context.addIssue({
+        code: "custom",
+        path: ["customFormat"],
+        message: "Для Custom необходимо указать размеры слэба",
+      });
+    }
+  });
+
+const publicCalculatorLeadSchema = calculatorPreviewSchema.safeExtend({
+  contact: z
+    .object({
+      name: z.string().trim().min(2).max(100),
+      phone: z.string().trim().min(5).max(30),
+      email: z.string().trim().email().max(100).optional().or(z.literal("")),
+      comment: z.string().trim().max(1000).optional().nullable(),
+    })
+    .strict(),
+});
+
+const calculatorRateUpdateSchema = z
+  .object({
+    displayName: z.string().trim().min(1).max(160),
+    basePriceUsdCents: z.coerce.number().int().min(0).max(2000000000),
+    publicAvailable: z.boolean(),
+    managerAvailable: z.boolean(),
+    manualAdjustmentAllowed: z.boolean(),
+    active: z.boolean(),
+  })
+  .strict();
+
+const calculatorSettingsUpdateSchema = z
+  .object({
+    exchangeRateScaled: z.coerce.number().int().positive().max(10000000),
+    reserveBps: z.coerce.number().int().min(0).max(100000),
+    publicFactorBps: z.coerce.number().int().min(0).max(100000),
+    minimumOrderBynCents: z.coerce.number().int().min(0).max(2000000000),
+    roundingStepBynCents: z.coerce.number().int().positive().max(100000000),
+    wasteBps: z.coerce.number().int().min(0).max(100000),
+    minimumMaterialMarkupBps: z.coerce.number().int().min(0).max(100000),
+    publicWording: z.string().trim().min(1).max(160),
+  })
+  .strict();
+
 module.exports = {
   orderSchema,
   orderUpdateSchema,
@@ -192,4 +300,8 @@ module.exports = {
   servicesSchema,
   statusUpdateSchema,
   loginSchema,
+  calculatorPreviewSchema,
+  publicCalculatorLeadSchema,
+  calculatorRateUpdateSchema,
+  calculatorSettingsUpdateSchema,
 };

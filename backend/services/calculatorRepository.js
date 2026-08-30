@@ -1,0 +1,312 @@
+const pool = require("../db");
+
+function mapMaterial(row) {
+  return {
+    id: row.material_id,
+    category: row.type_id,
+    manufacturer: row.fabricator,
+    series: row.series_name,
+    title: row.title,
+    sku: row.sku,
+    description: row.description,
+    image: row.image_path,
+    color: row.color,
+    priceUnit: row.price_unit,
+    basePriceUsdCents: Number(row.base_price_usd_cents || 0),
+    markupBps: Number(row.markup_bps || 0),
+    publicAvailable: Boolean(row.public_available),
+    active: Boolean(row.is_active),
+    slabFormatId: row.slab_format_id,
+    lengthMm: row.length_mm === null ? null : Number(row.length_mm),
+    widthMm: row.width_mm === null ? null : Number(row.width_mm),
+    thicknessMm: row.thickness_mm === null ? null : Number(row.thickness_mm),
+  };
+}
+
+function mapFormat(row, custom = {}) {
+  return {
+    id: Number(row.format_id),
+    code: row.system_code,
+    name: row.display_name,
+    lengthMm: row.is_custom ? Number(custom.lengthMm) : Number(row.length_mm),
+    widthMm: row.is_custom ? Number(custom.widthMm) : Number(row.width_mm),
+    thicknessMm: row.is_custom
+      ? Number(custom.thicknessMm || 20)
+      : Number(row.thickness_mm),
+    custom: Boolean(row.is_custom),
+  };
+}
+
+function mapRate(row) {
+  return {
+    id: Number(row.rate_id),
+    systemCode: row.system_code,
+    displayName: row.display_name,
+    category: row.category,
+    unit: row.unit_code,
+    basePriceUsdCents: Number(row.base_price_usd_cents),
+    calculationMode: row.calculation_mode,
+    dependentCode: row.dependent_code,
+    percentBps: row.percent_bps === null ? null : Number(row.percent_bps),
+    publicAvailable: Boolean(row.public_available),
+    managerAvailable: Boolean(row.manager_available),
+    manualAdjustmentAllowed: Boolean(row.manual_adjustment_allowed),
+    active: Boolean(row.is_active),
+    sortOrder: Number(row.sort_order),
+  };
+}
+
+async function getPublishedPricebook({ materialId, slabFormatCode, customFormat, publicMode = false }) {
+  const [[pricebook]] = await pool.query(
+    `SELECT p.*, s.reserve_bps, s.public_factor_bps,
+            s.minimum_order_byn_cents, s.rounding_step_byn_cents,
+            s.waste_bps, s.minimum_material_markup_bps, s.public_wording
+     FROM calculator_pricebooks p
+     JOIN calculator_settings s ON s.pricebook_id = p.pricebook_id
+     WHERE p.status = 'published'
+     ORDER BY p.version_number DESC LIMIT 1`,
+  );
+  if (!pricebook) return null;
+
+  const materialConditions = publicMode
+    ? "AND m.is_active = 1 AND m.public_available = 1"
+    : "AND m.is_active = 1";
+  const [[materialRow]] = await pool.query(
+    `SELECT m.* FROM materials m WHERE m.material_id = ? ${materialConditions} LIMIT 1`,
+    [materialId],
+  );
+  if (!materialRow) return null;
+  const formatCode = slabFormatCode || null;
+  const [[formatRow]] = formatCode
+    ? await pool.query(
+        "SELECT * FROM calculator_slab_formats WHERE system_code = ? AND is_active = 1 LIMIT 1",
+        [formatCode],
+      )
+    : await pool.query(
+        `SELECT f.* FROM calculator_slab_formats f
+         WHERE f.format_id = ? AND f.is_active = 1 LIMIT 1`,
+        [materialRow.slab_format_id],
+      );
+  if (!formatRow) return null;
+
+  const [rateRows] = await pool.query(
+    `SELECT * FROM calculator_rates
+     WHERE pricebook_id = ? AND is_active = 1
+       ${publicMode ? "AND public_available = 1" : "AND manager_available = 1"}
+     ORDER BY sort_order, rate_id`,
+    [pricebook.pricebook_id],
+  );
+  return {
+    id: Number(pricebook.pricebook_id),
+    version: Number(pricebook.version_number),
+    exchangeRateScaled: Number(pricebook.exchange_rate_scaled),
+    publicWording: pricebook.public_wording,
+    material: mapMaterial(materialRow),
+    slabFormat: mapFormat(formatRow, customFormat),
+    rates: rateRows.map(mapRate),
+    settings: {
+      reserveBps: Number(pricebook.reserve_bps),
+      publicFactorBps: Number(pricebook.public_factor_bps),
+      minimumOrderBynCents: Number(pricebook.minimum_order_byn_cents),
+      roundingStepBynCents: Number(pricebook.rounding_step_byn_cents),
+      wasteBps: Number(pricebook.waste_bps),
+      minimumMaterialMarkupBps: Number(pricebook.minimum_material_markup_bps),
+    },
+  };
+}
+
+async function getPublicCatalog() {
+  const [categories] = await pool.query(
+    `SELECT type_id AS id, type_name_ru AS name
+     FROM dict_material_types
+     WHERE is_active = 1 AND public_available = 1
+     ORDER BY sort_order, type_name_ru`,
+  );
+  const [materials] = await pool.query(
+    `SELECT material_id AS id, type_id AS category, fabricator AS manufacturer,
+            series_name AS series, title, sku, description, image_path AS image,
+            color, slab_format_id AS slabFormatId, thickness_mm AS thicknessMm
+     FROM materials
+     WHERE is_active = 1 AND public_available = 1
+       AND base_price_usd_cents > 0
+     ORDER BY sort_order, title`,
+  );
+  const [formats] = await pool.query(
+    `SELECT format_id AS id, system_code AS code, display_name AS name,
+            length_mm AS lengthMm, width_mm AS widthMm,
+            thickness_mm AS thicknessMm, is_custom AS custom
+     FROM calculator_slab_formats WHERE is_active = 1 ORDER BY sort_order`,
+  );
+  return { categories, materials, formats };
+}
+
+async function getAdminPricebook() {
+  const [[pricebook]] = await pool.query(
+    `SELECT p.*, s.* FROM calculator_pricebooks p
+     JOIN calculator_settings s ON s.pricebook_id = p.pricebook_id
+     WHERE p.status IN ('draft','published')
+     ORDER BY (p.status = 'draft') DESC, p.version_number DESC LIMIT 1`,
+  );
+  if (!pricebook) return null;
+  const [rates] = await pool.query(
+    "SELECT * FROM calculator_rates WHERE pricebook_id = ? ORDER BY sort_order, rate_id",
+    [pricebook.pricebook_id],
+  );
+  const [materials] = await pool.query(
+    "SELECT * FROM materials ORDER BY sort_order, title",
+  );
+  const [formats] = await pool.query(
+    "SELECT * FROM calculator_slab_formats ORDER BY sort_order, format_id",
+  );
+  return { pricebook, rates: rates.map(mapRate), materials: materials.map(mapMaterial), formats };
+}
+
+async function ensureDraft(connection, actorId) {
+  const [[draft]] = await connection.query(
+    "SELECT pricebook_id, version_number FROM calculator_pricebooks WHERE status = 'draft' ORDER BY version_number DESC LIMIT 1 FOR UPDATE",
+  );
+  if (draft) return draft;
+  const [[published]] = await connection.query(
+    "SELECT * FROM calculator_pricebooks WHERE status = 'published' ORDER BY version_number DESC LIMIT 1 FOR UPDATE",
+  );
+  if (!published) throw new Error("Опубликованный прайс не найден");
+  const [insert] = await connection.query(
+    `INSERT INTO calculator_pricebooks
+     (version_number, status, exchange_rate_scaled, note, created_by)
+     VALUES (?, 'draft', ?, 'Черновик новой версии', ?)`,
+    [Number(published.version_number) + 1, published.exchange_rate_scaled, actorId],
+  );
+  await connection.query(
+    `INSERT INTO calculator_settings
+     SELECT ?, reserve_bps, public_factor_bps, minimum_order_byn_cents,
+            rounding_step_byn_cents, waste_bps, minimum_material_markup_bps,
+            public_wording, CURRENT_TIMESTAMP
+     FROM calculator_settings WHERE pricebook_id = ?`,
+    [insert.insertId, published.pricebook_id],
+  );
+  await connection.query(
+    `INSERT INTO calculator_rates
+     (pricebook_id, system_code, display_name, category, unit_code,
+      base_price_usd_cents, calculation_mode, dependent_code, percent_bps,
+      public_available, manager_available, manual_adjustment_allowed,
+      is_active, sort_order)
+     SELECT ?, system_code, display_name, category, unit_code,
+            base_price_usd_cents, calculation_mode, dependent_code, percent_bps,
+            public_available, manager_available, manual_adjustment_allowed,
+            is_active, sort_order
+     FROM calculator_rates WHERE pricebook_id = ?`,
+    [insert.insertId, published.pricebook_id],
+  );
+  return { pricebook_id: insert.insertId, version_number: Number(published.version_number) + 1 };
+}
+
+async function updateDraftRate(actorId, systemCode, changes) {
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+    const draft = await ensureDraft(connection, actorId);
+    const [[before]] = await connection.query(
+      "SELECT * FROM calculator_rates WHERE pricebook_id = ? AND system_code = ? FOR UPDATE",
+      [draft.pricebook_id, systemCode],
+    );
+    if (!before) throw Object.assign(new Error("Тариф не найден"), { status: 404 });
+    await connection.query(
+      `UPDATE calculator_rates SET display_name = ?, base_price_usd_cents = ?,
+       public_available = ?, manager_available = ?,
+       manual_adjustment_allowed = ?, is_active = ?
+       WHERE pricebook_id = ? AND system_code = ?`,
+      [changes.displayName, changes.basePriceUsdCents, changes.publicAvailable,
+       changes.managerAvailable, changes.manualAdjustmentAllowed, changes.active,
+       draft.pricebook_id, systemCode],
+    );
+    await connection.query(
+      `INSERT INTO calculator_change_history
+       (pricebook_id, actor_id, entity_type, entity_key, action, before_json, after_json)
+       VALUES (?, ?, 'rate', ?, 'update', ?, ?)`,
+      [draft.pricebook_id, actorId, systemCode, JSON.stringify(before), JSON.stringify(changes)],
+    );
+    await connection.commit();
+    return draft;
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    connection.release();
+  }
+}
+
+async function updateDraftSettings(actorId, changes) {
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+    const draft = await ensureDraft(connection, actorId);
+    await connection.query(
+      `UPDATE calculator_pricebooks SET exchange_rate_scaled = ? WHERE pricebook_id = ?`,
+      [changes.exchangeRateScaled, draft.pricebook_id],
+    );
+    await connection.query(
+      `UPDATE calculator_settings SET reserve_bps = ?, public_factor_bps = ?,
+       minimum_order_byn_cents = ?, rounding_step_byn_cents = ?, waste_bps = ?,
+       minimum_material_markup_bps = ?, public_wording = ? WHERE pricebook_id = ?`,
+      [changes.reserveBps, changes.publicFactorBps, changes.minimumOrderBynCents,
+       changes.roundingStepBynCents, changes.wasteBps,
+       changes.minimumMaterialMarkupBps, changes.publicWording, draft.pricebook_id],
+    );
+    await connection.query(
+      `INSERT INTO calculator_change_history
+       (pricebook_id, actor_id, entity_type, entity_key, action, after_json)
+       VALUES (?, ?, 'settings', 'calculator', 'update', ?)`,
+      [draft.pricebook_id, actorId, JSON.stringify(changes)],
+    );
+    await connection.commit();
+    return draft;
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    connection.release();
+  }
+}
+
+async function publishDraft(actorId) {
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+    const [[draft]] = await connection.query(
+      "SELECT * FROM calculator_pricebooks WHERE status = 'draft' ORDER BY version_number DESC LIMIT 1 FOR UPDATE",
+    );
+    if (!draft) throw Object.assign(new Error("Черновик прайса отсутствует"), { status: 409 });
+    await connection.query("UPDATE calculator_pricebooks SET status = 'archived' WHERE status = 'published'");
+    await connection.query(
+      "UPDATE calculator_pricebooks SET status = 'published', published_at = CURRENT_TIMESTAMP WHERE pricebook_id = ?",
+      [draft.pricebook_id],
+    );
+    await connection.query(
+      `INSERT INTO system_settings (setting_key, setting_value)
+       VALUES ('exchange_rate', ?) ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)`,
+      [Number(draft.exchange_rate_scaled) / 10000],
+    );
+    await connection.query(
+      `INSERT INTO calculator_change_history
+       (pricebook_id, actor_id, entity_type, entity_key, action)
+       VALUES (?, ?, 'pricebook', ?, 'publish')`,
+      [draft.pricebook_id, actorId, String(draft.version_number)],
+    );
+    await connection.commit();
+    return { version: Number(draft.version_number) };
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    connection.release();
+  }
+}
+
+module.exports = {
+  getPublishedPricebook,
+  getPublicCatalog,
+  getAdminPricebook,
+  updateDraftRate,
+  updateDraftSettings,
+  publishDraft,
+};

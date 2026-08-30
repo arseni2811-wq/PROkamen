@@ -63,6 +63,7 @@ const ordersRoutes = require("./routes/orders.routes");
 const materialsRoutes = require("./routes/materials.routes");
 const settingsRoutes = require("./routes/settings.routes");
 const clientsRoutes = require("./routes/clients.routes");
+const calculatorRoutes = require("./routes/calculator.routes");
 
 // =========================================================
 // HEALTH-CHECK (JSON)
@@ -92,6 +93,7 @@ app.use("/api/orders", ordersRoutes);
 app.use("/api/clients", clientsRoutes);
 app.use("/api", materialsRoutes);
 app.use("/api", settingsRoutes);
+app.use("/api", calculatorRoutes);
 
 // =========================================================
 // РАЗДАЧА СТАТИКИ ФРОНТЕНДА
