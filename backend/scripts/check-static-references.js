@@ -3,6 +3,13 @@ const path = require("path");
 
 const publicDir = path.resolve(__dirname, "..", "..", "public");
 const htmlFiles = [];
+const prettyRoutes = new Set([
+  "/catalog/",
+  "/services/",
+  "/works/",
+  "/about/",
+  "/contacts/",
+]);
 
 function walk(directory) {
   for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
@@ -26,6 +33,8 @@ function localTarget(htmlFile, reference) {
   }
   // Extensionless links are application routes, not static file references.
   if (!path.extname(clean) && !clean.endsWith("/")) return null;
+  // These trailing-slash links are served by Express PRETTY_URLS, not files.
+  if (prettyRoutes.has(clean)) return null;
   return clean.startsWith("/")
     ? path.join(publicDir, clean)
     : path.resolve(path.dirname(htmlFile), clean);

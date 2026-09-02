@@ -11,6 +11,17 @@ const { authorizeAttachmentDownload } = require("./middleware/orderAccess");
 
 const app = express();
 const port = Number(process.env.PORT || 3000);
+const databaseName = process.env.DB_DATABASE || process.env.DB_NAME;
+
+if (
+  process.platform === "win32" &&
+  ["development", "test"].includes(process.env.NODE_ENV) &&
+  databaseName !== "pro_erp_test"
+) {
+  throw new Error(
+    "Для локальной Windows-разработки разрешена только база pro_erp_test",
+  );
+}
 
 // =========================================================
 // КОНФИГУРАЦИЯ
@@ -73,7 +84,13 @@ const calculatorRoutes = require("./routes/calculator.routes");
 app.get("/api/health", async (req, res) => {
   try {
     await pool.query("SELECT 1");
-    res.json({ success: true, status: "ok", db: "connected" });
+    res.json({
+      success: true,
+      status: "ok",
+      db: "connected",
+      database: "connected",
+      dbName: databaseName,
+    });
   } catch (err) {
     res
       .status(500)

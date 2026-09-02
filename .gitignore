@@ -11,6 +11,8 @@ backend/.env.*
 # Dependencies and generated output
 node_modules/
 backend/node_modules/
+backend/.npm-cache/
+backend/backups/
 coverage/
 *.log
 *.pid
