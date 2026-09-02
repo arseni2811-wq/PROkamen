@@ -72,7 +72,7 @@ async function main() {
       if (
         statusRows[0].count !== 1 ||
         uniqueRows[0].count !== 1 ||
-        migrationRows[0].count !== 6 ||
+        migrationRows[0].count !== 7 ||
         versionRows.length !== 1 ||
         Number(versionRows[0].COLUMN_DEFAULT) !== 1 ||
         versionRows[0].IS_NULLABLE !== "NO" ||
@@ -158,7 +158,7 @@ async function main() {
           success: true,
           database: legacyDatabase,
           baseline_adoption: true,
-          incremental_migrations: 5,
+          incremental_migrations: 6,
         }),
       );
     } finally {

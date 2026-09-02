@@ -33,6 +33,7 @@ function pricebook(rate = 3) {
       { systemCode: "joint_short", displayName: "Стык", category: "production", unit: "pcs", basePriceUsdCents: 4000, calculationMode: "unit", active: true, publicAvailable: true },
       { systemCode: "joint_long", displayName: "Длинный стык", category: "production", unit: "pcs", basePriceUsdCents: 8000, calculationMode: "unit", active: true, publicAvailable: true },
       { systemCode: "edge_standard", displayName: "Кромка", category: "production", unit: "m", basePriceUsdCents: 2000, calculationMode: "unit", active: true, publicAvailable: true },
+      { systemCode: "edge_round", displayName: "Овальная или круглая кромка", category: "production", unit: "m", basePriceUsdCents: 3000, calculationMode: "unit", active: true, publicAvailable: true },
       { systemCode: "polish_20", displayName: "Полировка 20 мм", category: "production", unit: "m", basePriceUsdCents: 2000, calculationMode: "unit", active: true, publicAvailable: true },
       { systemCode: "polish_40", displayName: "Полировка 40 мм", category: "production", unit: "m", basePriceUsdCents: 4000, calculationMode: "unit", active: true, publicAvailable: true },
       { systemCode: "cutout_hob", displayName: "Вырез под варочную панель", category: "cutout", unit: "pcs", basePriceUsdCents: 4000, calculationMode: "unit", active: true, publicAvailable: true },
@@ -116,7 +117,7 @@ test("столешница получает кромку только по ли�
   assert.equal(edgeLength(3), 2);
 });
 
-test("прямой раскрой столешниц и подоконников считает одну длину и одну ширину каждой детали", () => {
+test("раскрой столешниц и подоконников считает полный периметр каждой детали", () => {
   const straight = itemGeometry({
     productType: "countertop",
     shape: "straight",
@@ -139,18 +140,25 @@ test("прямой раскрой столешниц и подоконников
       { lengthMm: 850, widthMm: 300 },
     ],
   });
-  assert.equal(straight.straightCutM, 2.6);
-  assert.equal(l.straightCutM, 4.7);
-  assert.equal(uSill.straightCutM, 4.2);
+  const straightSill = itemGeometry({
+    productType: "windowsill",
+    shape: "straight",
+    pieces: [{ lengthMm: 1500, widthMm: 300 }],
+  });
+  assert.equal(straight.straightCutM, 5.2);
+  assert.equal(l.straightCutM, 9.4);
+  assert.equal(uSill.straightCutM, 8.4);
+  assert.equal(straightSill.straightCutM, 3.6);
+  assert.equal(straightSill.processedEdgeM, 1.5);
 });
 
-test("деталь длиннее слэба получает поперечный раскрой, стык и полировку по ширине", () => {
+test("стык длинной столешницы не увеличивает раскрой и не создаёт отдельную полировку", () => {
   const geometry = itemGeometry({
     productType: "countertop",
     shape: "straight",
     pieces: [{ lengthMm: 4200, widthMm: 600 }],
   }, 3050);
-  assert.equal(geometry.straightCutM, 5.4);
+  assert.equal(geometry.straightCutM, 9.6);
   assert.equal(geometry.processedEdgeM, 4.2);
   assert.equal(geometry.lengthSplitCount, 1);
   assert.equal(geometry.jointPolishM, 0.6);
@@ -168,10 +176,11 @@ test("деталь длиннее слэба получает поперечны
     }],
   }), pricebook());
   const quantities = Object.fromEntries(result.lines.map((line) => [line.code, line.quantity]));
-  assert.equal(quantities.cut_straight, 5.4);
+  assert.equal(quantities.cut_straight, 9.6);
   assert.equal(quantities.edge_standard, 4.2);
   assert.equal(quantities.joint_short, 1);
-  assert.equal(quantities.polish_20, 0.6);
+  assert.equal(quantities.polish_20, undefined);
+  assert.equal(quantities.polish_40, undefined);
 });
 
 test("каждое следующее превышение длины слэба добавляет ещё один комплект стыковки", () => {
@@ -180,7 +189,7 @@ test("каждое следующее превышение длины слэба
     shape: "straight",
     pieces: [{ lengthMm: 7000, widthMm: 600 }],
   }, 3050);
-  assert.equal(geometry.straightCutM, 8.8);
+  assert.equal(geometry.straightCutM, 15.2);
   assert.equal(geometry.lengthSplitCount, 2);
   assert.equal(geometry.jointPolishM, 1.2);
   assert.equal(geometry.jointCount, 2);
@@ -470,6 +479,88 @@ test("уточнение сторон добавляет только выбра
   assert.equal(geometry.backLengthM, 2.6);
 });
 
+test("лицевая кромка столешницы учитывает только выбранные стороны", () => {
+  const geometry = (edgeSides) => itemGeometry({
+    productType: "countertop",
+    shape: "straight",
+    pieces: [{ lengthMm: 4200, widthMm: 600 }],
+    edgeSides,
+  });
+  assert.equal(geometry({ front: true, left: false, right: false }).processedEdgeM, 4.2);
+  assert.equal(geometry({ front: true, left: true, right: false }).processedEdgeM, 4.8);
+  assert.equal(geometry({ front: true, left: true, right: true }).processedEdgeM, 5.4);
+});
+
+test("профили столешницы выбирают подтверждённую тарифную группу", () => {
+  const expectedCodes = {
+    model_1: "edge_standard",
+    model_2: "edge_round",
+    model_3: "edge_round",
+    model_4: "edge_standard",
+    model_5: "edge_standard",
+    model_6: "edge_standard",
+    model_7: "edge_standard",
+  };
+  for (const [edgeProfileModel, expectedCode] of Object.entries(expectedCodes)) {
+    const result = calculate(config({
+      items: [{
+        productType: "countertop",
+        shape: "straight",
+        pieces: [{ lengthMm: 2000, widthMm: 600 }],
+        automaticGeometry: true,
+        edgeCode: "edge_standard",
+        edgeProfileModel,
+        operations: [],
+      }],
+    }), pricebook());
+    assert.equal(result.lines.find((line) => line.code.startsWith("edge_"))?.code, expectedCode);
+  }
+  assert.equal(Object.values(expectedCodes).includes("edge_reinforced"), false);
+});
+
+test("эталон 4200×600 даёт 314 USD услуг без монтажа и полировки стыка", () => {
+  const result = calculate(config({
+    items: [{
+      productType: "countertop",
+      shape: "straight",
+      pieces: [{ lengthMm: 4200, widthMm: 600 }],
+      automaticGeometry: true,
+      edgeCode: "edge_standard",
+      edgeProfileModel: "model_2",
+      edgeSides: { front: true, left: false, right: false },
+      sinkType: "under",
+      hob: true,
+      tapHole: true,
+      installation: false,
+      operations: [],
+    }],
+  }), pricebook());
+  const lines = Object.fromEntries(result.lines.map((line) => [line.code, line]));
+  assert.equal(lines.cut_straight.quantity, 9.6);
+  assert.equal(lines.cut_straight.amountUsdCents, 4800);
+  assert.equal(lines.edge_round.quantity, 4.2);
+  assert.equal(lines.edge_round.amountUsdCents, 12600);
+  assert.equal(lines.joint_short.quantity, 1);
+  assert.equal(lines.joint_short.amountUsdCents, 4000);
+  assert.equal(lines.cutout_sink_under.amountUsdCents, 5000);
+  assert.equal(lines.cutout_hob.amountUsdCents, 4000);
+  assert.equal(lines.hole_faucet.amountUsdCents, 1000);
+  assert.equal(lines.polish_20, undefined);
+  assert.equal(lines.polish_40, undefined);
+  assert.equal(lines.install_countertop, undefined);
+  assert.equal(result.lines.reduce((sum, line) => sum + line.amountUsdCents, 0), 31400);
+});
+
+test("столешница не длиннее слэба не получает стык", () => {
+  const geometry = itemGeometry({
+    productType: "countertop",
+    shape: "straight",
+    pieces: [{ lengthMm: 3050, widthMm: 600 }],
+  }, 3050);
+  assert.equal(geometry.jointCount, 0);
+  assert.equal(geometry.jointPolishM, 0);
+});
+
 test("скинали добавляет площадь материала, высоту и раскрой панели", () => {
   const result = calculate(config({
     items: [{
@@ -487,7 +578,7 @@ test("скинали добавляет площадь материала, вы�
   assert.equal(result.metrics.items[0].productAreaM2, 1.2);
   assert.equal(result.metrics.items[0].wallPanelAreaM2, 1.2);
   assert.equal(result.metrics.areaM2, 2.4);
-  assert.equal(result.metrics.items[0].straightCutM, 5.2);
+  assert.equal(result.metrics.items[0].straightCutM, 7.8);
 });
 
 test("раскладка делит длинную деталь по слэбу и отмечает продолжение", () => {

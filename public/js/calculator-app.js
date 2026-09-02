@@ -45,6 +45,16 @@
     { code: "model_7", name: "Мод. 7", description: "С водоотбойником", image: "/assets/images/calculator/edge-profile-model-7-v1.png" },
   ];
   const edgeProfileByCode = Object.fromEntries(edgeProfiles.map((profile) => [profile.code, profile]));
+  const edgeRateByProfile = {
+    model_1: "edge_standard",
+    model_2: "edge_round",
+    model_3: "edge_round",
+    model_4: "edge_standard",
+    model_5: "edge_standard",
+    model_6: "edge_standard",
+    model_7: "edge_standard",
+  };
+  // edge_reinforced requires a future finishedThickness field and is not profile-driven.
   const backsplashNames = {
     none: "Без бортика",
     straight: "Прямой бортик",
@@ -136,22 +146,28 @@
     tapHole: false,
     installation: false,
   });
-  const normalizeItem = (item = {}) => ({
-    ...(item.productType === "island" || item.productType === "bar" ? defaultExtra(item.productType) : defaultMainItem(item.productType || "countertop")),
-    ...item,
-    automaticGeometry: item.automaticGeometry !== false,
-    polishedSides: item.productType === "island" || item.productType === "bar" || item.productType === "table" ? 4 : 1,
-    roundedCorners: Number(item.roundedCorners || 0),
-    cornerRadiusMm: Number(item.cornerRadiusMm || 50),
-    edgeProfileModel: edgeProfileByCode[item.edgeProfileModel] ? item.edgeProfileModel : "model_1",
-    backsplashType: item.backsplashType || (item.backsplash ? "straight" : "none"),
-    wallPanelAutoLength: item.wallPanelAutoLength !== false,
-    wallPanelHeightMm: Number(item.wallPanelHeightMm || 600),
-    edgeSides: { front: true, left: false, right: false, ...(item.edgeSides || {}) },
-    wallSides: { back: true, left: false, right: false, ...(item.wallSides || {}) },
-    pieces: Array.isArray(item.pieces) && item.pieces.length ? item.pieces : shapePieces(item.shape || "straight", item.productType || "countertop"),
-    operations: Array.isArray(item.operations) ? item.operations : [],
-  });
+  const normalizeItem = (item = {}) => {
+    const productType = item.productType || "countertop";
+    const edgeProfileModel = edgeProfileByCode[item.edgeProfileModel] ? item.edgeProfileModel : "model_1";
+    const usesProfileRate = productType === "countertop" || productType === "windowsill";
+    return {
+      ...(productType === "island" || productType === "bar" ? defaultExtra(productType) : defaultMainItem(productType)),
+      ...item,
+      automaticGeometry: item.automaticGeometry !== false,
+      polishedSides: item.productType === "island" || item.productType === "bar" || item.productType === "table" ? 4 : 1,
+      roundedCorners: Number(item.roundedCorners || 0),
+      cornerRadiusMm: Number(item.cornerRadiusMm || 50),
+      edgeCode: usesProfileRate ? edgeRateByProfile[edgeProfileModel] : item.edgeCode || "edge_standard",
+      edgeProfileModel,
+      backsplashType: item.backsplashType || (item.backsplash ? "straight" : "none"),
+      wallPanelAutoLength: item.wallPanelAutoLength !== false,
+      wallPanelHeightMm: Number(item.wallPanelHeightMm || 600),
+      edgeSides: { front: true, left: false, right: false, ...(item.edgeSides || {}) },
+      wallSides: { back: true, left: false, right: false, ...(item.wallSides || {}) },
+      pieces: Array.isArray(item.pieces) && item.pieces.length ? item.pieces : shapePieces(item.shape || "straight", item.productType || "countertop"),
+      operations: Array.isArray(item.operations) ? item.operations : [],
+    };
+  };
 
   const state = {
     catalog: null,
@@ -522,7 +538,7 @@
       const itemCard = event.target.closest("[data-item]"); if (itemCard) { const index = Number(itemCard.dataset.item); const item = state.items[index]; if (event.target.closest(".remove-item")) state.items.splice(index, 1); else if (event.target.closest(".item-product-choice")) { const nextType = event.target.closest(".item-product-choice").dataset.value; if (item.productType !== nextType) { state.items[index] = defaultMainItem(nextType); if (nextType !== "countertop" && !state.items.some((entry) => entry.productType === "countertop")) state.items = state.items.filter((entry) => entry.productType !== "island" && entry.productType !== "bar"); } } else if (event.target.closest(".item-shape-choice")) { item.shape = event.target.closest(".item-shape-choice").dataset.value; item.pieces = shapePieces(item.shape, item.productType); } else if (event.target.closest(".table-shape-choice")) { item.tableShape = event.target.closest(".table-shape-choice").dataset.value; item.pieces = item.tableShape === "round" ? [{ lengthMm: 1100, widthMm: 1100 }] : [{ lengthMm: 1600, widthMm: 900 }]; } else return; renderItems(); scheduleCalculate(); return; }
       const extraToggle = event.target.closest("[data-extra-toggle]"); if (extraToggle) { const index = state.items.findIndex((item) => item.productType === extraToggle.dataset.extraToggle); if (index >= 0) state.items.splice(index, 1); else state.items.push(defaultExtra(extraToggle.dataset.extraToggle)); renderItems(); scheduleCalculate(); return; }
       const extraCard = event.target.closest("[data-extra-item]"); if (extraCard) { const index = Number(extraCard.dataset.extraItem); const item = state.items[index]; if (event.target.closest(".remove-extra")) state.items.splice(index, 1); else if (event.target.closest("[data-extra-corners]")) item.roundedCorners = Number(event.target.closest("[data-extra-corners]").dataset.extraCorners); else if (event.target.closest("[data-extra-radius]")) item.cornerRadiusMm = Number(event.target.closest("[data-extra-radius]").dataset.extraRadius); else return; renderItems(); scheduleCalculate(); return; }
-      const optionGroup = event.target.closest("[data-option-item]"); if (optionGroup) { const item = state.items[Number(optionGroup.dataset.optionItem)]; const edgeProfile = event.target.closest("[data-edge-profile]"); const backsplash = event.target.closest("[data-backsplash]"); const sink = event.target.closest("[data-sink]"); const toggle = event.target.closest("[data-field]"); const counter = event.target.closest("[data-counter]"); const side = event.target.closest("[data-side-group]"); if (edgeProfile) { item.edgeProfileModel = edgeProfile.dataset.edgeProfile; item.edgeCode = "edge_standard"; } else if (backsplash) { item.backsplashType = backsplash.dataset.backsplash; item.backsplash = item.backsplashType !== "none"; } else if (sink) item.sinkType = sink.dataset.sink; else if (side) { const group = side.dataset.sideGroup; item[group] = { ...(item[group] || {}), [side.dataset.side]: !item[group]?.[side] }; } else if (counter) item[counter.dataset.counter] = Math.max(0, Math.min(20, Number(item[counter.dataset.counter] || 0) + Number(counter.dataset.delta))); else if (toggle && toggle.tagName === "BUTTON") { const field = toggle.dataset.field; item[field] = !item[field]; if (field === "wallPanelAutoLength" && !item[field] && !item.wallPanelLengthM) item.wallPanelLengthM = Math.round(item.pieces.reduce((sum, piece) => sum + Number(piece.lengthMm || 0), 0)) / 1000; } else return; renderOptions(); scheduleCalculate(); return; }
+      const optionGroup = event.target.closest("[data-option-item]"); if (optionGroup) { const item = state.items[Number(optionGroup.dataset.optionItem)]; const edgeProfile = event.target.closest("[data-edge-profile]"); const backsplash = event.target.closest("[data-backsplash]"); const sink = event.target.closest("[data-sink]"); const toggle = event.target.closest("[data-field]"); const counter = event.target.closest("[data-counter]"); const side = event.target.closest("[data-side-group]"); if (edgeProfile) { item.edgeProfileModel = edgeProfile.dataset.edgeProfile; item.edgeCode = item.productType === "countertop" || item.productType === "windowsill" ? edgeRateByProfile[item.edgeProfileModel] : "edge_standard"; } else if (backsplash) { item.backsplashType = backsplash.dataset.backsplash; item.backsplash = item.backsplashType !== "none"; } else if (sink) item.sinkType = sink.dataset.sink; else if (side) { const group = side.dataset.sideGroup; item[group] = { ...(item[group] || {}), [side.dataset.side]: !item[group]?.[side] }; } else if (counter) item[counter.dataset.counter] = Math.max(0, Math.min(20, Number(item[counter.dataset.counter] || 0) + Number(counter.dataset.delta))); else if (toggle && toggle.tagName === "BUTTON") { const field = toggle.dataset.field; item[field] = !item[field]; if (field === "wallPanelAutoLength" && !item[field] && !item.wallPanelLengthM) item.wallPanelLengthM = Math.round(item.pieces.reduce((sum, piece) => sum + Number(piece.lengthMm || 0), 0)) / 1000; } else return; renderOptions(); scheduleCalculate(); return; }
       const lineCard = event.target.closest("[data-line]"); if (lineCard && event.target.closest(".remove-line")) { state.additionalLines.splice(Number(lineCard.dataset.line), 1); renderManualLines(); scheduleCalculate(); }
     });
     root.addEventListener("input", (event) => {

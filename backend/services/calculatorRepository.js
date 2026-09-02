@@ -20,7 +20,36 @@ function mapMaterial(row) {
     lengthMm: row.length_mm === null ? null : Number(row.length_mm),
     widthMm: row.width_mm === null ? null : Number(row.width_mm),
     thicknessMm: row.thickness_mm === null ? null : Number(row.thickness_mm),
+    fractionPricesUsdCents: row.fraction_prices_usd_cents || null,
   };
+}
+
+async function getVariantForFormat(materialId, formatId) {
+  try {
+    const [[variant]] = await pool.query(
+      `SELECT * FROM material_variants
+       WHERE material_id = ? AND slab_format_id = ? AND is_active = 1
+       ORDER BY is_calculator_ready DESC, material_variant_id LIMIT 1`,
+      [materialId, formatId],
+    );
+    if (!variant) return null;
+    const [prices] = await pool.query(
+      `SELECT quantity_fraction, calculator_amount_usd_cents
+       FROM material_prices
+       WHERE material_variant_id = ? AND is_active = 1 AND is_calculator_price = 1
+         AND calculator_amount_usd_cents IS NOT NULL`,
+      [variant.material_variant_id],
+    );
+    return {
+      ...variant,
+      fractionPricesUsdCents: Object.fromEntries(prices.map((price) => [
+        String(Number(price.quantity_fraction)), Number(price.calculator_amount_usd_cents),
+      ])),
+    };
+  } catch (error) {
+    if (error.code === "ER_NO_SUCH_TABLE") return null;
+    throw error;
+  }
 }
 
 function mapFormat(row, custom = {}) {
@@ -88,6 +117,17 @@ async function getPublishedPricebook({ materialId, slabFormatCode, customFormat,
         [materialRow.slab_format_id],
       );
   if (!formatRow) return null;
+  const variant = await getVariantForFormat(materialRow.material_id, formatRow.format_id);
+  if (materialRow.import_key && !variant) return null;
+  const mappedMaterial = mapMaterial(materialRow);
+  if (variant && variant.fractionPricesUsdCents["1"] !== undefined) {
+    mappedMaterial.priceUnit = "slab";
+    mappedMaterial.basePriceUsdCents = variant.fractionPricesUsdCents["1"];
+    mappedMaterial.fractionPricesUsdCents = variant.fractionPricesUsdCents;
+    mappedMaterial.lengthMm = Number(variant.length_mm);
+    mappedMaterial.widthMm = Number(variant.width_mm);
+    mappedMaterial.thicknessMm = Number(variant.thickness_mm);
+  }
 
   const [rateRows] = await pool.query(
     `SELECT * FROM calculator_rates
@@ -101,7 +141,7 @@ async function getPublishedPricebook({ materialId, slabFormatCode, customFormat,
     version: Number(pricebook.version_number),
     exchangeRateScaled: Number(pricebook.exchange_rate_scaled),
     publicWording: pricebook.public_wording,
-    material: mapMaterial(materialRow),
+    material: mappedMaterial,
     slabFormat: mapFormat(formatRow, customFormat),
     rates: rateRows.map(mapRate),
     settings: {

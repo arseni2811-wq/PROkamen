@@ -283,7 +283,7 @@ const calculatorUpdateSchema = z.object({
 const calculatorPreviewSchema = z
   .object({
     materialId: z.string().trim().min(1).max(50),
-    slabFormatCode: z.enum(["normal", "jumbo", "super_jumbo", "custom"]),
+    slabFormatCode: z.string().trim().min(1).max(40).regex(/^[a-z0-9_]+$/),
     customFormat: z
       .object({
         lengthMm: z.coerce.number().finite().positive().max(10000),

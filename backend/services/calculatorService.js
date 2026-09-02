@@ -2,6 +2,16 @@
 
 const SNAPSHOT_SCHEMA_VERSION = 2;
 const BPS = 10000;
+const EDGE_RATE_BY_PROFILE = Object.freeze({
+  model_1: "edge_standard",
+  model_2: "edge_round",
+  model_3: "edge_round",
+  model_4: "edge_standard",
+  model_5: "edge_standard",
+  model_6: "edge_standard",
+  model_7: "edge_standard",
+});
+// edge_reinforced depends on a future finishedThickness field, not on profile shape.
 
 function asNonNegativeInteger(value, field) {
   const number = Number(value ?? 0);
@@ -221,7 +231,7 @@ function itemGeometry(item, slabLengthMm = Infinity) {
     }
     exteriorStraightCutM = roundMeters(
       pieces.reduce(
-        (sum, piece) => sum + (usesSlabEdges ? 1 : 2) *
+        (sum, piece) => sum + 2 *
           (piece.lengthMm + piece.widthMm) / 1000,
         0,
       ) - (usesSlabEdges ? 0 : roundedCorners * 2 * radiusMm / 1000),
@@ -237,7 +247,9 @@ function itemGeometry(item, slabLengthMm = Infinity) {
   const wallPanelCutM = item.wallPanel && wallPanelLengthM > 0
     ? roundMeters(wallPanelLengthM + wallPanelHeightMm / 1000)
     : 0;
-  const straightCutM = roundMeters(exteriorStraightCutM + jointPolishM + wallPanelCutM);
+  const straightCutM = roundMeters(
+    exteriorStraightCutM + (usesSlabEdges ? 0 : jointPolishM) + wallPanelCutM,
+  );
   let processedEdgeM;
   if (usesSlabEdges) {
     processedEdgeM = selectedEdgeLengthM;
@@ -301,7 +313,11 @@ function automaticQuantities(item, geometry = itemGeometry(item), slabFormat = {
       : "joint_long";
     result.push({ code: jointCode, quantity: geometry.jointCount });
   }
-  if (geometry.jointPolishM > 0) {
+  if (
+    geometry.jointPolishM > 0 &&
+    item.productType !== "countertop" &&
+    item.productType !== "windowsill"
+  ) {
     const polishCode = Number(slabFormat.thicknessMm || 20) >= 40
       ? "polish_40"
       : "polish_20";
@@ -352,6 +368,13 @@ function normalizePieces(configuration, slabLengthMm = Infinity) {
   if (items.length === 0) throw new TypeError("Добавьте хотя бы одно изделие");
 
   return items.map((item, itemIndex) => {
+    const productType = item.productType || "countertop";
+    const edgeProfileModel = item.edgeProfileModel || "model_1";
+    const profileRateCode =
+      (productType === "countertop" || productType === "windowsill") &&
+      item.edgeProfileModel
+        ? EDGE_RATE_BY_PROFILE[edgeProfileModel]
+        : null;
     const rawPieces = Array.isArray(item.pieces) && item.pieces.length
       ? item.pieces
       : [{ lengthMm: item.lengthMm, widthMm: item.widthMm }];
@@ -370,13 +393,13 @@ function normalizePieces(configuration, slabLengthMm = Infinity) {
       return { lengthMm, widthMm };
     });
     const normalized = {
-      productType: item.productType || "countertop",
+      productType,
       shape: item.shape || "straight",
       tableShape: item.tableShape || "rectangle",
       pieces,
       operations: Array.isArray(item.operations) ? item.operations : [],
-      edgeCode: item.edgeCode || null,
-      edgeProfileModel: item.edgeProfileModel || "model_1",
+      edgeCode: profileRateCode || item.edgeCode || null,
+      edgeProfileModel,
       automaticGeometry: Boolean(item.automaticGeometry),
       polishedSides: asNonNegativeInteger(item.polishedSides || 1, "Количество полируемых сторон"),
       roundedCorners: asNonNegativeInteger(item.roundedCorners, "Количество скруглённых углов"),
@@ -451,7 +474,18 @@ function calculateMaterial(
   let baseUsdCents;
   switch (material.priceUnit) {
     case "slab":
-      baseUsdCents = multiplyCents(material.basePriceUsdCents, slabCount);
+      if (material.fractionPricesUsdCents) {
+        const full = asNonNegativeInteger(material.fractionPricesUsdCents["1"], "Цена полного слэба");
+        const wholeSlabs = Math.floor(slabCount);
+        const hasHalf = slabCount % 1 === 0.5;
+        if (hasHalf && material.fractionPricesUsdCents["0.5"] === undefined) {
+          throw new TypeError("Для дробного расхода отсутствует цена половины слэба");
+        }
+        const half = hasHalf ? asNonNegativeInteger(material.fractionPricesUsdCents["0.5"], "Цена половины слэба") : 0;
+        baseUsdCents = wholeSlabs * full + half;
+      } else {
+        baseUsdCents = multiplyCents(material.basePriceUsdCents, slabCount);
+      }
       break;
     case "half_slab":
       baseUsdCents = multiplyCents(material.basePriceUsdCents, slabCount * 2);
@@ -749,4 +783,5 @@ module.exports = {
   roundUpCents,
   toPublicResult,
   usdToBynCents,
+  calculateMaterial,
 };
