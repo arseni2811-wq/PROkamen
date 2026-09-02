@@ -263,6 +263,13 @@ app.use((err, req, res, next) => {
     });
   }
 
+  if (typeof err.code === "string" && err.code.startsWith("ER_")) {
+    return res.status(500).json({
+      success: false,
+      message: "Калькулятор временно недоступен. Обновите страницу или свяжитесь с менеджером.",
+    });
+  }
+
   // Default error
   res.status(err.status || 500).json({
     success: false,

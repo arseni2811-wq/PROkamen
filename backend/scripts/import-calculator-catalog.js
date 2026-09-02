@@ -30,9 +30,10 @@ async function importCalculatorCatalog() {
       await connection.query(
         `INSERT INTO materials
          (material_id, type_id, title, fabricator, description, image_path, sku,
+          price_per_m2,
           slab_format_id, length_mm, width_mm, thickness_mm, price_unit,
           base_price_usd_cents, is_active, public_available, sort_order)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'manual', 0, 1, ?, ?)
+         VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, 'manual', 0, 1, ?, ?)
          ON DUPLICATE KEY UPDATE
            type_id = VALUES(type_id), title = VALUES(title),
            fabricator = VALUES(fabricator), description = VALUES(description),

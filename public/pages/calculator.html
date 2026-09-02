@@ -3,18 +3,57 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="description" content="Рассчитайте ориентировочную стоимость столешницы или подоконника из камня." />
-    <title>Калькулятор изделий — ПРО Камень</title>
-    <link rel="stylesheet" href="../css/calculator.css" />
+    <meta name="description" content="Онлайн-расчёт столешницы, подоконника или стола из кварцевого агломерата, гранита и оникса в белорусских рублях." />
+    <meta name="robots" content="index,follow" />
+    <title>Калькулятор изделий из камня — ПРО Камень</title>
+    <link rel="stylesheet" href="/css/base.css" />
+    <link rel="stylesheet" href="/css/layout.css" />
+    <link rel="stylesheet" href="/css/components.css" />
+    <link rel="stylesheet" href="/css/calculator.css" />
+    <link rel="icon" href="/assets/images/ui/favicon.ico" />
   </head>
-  <body>
-    <header class="calc-header"><div class="calc-header__inner"><a class="calc-brand" href="../index.html">ПРО КАМЕНЬ</a><a class="calc-back" href="../index.html">На главную</a></div></header>
-    <main class="calc-shell">
-      <h1 class="calc-title">Рассчитайте изделие из камня</h1>
-      <p class="calc-lead">Выберите форму, размеры и материал. Итог — ориентир «от» в BYN; точную стоимость подтвердит менеджер после замера.</p>
-      <div class="calc-progress" aria-hidden="true"><span class="active"></span><span class="active"></span><span class="active"></span><span class="active"></span></div>
-      <div id="calculatorApp" class="calc-grid" aria-live="polite"></div>
+  <body class="calculator-page">
+    <a class="skip-link" href="#main">Перейти к содержимому</a>
+    <header class="header" role="banner"></header>
+
+    <main class="main calculator-main" id="main">
+      <section class="calculator-hero" aria-labelledby="calculator-title">
+        <div class="container calculator-hero__inner">
+          <div>
+            <p class="calculator-eyebrow">Онлайн-калькулятор</p>
+            <h1 id="calculator-title">Соберите своё изделие из камня</h1>
+            <p class="calculator-hero__lead">
+              Выберите изделие, форму, размеры и материал. Стоимость обновляется
+              автоматически и показывается в белорусских рублях.
+            </p>
+          </div>
+          <div class="calculator-hero__note">
+            <span class="calculator-hero__note-icon" aria-hidden="true">≈</span>
+            <p><strong>Расчёт ориентировочный</strong><br />Точную цену подтвердит менеджер после замера.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="container calculator-workspace" aria-label="Расчёт изделия">
+        <div class="calculator-progress" aria-label="Этапы расчёта">
+          <span><b>1</b> Изделие</span>
+          <span><b>2</b> Камень</span>
+          <span><b>3</b> Кромка</span>
+          <span><b>4</b> Услуги</span>
+          <span><b>5</b> Итог</span>
+          <span><b>6</b> Заявка</span>
+        </div>
+        <div id="calculatorApp" class="calc-grid" aria-live="polite">
+          <div class="calculator-loading" role="status">
+            <span class="calculator-loader" aria-hidden="true"></span>
+            Загружаем материалы и актуальные цены…
+          </div>
+        </div>
+      </section>
     </main>
-    <script src="../js/calculator-app.js" defer></script>
+
+    <footer class="footer" role="contentinfo"></footer>
+    <script type="module" src="/js/main.js?v=4"></script>
+    <script src="/js/calculator-app.js?v=4" defer></script>
   </body>
 </html>

@@ -18,6 +18,9 @@ ON DUPLICATE KEY UPDATE
 UPDATE dict_material_types
 SET is_active = 0, public_available = 0, sort_order = 90
 WHERE type_id = 'acrylic';
+UPDATE dict_material_types
+SET public_available = 0, sort_order = 90
+WHERE type_id NOT IN ('quartz', 'granite', 'onyx');
 UPDATE dict_material_types SET sort_order = 10 WHERE type_id = 'quartz';
 
 CREATE TABLE calculator_slab_formats (
@@ -69,6 +72,11 @@ SET base_price_usd_cents = ROUND((price_per_m2 / 3) * 100),
     price_unit = 'sqm',
     price_changed_at = CURRENT_TIMESTAMP
 WHERE base_price_usd_cents = 0 AND price_per_m2 > 0;
+
+UPDATE materials SET type_id = 'granite'
+WHERE type_id = 'natural' AND title LIKE 'Гранит %';
+UPDATE materials SET type_id = 'onyx'
+WHERE type_id = 'natural' AND title LIKE 'Оникс %';
 
 CREATE TABLE calculator_pricebooks (
   pricebook_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,

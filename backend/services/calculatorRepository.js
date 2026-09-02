@@ -69,7 +69,7 @@ async function getPublishedPricebook({ materialId, slabFormatCode, customFormat,
   if (!pricebook) return null;
 
   const materialConditions = publicMode
-    ? "AND m.is_active = 1 AND m.public_available = 1"
+    ? "AND m.is_active = 1 AND m.public_available = 1 AND m.type_id IN ('quartz','granite','onyx')"
     : "AND m.is_active = 1";
   const [[materialRow]] = await pool.query(
     `SELECT m.* FROM materials m WHERE m.material_id = ? ${materialConditions} LIMIT 1`,
@@ -120,6 +120,7 @@ async function getPublicCatalog() {
     `SELECT type_id AS id, type_name_ru AS name
      FROM dict_material_types
      WHERE is_active = 1 AND public_available = 1
+       AND type_id IN ('quartz','granite','onyx')
      ORDER BY sort_order, type_name_ru`,
   );
   const [materials] = await pool.query(
@@ -128,6 +129,7 @@ async function getPublicCatalog() {
             color, slab_format_id AS slabFormatId, thickness_mm AS thicknessMm
      FROM materials
      WHERE is_active = 1 AND public_available = 1
+       AND type_id IN ('quartz','granite','onyx')
        AND base_price_usd_cents > 0
      ORDER BY sort_order, title`,
   );

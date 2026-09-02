@@ -37,6 +37,9 @@ function hasAllowedFileSignature(filename, header) {
   if ([".doc", ".xls"].includes(extension)) {
     return startsWith(header, OLE_SIGNATURE);
   }
+  if (extension === ".dwg") {
+    return header.length >= 6 && /^AC10\d{2}$/.test(header.subarray(0, 6).toString("ascii"));
+  }
   return false;
 }
 

@@ -191,14 +191,56 @@ const calculatorPieceSchema = z
   })
   .strict();
 
+const calculatorEdgeSidesSchema = z
+  .object({
+    front: z.boolean().optional().default(true),
+    left: z.boolean().optional().default(false),
+    right: z.boolean().optional().default(false),
+  })
+  .strict();
+
+const calculatorWallSidesSchema = z
+  .object({
+    back: z.boolean().optional().default(true),
+    left: z.boolean().optional().default(false),
+    right: z.boolean().optional().default(false),
+  })
+  .strict();
+
 const calculatorItemV2Schema = z
   .object({
-    productType: z.enum(["countertop", "windowsill"]),
+    productType: z.enum(["countertop", "windowsill", "table", "island", "bar"]),
     shape: z.enum(["straight", "l", "u"]),
+    tableShape: z.enum(["rectangle", "round", "oval"]).optional().default("rectangle"),
     pieces: z.array(calculatorPieceSchema).min(1).max(3),
     processedEdgeM: z.coerce.number().finite().min(0).max(1000).optional(),
     edgeCode: z.enum(["edge_standard", "edge_round", "edge_reinforced"]).optional().nullable(),
+    edgeProfileModel: z.enum(["model_1", "model_2", "model_3", "model_4", "model_5", "model_6", "model_7"]).optional().default("model_1"),
     straightCutM: z.coerce.number().finite().min(0).max(1000).optional(),
+    automaticGeometry: z.boolean().optional().default(false),
+    polishedSides: z.coerce.number().int().min(1).max(4).optional().default(1),
+    roundedCorners: z.coerce.number().int().min(0).max(4).optional().default(0),
+    cornerRadiusMm: z.coerce.number().finite().min(0).max(500).optional().default(50),
+    installation: z.boolean().optional().default(false),
+    backsplash: z.boolean().optional().default(false),
+    backsplashType: z.enum(["none", "straight", "coved"]).optional().default("none"),
+    backsplashLengthM: z.coerce.number().finite().min(0).max(1000).optional().default(0),
+    wallPanel: z.boolean().optional().default(false),
+    wallPanelAutoLength: z.boolean().optional().default(true),
+    wallPanelLengthM: z.coerce.number().finite().min(0).max(1000).optional().default(0),
+    wallPanelHeightMm: z.coerce.number().finite().min(50).max(5000).optional().default(600),
+    edgeSides: calculatorEdgeSidesSchema.optional().default({ front: true, left: false, right: false }),
+    wallSides: calculatorWallSidesSchema.optional().default({ back: true, left: false, right: false }),
+    sinkType: z.enum(["none", "top", "under", "stone"]).optional().default("none"),
+    hob: z.boolean().optional().default(false),
+    tapHole: z.boolean().optional().default(false),
+    socketHoles: z.coerce.number().int().min(0).max(20).optional().default(0),
+    dispenserHoles: z.coerce.number().int().min(0).max(20).optional().default(0),
+    roundCutouts: z.coerce.number().int().min(0).max(20).optional().default(0),
+    otherHoles: z.coerce.number().int().min(0).max(20).optional().default(0),
+    measurementRequested: z.boolean().optional().default(false),
+    deliveryRequested: z.boolean().optional().default(false),
+    liftingRequested: z.boolean().optional().default(false),
     operations: z.array(calculatorOperationSchema).max(100).default([]),
   })
   .strict();

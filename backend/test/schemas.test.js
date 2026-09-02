@@ -4,9 +4,59 @@ const {
   orderSchema,
   orderUpdateSchema,
   calculatorUpdateSchema,
+  calculatorPreviewSchema,
   materialSchema,
   statusUpdateSchema,
 } = require("../middleware/schemas");
+
+test("calculator preview accepts island and bar geometry", () => {
+  const item = (productType) => ({
+    productType,
+    shape: "straight",
+    pieces: [{ lengthMm: 1800, widthMm: productType === "island" ? 900 : 500 }],
+    automaticGeometry: true,
+    polishedSides: 4,
+    roundedCorners: productType === "island" ? 4 : 0,
+    cornerRadiusMm: 50,
+    edgeCode: "edge_standard",
+    operations: [],
+  });
+  const result = calculatorPreviewSchema.safeParse({
+    materialId: "stone-1",
+    slabFormatCode: "normal",
+    configuration: {
+      items: [item("island"), item("bar")],
+      operations: [],
+      additionalLines: [],
+    },
+  });
+  assert.equal(result.success, true);
+});
+
+test("calculator preview accepts table shape and automatic skinali perimeter", () => {
+  const result = calculatorPreviewSchema.safeParse({
+    materialId: "stone-1",
+    slabFormatCode: "normal",
+    configuration: {
+      items: [{
+        productType: "table",
+        shape: "straight",
+        tableShape: "oval",
+        pieces: [{ lengthMm: 1600, widthMm: 900 }],
+        automaticGeometry: true,
+        polishedSides: 4,
+        wallPanelAutoLength: true,
+        edgeCode: "edge_standard",
+        edgeProfileModel: "model_7",
+        operations: [],
+      }],
+      operations: [],
+      additionalLines: [],
+    },
+  });
+  assert.equal(result.success, true);
+  assert.equal(result.data.configuration.items[0].edgeProfileModel, "model_7");
+});
 
 test("mutating an existing order requires an expected version", () => {
   assert.equal(orderUpdateSchema.safeParse({ prepayment: 10 }).success, false);

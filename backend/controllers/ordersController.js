@@ -1033,16 +1033,25 @@ async function updateOrderCalculator(req, res) {
 
       await connection.query("DELETE FROM order_items WHERE order_id = ?", [orderId]);
       const totalArea = Number(snapshot.metrics?.areaM2 || 0);
-      for (const item of configurationItems) {
+      const itemNames = {
+        countertop: "Столешница",
+        windowsill: "Подоконник",
+        table: "Стол",
+        island: "Остров",
+        bar: "Барная стойка",
+      };
+      for (const [itemIndex, item] of configurationItems.entries()) {
         const pieces = Array.isArray(item.pieces) ? item.pieces : [];
-        const itemArea = pieces.reduce(
-          (sum, piece) =>
-            sum + Number(piece.lengthMm || 0) * Number(piece.widthMm || 0) / 1000000,
+        const savedGeometry = snapshot.metrics?.items?.[itemIndex];
+        const rawItemArea = pieces.reduce(
+          (sum, piece) => sum +
+            Number(piece.lengthMm || 0) * Number(piece.widthMm || 0) / 1000000,
           0,
         );
+        const itemArea = Number(savedGeometry?.areaM2 ?? rawItemArea);
         const lengthMm = Math.round(Math.max(...pieces.map((piece) => Number(piece.lengthMm || 0))));
         const widthMm = Math.round(Math.max(...pieces.map((piece) => Number(piece.widthMm || 0))));
-        const edgeLengthM = Number(item.processedEdgeM || 0);
+        const edgeLengthM = Number(savedGeometry?.processedEdgeM ?? item.processedEdgeM ?? 0);
         const itemCost = totalArea > 0 ? totalAmount * itemArea / totalArea : 0;
         await connection.query(
           `INSERT INTO order_items
@@ -1073,7 +1082,7 @@ async function updateOrderCalculator(req, res) {
           totalAmount,
           exchangeRate,
           configurationItems.map((item) =>
-            item.productType === "windowsill" ? "Подоконник" : "Столешница",
+            itemNames[item.productType] || "Изделие из камня",
           ).join(", "),
           orderId,
           expectedVersion,

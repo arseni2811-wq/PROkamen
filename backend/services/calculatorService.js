@@ -40,7 +40,314 @@ function roundSlabs(value) {
   return Math.ceil(asNonNegativeNumber(value, "Расход слэбов") * 2) / 2;
 }
 
-function normalizePieces(configuration) {
+function roundMeters(value) {
+  return Math.round(Number(value) * 1000) / 1000;
+}
+
+function normalizedSides(value, defaults) {
+  const source = value && typeof value === "object" ? value : {};
+  return Object.fromEntries(
+    Object.entries(defaults).map(([key, fallback]) => [key, source[key] === undefined ? fallback : Boolean(source[key])]),
+  );
+}
+
+function buildSlabLayout(items, slabLengthMm, slabWidthMm, kerfMm = 4) {
+  const parts = [];
+  items.forEach((item, itemIndex) => {
+    if (item.productType === "table" && ["round", "oval"].includes(item.tableShape)) {
+      const piece = item.pieces[0];
+      if (piece.lengthMm > slabLengthMm || piece.widthMm > slabWidthMm) {
+        throw new TypeError(`Стол ${itemIndex + 1} целиком не помещается в выбранный слэб`);
+      }
+    }
+    item.pieces.forEach((piece, pieceIndex) => {
+      if (piece.widthMm > slabWidthMm) {
+        throw new TypeError(`Глубина детали ${itemIndex + 1}.${pieceIndex + 1} больше ширины выбранного слэба`);
+      }
+      let remaining = piece.lengthMm;
+      let segmentIndex = 0;
+      while (remaining > 0) {
+        const lengthMm = Math.min(remaining, slabLengthMm);
+        parts.push({
+          itemIndex,
+          pieceIndex,
+          segmentIndex,
+          lengthMm,
+          widthMm: piece.widthMm,
+          continuation: segmentIndex > 0,
+        });
+        remaining -= lengthMm;
+        segmentIndex += 1;
+      }
+    });
+    if (item.wallPanel) {
+      const geometry = itemGeometry({ ...item, wallPanel: false }, slabLengthMm);
+      const panelLengthMm = Math.round((item.wallPanelAutoLength !== false
+        ? geometry.backLengthM
+        : item.wallPanelLengthM) * 1000);
+      if (item.wallPanelHeightMm > slabWidthMm) {
+        throw new TypeError(`Высота скинали изделия ${itemIndex + 1} больше ширины выбранного слэба`);
+      }
+      let remaining = panelLengthMm;
+      let segmentIndex = 0;
+      while (remaining > 0) {
+        const lengthMm = Math.min(remaining, slabLengthMm);
+        parts.push({ itemIndex, pieceIndex: -1, segmentIndex, lengthMm, widthMm: item.wallPanelHeightMm, wallPanel: true, continuation: segmentIndex > 0 });
+        remaining -= lengthMm;
+        segmentIndex += 1;
+      }
+    }
+  });
+
+  const slabs = [];
+  const sorted = [...parts].sort((a, b) => b.widthMm - a.widthMm || b.lengthMm - a.lengthMm);
+  for (const part of sorted) {
+    let placement = null;
+    for (const slab of slabs) {
+      for (const shelf of slab.shelves) {
+        if (part.widthMm <= shelf.heightMm && shelf.xMm + part.lengthMm <= slabLengthMm) {
+          placement = { slab, shelf, xMm: shelf.xMm, yMm: shelf.yMm };
+          shelf.xMm += part.lengthMm + kerfMm;
+          break;
+        }
+      }
+      if (placement) break;
+      const usedHeightMm = slab.shelves.reduce((sum, shelf) => sum + shelf.heightMm + kerfMm, 0);
+      if (usedHeightMm + part.widthMm <= slabWidthMm) {
+        const shelf = { yMm: usedHeightMm, xMm: part.lengthMm + kerfMm, heightMm: part.widthMm };
+        slab.shelves.push(shelf);
+        placement = { slab, shelf, xMm: 0, yMm: usedHeightMm };
+        break;
+      }
+    }
+    if (!placement) {
+      const slab = { index: slabs.length, shelves: [{ yMm: 0, xMm: part.lengthMm + kerfMm, heightMm: part.widthMm }], parts: [] };
+      slabs.push(slab);
+      placement = { slab, xMm: 0, yMm: 0 };
+    }
+    placement.slab.parts.push({ ...part, xMm: placement.xMm, yMm: placement.yMm });
+  }
+  return {
+    kerfMm,
+    slabLengthMm,
+    slabWidthMm,
+    physicalSlabCount: slabs.length,
+    slabs: slabs.map(({ index, parts: slabParts }) => ({ index, parts: slabParts })),
+  };
+}
+
+function itemGeometry(item, slabLengthMm = Infinity) {
+  const pieces = item.pieces || [];
+  const first = pieces[0];
+  if (!first) throw new TypeError("У изделия отсутствуют размеры");
+  const usableSlabLengthMm = Number(slabLengthMm);
+  const splitBySlabLength = Number.isFinite(usableSlabLengthMm) && usableSlabLengthMm > 0;
+  const lengthSplitCount = splitBySlabLength
+    ? pieces.reduce(
+        (sum, piece) => sum + Math.max(0, Math.ceil(piece.lengthMm / usableSlabLengthMm) - 1),
+        0,
+      )
+    : 0;
+  const jointPolishM = splitBySlabLength
+    ? roundMeters(pieces.reduce((sum, piece) => {
+        const splits = Math.max(0, Math.ceil(piece.lengthMm / usableSlabLengthMm) - 1);
+        return sum + splits * piece.widthMm / 1000;
+      }, 0))
+    : 0;
+  const usesSlabEdges = item.productType === "countertop" || item.productType === "windowsill";
+  const roundedCorners = Math.min(4, Math.max(0, Number(item.roundedCorners || 0)));
+  if (roundedCorners > 0 && Number(item.cornerRadiusMm || 0) > Math.min(first.lengthMm, first.widthMm) / 2) {
+    throw new TypeError("Закругление не может быть больше половины меньшей стороны изделия");
+  }
+  const radiusMm = Math.min(
+    Number(item.cornerRadiusMm || 0),
+    first.lengthMm / 2,
+    first.widthMm / 2,
+  );
+  const frontLengthM = roundMeters(
+    pieces.reduce((sum, piece) => sum + piece.lengthMm / 1000, 0),
+  );
+  const edgeSides = normalizedSides(item.edgeSides, { front: true, left: false, right: false });
+  const wallSides = normalizedSides(item.wallSides, { back: true, left: false, right: false });
+  const selectedEdgeLengthM = roundMeters(
+    (edgeSides.front ? frontLengthM : 0) +
+    (edgeSides.left ? first.widthMm / 1000 : 0) +
+    (edgeSides.right ? pieces[pieces.length - 1].widthMm / 1000 : 0),
+  );
+  const backLengthM = roundMeters(
+    (wallSides.back ? frontLengthM : 0) +
+    (wallSides.left ? first.widthMm / 1000 : 0) +
+    (wallSides.right ? pieces[pieces.length - 1].widthMm / 1000 : 0),
+  );
+  let areaMm2;
+  let exteriorStraightCutM;
+  let curvedCutM = 0;
+
+  if (item.productType === "table" && item.tableShape === "round") {
+    const diameterMm = first.lengthMm;
+    const radiusMm = diameterMm / 2;
+    areaMm2 = Math.PI * radiusMm * radiusMm;
+    exteriorStraightCutM = 0;
+    curvedCutM = roundMeters(Math.PI * diameterMm / 1000);
+  } else if (item.productType === "table" && item.tableShape === "oval") {
+    const radiusA = first.lengthMm / 2;
+    const radiusB = first.widthMm / 2;
+    const h = ((radiusA - radiusB) ** 2) / ((radiusA + radiusB) ** 2);
+    areaMm2 = Math.PI * radiusA * radiusB;
+    exteriorStraightCutM = 0;
+    curvedCutM = roundMeters(
+      Math.PI * (radiusA + radiusB) * (1 + 3 * h / (10 + Math.sqrt(4 - 3 * h))) / 1000,
+    );
+  } else if (item.productType === "bar") {
+    if (first.lengthMm < first.widthMm / 2) {
+      throw new TypeError("Длина барной стойки должна быть не меньше половины её глубины");
+    }
+    const endRadiusMm = Math.min(first.widthMm / 2, first.lengthMm);
+    areaMm2 =
+      (first.lengthMm - endRadiusMm) * first.widthMm +
+      Math.PI * endRadiusMm * endRadiusMm / 2;
+    exteriorStraightCutM = roundMeters(
+      (2 * (first.lengthMm - endRadiusMm) + first.widthMm) / 1000,
+    );
+    curvedCutM = roundMeters(Math.PI * endRadiusMm / 1000);
+  } else {
+    areaMm2 = pieces.reduce(
+      (sum, piece) => sum + piece.lengthMm * piece.widthMm,
+      0,
+    );
+    if (roundedCorners > 0 && radiusMm > 0) {
+      areaMm2 -= roundedCorners * radiusMm * radiusMm * (1 - Math.PI / 4);
+      curvedCutM = roundMeters(roundedCorners * Math.PI * radiusMm / 2 / 1000);
+    }
+    exteriorStraightCutM = roundMeters(
+      pieces.reduce(
+        (sum, piece) => sum + (usesSlabEdges ? 1 : 2) *
+          (piece.lengthMm + piece.widthMm) / 1000,
+        0,
+      ) - (usesSlabEdges ? 0 : roundedCorners * 2 * radiusMm / 1000),
+    );
+  }
+
+  const polishedSides = Math.min(4, Math.max(1, Number(item.polishedSides || 1)));
+  const wallPanelLengthM = item.wallPanel
+    ? (item.wallPanelAutoLength !== false ? backLengthM : Number(item.wallPanelLengthM || 0))
+    : 0;
+  const wallPanelHeightMm = item.wallPanel ? Number(item.wallPanelHeightMm || 600) : 0;
+  const wallPanelAreaM2 = roundMeters(wallPanelLengthM * wallPanelHeightMm / 1000);
+  const wallPanelCutM = item.wallPanel && wallPanelLengthM > 0
+    ? roundMeters(wallPanelLengthM + wallPanelHeightMm / 1000)
+    : 0;
+  const straightCutM = roundMeters(exteriorStraightCutM + jointPolishM + wallPanelCutM);
+  let processedEdgeM;
+  if (usesSlabEdges) {
+    processedEdgeM = selectedEdgeLengthM;
+  } else if (
+    polishedSides === 4 ||
+    item.productType === "island" ||
+    item.productType === "bar" ||
+    item.productType === "table"
+  ) {
+    processedEdgeM = roundMeters(exteriorStraightCutM + curvedCutM);
+  } else {
+    processedEdgeM = frontLengthM +
+      (polishedSides >= 2 ? pieces[0].widthMm / 1000 : 0) +
+      (polishedSides >= 3 ? pieces[pieces.length - 1].widthMm / 1000 : 0);
+    if (roundedCorners > 0 && radiusMm > 0) {
+      processedEdgeM += roundedCorners * (Math.PI * radiusMm / 2 - 2 * radiusMm) / 1000;
+    }
+    processedEdgeM = roundMeters(Math.max(0, processedEdgeM));
+  }
+  return {
+    productType: item.productType,
+    shape: item.shape,
+    tableShape: item.tableShape || "rectangle",
+    productAreaM2: Math.round(areaMm2) / 1000000,
+    wallPanelAreaM2,
+    areaM2: Math.round((areaMm2 / 1000000 + wallPanelAreaM2) * 1000000) / 1000000,
+    straightCutM,
+    curvedCutM,
+    processedEdgeM,
+    lengthSplitCount,
+    jointPolishM,
+    backLengthM: item.productType === "countertop" || item.productType === "windowsill"
+      ? backLengthM
+      : 0,
+    wallPanelLengthM,
+    wallPanelHeightMm,
+    edgeSides,
+    wallSides,
+    installationM: item.productType === "island" || item.productType === "bar" || item.productType === "table"
+      ? roundMeters(first.lengthMm / 1000)
+      : frontLengthM,
+    jointCount: (item.shape === "u"
+      ? 2
+      : item.shape === "l"
+        ? 1
+        : 0) + lengthSplitCount,
+  };
+}
+
+function automaticQuantities(item, geometry = itemGeometry(item), slabFormat = {}) {
+  if (!item.automaticGeometry) return [];
+  const result = item.edgeCode && geometry.processedEdgeM > 0
+    ? [{ code: item.edgeCode, quantity: geometry.processedEdgeM }]
+    : [];
+  if (geometry.curvedCutM > 0) {
+    result.push({ code: "cut_curved", quantity: geometry.curvedCutM });
+  }
+  if (geometry.jointCount) {
+    const jointCode = Math.max(...item.pieces.map((piece) => piece.widthMm)) <= 700
+      ? "joint_short"
+      : "joint_long";
+    result.push({ code: jointCode, quantity: geometry.jointCount });
+  }
+  if (geometry.jointPolishM > 0) {
+    const polishCode = Number(slabFormat.thicknessMm || 20) >= 40
+      ? "polish_40"
+      : "polish_20";
+    result.push({ code: polishCode, quantity: geometry.jointPolishM });
+  }
+  if (item.sinkType === "top") result.push({ code: "cutout_sink_top", quantity: 1 });
+  if (item.sinkType === "under") result.push({ code: "cutout_sink_under", quantity: 1 });
+  if (item.sinkType === "stone") result.push({ code: "stone_sink", quantity: 1 });
+  if (item.hob) result.push({ code: "cutout_hob", quantity: 1 });
+  if (item.tapHole) result.push({ code: "hole_faucet", quantity: 1 });
+  if (Number(item.socketHoles || 0) > 0) {
+    result.push({ code: "hole_socket", quantity: Number(item.socketHoles) });
+  }
+  if (Number(item.dispenserHoles || 0) > 0) {
+    result.push({ code: "hole_dispenser", quantity: Number(item.dispenserHoles) });
+  }
+  if (Number(item.roundCutouts || 0) > 0) {
+    result.push({ code: "cutout_round", quantity: Number(item.roundCutouts) });
+  }
+  if (Number(item.otherHoles || 0) > 0) {
+    result.push({ code: "hole_standard", quantity: Number(item.otherHoles) });
+  }
+  const backsplashType = item.backsplashType || (item.backsplash ? "straight" : "none");
+  const backsplashLengthM = Number(item.backsplashLengthM || 0) > 0
+    ? Number(item.backsplashLengthM)
+    : geometry.installationM;
+  const wallPanelLengthM = item.wallPanelAutoLength !== false
+    ? geometry.backLengthM
+    : Number(item.wallPanelLengthM || 0);
+  if (backsplashType === "straight") {
+    result.push({ code: "backsplash_make", quantity: backsplashLengthM });
+  }
+  if (item.wallPanel) result.push({ code: "wall_panel", quantity: wallPanelLengthM });
+  if (item.installation) {
+    result.push({
+      code: item.productType === "windowsill" ? "install_sill" : "install_countertop",
+      quantity: geometry.installationM,
+    });
+    if (item.sinkType === "under") result.push({ code: "install_sink", quantity: 1 });
+    if (backsplashType === "straight") result.push({ code: "install_plinth", quantity: backsplashLengthM });
+    if (item.wallPanel) result.push({ code: "install_wall_panel", quantity: wallPanelLengthM });
+  }
+  return result;
+}
+
+function normalizePieces(configuration, slabLengthMm = Infinity) {
   const items = Array.isArray(configuration.items) ? configuration.items : [];
   if (items.length === 0) throw new TypeError("Добавьте хотя бы одно изделие");
 
@@ -62,21 +369,47 @@ function normalizePieces(configuration) {
       }
       return { lengthMm, widthMm };
     });
-    return {
+    const normalized = {
       productType: item.productType || "countertop",
       shape: item.shape || "straight",
+      tableShape: item.tableShape || "rectangle",
       pieces,
       operations: Array.isArray(item.operations) ? item.operations : [],
       edgeCode: item.edgeCode || null,
-      processedEdgeM: asNonNegativeNumber(item.processedEdgeM, "Длина кромки"),
-      straightCutM:
-        item.straightCutM === undefined
-          ? pieces.reduce(
-              (sum, piece) => sum + (piece.lengthMm + piece.widthMm) * 2 / 1000,
-              0,
-            )
-          : asNonNegativeNumber(item.straightCutM, "Прямой раскрой"),
+      edgeProfileModel: item.edgeProfileModel || "model_1",
+      automaticGeometry: Boolean(item.automaticGeometry),
+      polishedSides: asNonNegativeInteger(item.polishedSides || 1, "Количество полируемых сторон"),
+      roundedCorners: asNonNegativeInteger(item.roundedCorners, "Количество скруглённых углов"),
+      cornerRadiusMm: asNonNegativeNumber(item.cornerRadiusMm || 0, "Радиус скругления"),
+      installation: Boolean(item.installation),
+      backsplash: Boolean(item.backsplash),
+      backsplashType: item.backsplashType || (item.backsplash ? "straight" : "none"),
+      backsplashLengthM: asNonNegativeNumber(item.backsplashLengthM, "Длина бортика"),
+      wallPanel: Boolean(item.wallPanel),
+      wallPanelAutoLength: item.wallPanelAutoLength !== false,
+      wallPanelLengthM: asNonNegativeNumber(item.wallPanelLengthM, "Длина скинали"),
+      wallPanelHeightMm: asNonNegativeNumber(item.wallPanelHeightMm || 600, "Высота скинали"),
+      edgeSides: normalizedSides(item.edgeSides, { front: true, left: false, right: false }),
+      wallSides: normalizedSides(item.wallSides, { back: true, left: false, right: false }),
+      sinkType: item.sinkType || "none",
+      hob: Boolean(item.hob),
+      tapHole: Boolean(item.tapHole),
+      socketHoles: asNonNegativeInteger(item.socketHoles, "Отверстия под розетки"),
+      dispenserHoles: asNonNegativeInteger(item.dispenserHoles, "Отверстия под дозатор"),
+      roundCutouts: asNonNegativeInteger(item.roundCutouts, "Круглые вырезы"),
+      otherHoles: asNonNegativeInteger(item.otherHoles, "Дополнительные отверстия"),
+      measurementRequested: Boolean(item.measurementRequested),
+      deliveryRequested: Boolean(item.deliveryRequested),
+      liftingRequested: Boolean(item.liftingRequested),
+      processedEdgeM: item.automaticGeometry
+        ? 0
+        : asNonNegativeNumber(item.processedEdgeM, "Длина кромки"),
+      straightCutM: 0,
     };
+    normalized.straightCutM = item.straightCutM === undefined
+      ? itemGeometry(normalized, slabLengthMm).straightCutM
+      : asNonNegativeNumber(item.straightCutM, "Прямой раскрой");
+    return normalized;
   });
 }
 
@@ -148,19 +481,19 @@ function calculate(configuration, pricebook, mode = "internal") {
   if (!pricebook || !pricebook.material || !pricebook.slabFormat) {
     throw new TypeError("Не переданы материал и формат слэба");
   }
-  const piecesByItem = normalizePieces(configuration);
-  const allPieces = piecesByItem.flatMap((item) => item.pieces);
+  const slabLengthMm = asNonNegativeNumber(pricebook.slabFormat.lengthMm, "Длина слэба");
+  const slabWidthMm = asNonNegativeNumber(pricebook.slabFormat.widthMm, "Ширина слэба");
+  const piecesByItem = normalizePieces(configuration, slabLengthMm);
+  const itemGeometries = piecesByItem.map((item) => itemGeometry(item, slabLengthMm));
+  const slabLayout = buildSlabLayout(piecesByItem, slabLengthMm, slabWidthMm);
   const areaM2 = Math.round(
-    allPieces.reduce(
-      (sum, piece) => sum + piece.lengthMm * piece.widthMm / 1000000,
-      0,
-    ) * 1000000,
+    itemGeometries.reduce((sum, geometry) => sum + geometry.areaM2, 0) * 1000000,
   ) / 1000000;
   const wasteBps = asNonNegativeInteger(pricebook.settings.wasteBps, "Отходы");
   const areaWithWasteM2 = areaM2 * (BPS + wasteBps) / BPS;
   const slabAreaM2 =
-    asNonNegativeNumber(pricebook.slabFormat.lengthMm, "Длина слэба") *
-    asNonNegativeNumber(pricebook.slabFormat.widthMm, "Ширина слэба") /
+    slabLengthMm *
+    slabWidthMm /
     1000000;
   if (slabAreaM2 <= 0) throw new TypeError("Некорректный формат слэба");
   const automaticSlabCount = roundSlabs(areaWithWasteM2 / slabAreaM2);
@@ -180,7 +513,7 @@ function calculate(configuration, pricebook, mode = "internal") {
 
   const rates = new Map(pricebook.rates.map((rate) => [rate.systemCode, rate]));
   const quantities = new Map();
-  for (const item of piecesByItem) {
+  for (const [itemIndex, item] of piecesByItem.entries()) {
     quantities.set(
       "cut_straight",
       (quantities.get("cut_straight") || 0) + item.straightCutM,
@@ -190,6 +523,16 @@ function calculate(configuration, pricebook, mode = "internal") {
         operation.code,
         (quantities.get(operation.code) || 0) +
           asNonNegativeNumber(operation.quantity, operation.code),
+      );
+    }
+    for (const operation of automaticQuantities(
+      item,
+      itemGeometries[itemIndex],
+      pricebook.slabFormat,
+    )) {
+      quantities.set(
+        operation.code,
+        (quantities.get(operation.code) || 0) + operation.quantity,
       );
     }
     if (item.edgeCode && item.processedEdgeM > 0) {
@@ -298,6 +641,9 @@ function calculate(configuration, pricebook, mode = "internal") {
       id: pricebook.material.id,
       category: pricebook.material.category,
       title: pricebook.material.title,
+      manufacturer: pricebook.material.manufacturer || null,
+      series: pricebook.material.series || null,
+      sku: pricebook.material.sku || null,
       slabFormat: pricebook.slabFormat,
       slabCount,
       automaticSlabCount,
@@ -307,7 +653,18 @@ function calculate(configuration, pricebook, mode = "internal") {
       materialBynCents,
       additionalMaterialBynCents,
     },
-    metrics: { areaM2, areaWithWasteM2, slabAreaM2 },
+    metrics: {
+      areaM2,
+      areaWithWasteM2,
+      slabAreaM2,
+      straightCutM: roundMeters(itemGeometries.reduce((sum, item) => sum + item.straightCutM, 0)),
+      curvedCutM: roundMeters(itemGeometries.reduce((sum, item) => sum + item.curvedCutM, 0)),
+      processedEdgeM: roundMeters(itemGeometries.reduce((sum, item) => sum + item.processedEdgeM, 0)),
+      jointCount: itemGeometries.reduce((sum, item) => sum + item.jointCount, 0),
+      wallPanelAreaM2: roundMeters(itemGeometries.reduce((sum, item) => sum + item.wallPanelAreaM2, 0)),
+      slabLayout,
+      items: itemGeometries,
+    },
     lines: lines.map((line) => ({
       ...line,
       amountBynCents:
@@ -331,6 +688,29 @@ function calculate(configuration, pricebook, mode = "internal") {
 }
 
 function toPublicResult(result) {
+  const publicTotalCents = result.totals.publicFromTotalCents;
+  const sourceParts = [
+    { type: "material", amountBynCents: result.totals.materialBynCents },
+    ...result.lines
+      .filter((line) => Number(line.amountBynCents) > 0)
+      .map((line) => ({ type: "line", line, amountBynCents: line.amountBynCents })),
+  ];
+  const sourceTotalCents = sourceParts.reduce((sum, part) => sum + part.amountBynCents, 0);
+  let allocatedCents = 0;
+  const allocatedParts = sourceParts.map((part, index) => {
+    const remainingCents = Math.max(0, publicTotalCents - allocatedCents);
+    const amountBynCents = index === sourceParts.length - 1
+      ? remainingCents
+      : sourceTotalCents > 0
+        ? Math.min(remainingCents, Math.round(part.amountBynCents * publicTotalCents / sourceTotalCents))
+        : 0;
+    allocatedCents += amountBynCents;
+    return { ...part, amountBynCents };
+  });
+  const materialPart = allocatedParts.find((part) => part.type === "material");
+  const worksBynCents = allocatedParts
+    .filter((part) => part.type === "line")
+    .reduce((sum, part) => sum + part.amountBynCents, 0);
   return {
     schemaVersion: result.schemaVersion,
     pricebookVersion: result.pricebookVersion,
@@ -344,13 +724,27 @@ function toPublicResult(result) {
       id: result.material.id,
       category: result.material.category,
       title: result.material.title,
+      manufacturer: result.material.manufacturer,
+      series: result.material.series,
+      sku: result.material.sku,
+      slabFormat: result.material.slabFormat,
+      slabCount: result.material.slabCount,
+      amountBynCents: materialPart?.amountBynCents || 0,
+    },
+    totals: {
+      materialBynCents: materialPart?.amountBynCents || 0,
+      worksBynCents,
+      publicFromTotalCents: publicTotalCents,
     },
   };
 }
 
 module.exports = {
   SNAPSHOT_SCHEMA_VERSION,
+  automaticQuantities,
   calculate,
+  itemGeometry,
+  buildSlabLayout,
   roundSlabs,
   roundUpCents,
   toPublicResult,

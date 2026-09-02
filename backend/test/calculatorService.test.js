@@ -1,6 +1,6 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { calculate, roundSlabs } = require("../services/calculatorService");
+const { calculate, itemGeometry, roundSlabs } = require("../services/calculatorService");
 
 function pricebook(rate = 3) {
   return {
@@ -27,11 +27,26 @@ function pricebook(rate = 3) {
       { systemCode: "cut_straight", displayName: "Прямой раскрой", category: "production", unit: "m", basePriceUsdCents: 500, calculationMode: "unit", active: true, publicAvailable: true },
       { systemCode: "cut_curved", displayName: "Фигурный раскрой", category: "production", unit: "m", basePriceUsdCents: 0, calculationMode: "dependent", dependentCode: "cut_straight", percentBps: 13000, active: true, publicAvailable: true },
       { systemCode: "hole_faucet", displayName: "Отверстие", category: "production", unit: "pcs", basePriceUsdCents: 1000, calculationMode: "unit", active: true, publicAvailable: true },
+      { systemCode: "hole_socket", displayName: "Отверстие под розетку", category: "cutout", unit: "pcs", basePriceUsdCents: 1000, calculationMode: "unit", active: true, publicAvailable: true },
+      { systemCode: "hole_dispenser", displayName: "Отверстие под дозатор", category: "cutout", unit: "pcs", basePriceUsdCents: 1000, calculationMode: "unit", active: true, publicAvailable: true },
+      { systemCode: "cutout_round", displayName: "Круглый вырез", category: "cutout", unit: "pcs", basePriceUsdCents: 7000, calculationMode: "unit", active: true, publicAvailable: true },
       { systemCode: "joint_short", displayName: "Стык", category: "production", unit: "pcs", basePriceUsdCents: 4000, calculationMode: "unit", active: true, publicAvailable: true },
+      { systemCode: "joint_long", displayName: "Длинный стык", category: "production", unit: "pcs", basePriceUsdCents: 8000, calculationMode: "unit", active: true, publicAvailable: true },
       { systemCode: "edge_standard", displayName: "Кромка", category: "production", unit: "m", basePriceUsdCents: 2000, calculationMode: "unit", active: true, publicAvailable: true },
+      { systemCode: "polish_20", displayName: "Полировка 20 мм", category: "production", unit: "m", basePriceUsdCents: 2000, calculationMode: "unit", active: true, publicAvailable: true },
+      { systemCode: "polish_40", displayName: "Полировка 40 мм", category: "production", unit: "m", basePriceUsdCents: 4000, calculationMode: "unit", active: true, publicAvailable: true },
+      { systemCode: "cutout_hob", displayName: "Вырез под варочную панель", category: "cutout", unit: "pcs", basePriceUsdCents: 4000, calculationMode: "unit", active: true, publicAvailable: true },
+      { systemCode: "cutout_sink_under", displayName: "Вырез под мойку снизу", category: "cutout", unit: "pcs", basePriceUsdCents: 5000, calculationMode: "unit", active: true, publicAvailable: true },
+      { systemCode: "backsplash_make", displayName: "Изготовление бортика", category: "production", unit: "m", basePriceUsdCents: 1000, calculationMode: "unit", active: true, publicAvailable: true },
+      { systemCode: "backsplash", displayName: "Пристенный бортик", category: "additional", unit: "m", basePriceUsdCents: 1000, calculationMode: "unit", active: true, publicAvailable: true },
+      { systemCode: "install_plinth", displayName: "Монтаж бортика", category: "installation", unit: "m", basePriceUsdCents: 500, calculationMode: "unit", active: true, publicAvailable: true },
+      { systemCode: "install_sink", displayName: "Вклейка мойки", category: "installation", unit: "pcs", basePriceUsdCents: 1000, calculationMode: "unit", active: true, publicAvailable: true },
       { systemCode: "manual_polish_small", displayName: "Ручная полировка", category: "production", unit: "service", basePriceUsdCents: 5000, calculationMode: "unit", active: true, publicAvailable: false },
       { systemCode: "manual_polish_large", displayName: "Ручная полировка более 1 м²", category: "production", unit: "service", basePriceUsdCents: 8000, calculationMode: "unit", active: true, publicAvailable: false },
       { systemCode: "install_countertop", displayName: "Монтаж", category: "installation", unit: "m", basePriceUsdCents: 2500, calculationMode: "unit", active: true, publicAvailable: true },
+      { systemCode: "install_sill", displayName: "Монтаж подоконника", category: "installation", unit: "m", basePriceUsdCents: 2500, calculationMode: "unit", active: true, publicAvailable: true },
+      { systemCode: "wall_panel", displayName: "Скинали", category: "production", unit: "m", basePriceUsdCents: 2000, calculationMode: "unit", active: true, publicAvailable: true },
+      { systemCode: "install_wall_panel", displayName: "Монтаж скинали", category: "installation", unit: "m", basePriceUsdCents: 1000, calculationMode: "unit", active: true, publicAvailable: true },
     ],
   };
 }
@@ -66,8 +81,199 @@ test("прямая, Г- и П-образная формы суммируют п�
   assert.equal(u.metrics.areaM2, 1.2);
 });
 
+test("автоматическая геометрия добавляет 0, 1 и 2 стыка по форме", () => {
+  const makeItem = (shape, pieces) => ({
+    productType: "countertop",
+    shape,
+    pieces,
+    automaticGeometry: true,
+    polishedSides: 1,
+    edgeCode: "edge_standard",
+    operations: [],
+  });
+  const straight = calculate(config({ items: [makeItem("straight", [{ lengthMm: 1000, widthMm: 600 }])] }), pricebook());
+  const l = calculate(config({ items: [makeItem("l", [{ lengthMm: 1000, widthMm: 600 }, { lengthMm: 500, widthMm: 600 }])] }), pricebook());
+  const u = calculate(config({ items: [makeItem("u", [{ lengthMm: 1000, widthMm: 600 }, { lengthMm: 500, widthMm: 600 }, { lengthMm: 500, widthMm: 600 }])] }), pricebook());
+  assert.equal(straight.lines.find((line) => line.code === "joint_short"), undefined);
+  assert.equal(l.lines.find((line) => line.code === "joint_short").quantity, 1);
+  assert.equal(u.lines.find((line) => line.code === "joint_short").quantity, 2);
+});
+
+test("столешница получает кромку только по лицевой длине без боковых торцов", () => {
+  const edgeLength = (polishedSides) => calculate(config({
+    items: [{
+      productType: "countertop",
+      shape: "straight",
+      pieces: [{ lengthMm: 2000, widthMm: 600 }],
+      automaticGeometry: true,
+      polishedSides,
+      edgeCode: "edge_standard",
+      operations: [],
+    }],
+  }), pricebook()).lines.find((line) => line.code === "edge_standard").quantity;
+  assert.equal(edgeLength(1), 2);
+  assert.equal(edgeLength(2), 2);
+  assert.equal(edgeLength(3), 2);
+});
+
+test("прямой раскрой столешниц и подоконников считает одну длину и одну ширину каждой детали", () => {
+  const straight = itemGeometry({
+    productType: "countertop",
+    shape: "straight",
+    pieces: [{ lengthMm: 2000, widthMm: 600 }],
+  });
+  const l = itemGeometry({
+    productType: "countertop",
+    shape: "l",
+    pieces: [
+      { lengthMm: 2000, widthMm: 600 },
+      { lengthMm: 1500, widthMm: 600 },
+    ],
+  });
+  const uSill = itemGeometry({
+    productType: "windowsill",
+    shape: "u",
+    pieces: [
+      { lengthMm: 850, widthMm: 300 },
+      { lengthMm: 1600, widthMm: 300 },
+      { lengthMm: 850, widthMm: 300 },
+    ],
+  });
+  assert.equal(straight.straightCutM, 2.6);
+  assert.equal(l.straightCutM, 4.7);
+  assert.equal(uSill.straightCutM, 4.2);
+});
+
+test("деталь длиннее слэба получает поперечный раскрой, стык и полировку по ширине", () => {
+  const geometry = itemGeometry({
+    productType: "countertop",
+    shape: "straight",
+    pieces: [{ lengthMm: 4200, widthMm: 600 }],
+  }, 3050);
+  assert.equal(geometry.straightCutM, 5.4);
+  assert.equal(geometry.processedEdgeM, 4.2);
+  assert.equal(geometry.lengthSplitCount, 1);
+  assert.equal(geometry.jointPolishM, 0.6);
+  assert.equal(geometry.jointCount, 1);
+
+  const result = calculate(config({
+    items: [{
+      productType: "countertop",
+      shape: "straight",
+      pieces: [{ lengthMm: 4200, widthMm: 600 }],
+      automaticGeometry: true,
+      polishedSides: 1,
+      edgeCode: "edge_standard",
+      operations: [],
+    }],
+  }), pricebook());
+  const quantities = Object.fromEntries(result.lines.map((line) => [line.code, line.quantity]));
+  assert.equal(quantities.cut_straight, 5.4);
+  assert.equal(quantities.edge_standard, 4.2);
+  assert.equal(quantities.joint_short, 1);
+  assert.equal(quantities.polish_20, 0.6);
+});
+
+test("каждое следующее превышение длины слэба добавляет ещё один комплект стыковки", () => {
+  const geometry = itemGeometry({
+    productType: "windowsill",
+    shape: "straight",
+    pieces: [{ lengthMm: 7000, widthMm: 600 }],
+  }, 3050);
+  assert.equal(geometry.straightCutM, 8.8);
+  assert.equal(geometry.lengthSplitCount, 2);
+  assert.equal(geometry.jointPolishM, 1.2);
+  assert.equal(geometry.jointCount, 2);
+});
+
+test("остров рассчитывает площадь и кромку по полному периметру", () => {
+  const geometry = itemGeometry({
+    productType: "island",
+    shape: "straight",
+    pieces: [{ lengthMm: 1800, widthMm: 900 }],
+    polishedSides: 4,
+  });
+  assert.equal(geometry.areaM2, 1.62);
+  assert.equal(geometry.straightCutM, 5.4);
+  assert.equal(geometry.curvedCutM, 0);
+  assert.equal(geometry.processedEdgeM, 5.4);
+  assert.equal(geometry.installationM, 1.8);
+});
+
+test("барная стойка получает полукруглый торец без ручных операций", () => {
+  const result = calculate(config({
+    items: [{
+      ...config().items[0],
+      productType: "bar",
+      pieces: [{ lengthMm: 1800, widthMm: 500 }],
+      automaticGeometry: true,
+      polishedSides: 4,
+      edgeCode: "edge_standard",
+    }],
+  }), pricebook());
+  assert.equal(result.metrics.areaM2, 0.873175);
+  assert.equal(result.metrics.straightCutM, 3.6);
+  assert.equal(result.metrics.curvedCutM, 0.785);
+  assert.equal(result.metrics.processedEdgeM, 4.385);
+  assert.equal(result.lines.find((line) => line.code === "cut_curved").quantity, 0.785);
+  assert.equal(result.lines.find((line) => line.code === "edge_standard").quantity, 4.385);
+});
+
+test("барная стойка отклоняет физически невозможный полукруглый торец", () => {
+  assert.throws(() => itemGeometry({
+    productType: "bar",
+    shape: "straight",
+    pieces: [{ lengthMm: 300, widthMm: 800 }],
+    polishedSides: 4,
+  }), /половины её глубины/);
+});
+
+test("четыре радиусных угла острова уменьшают площадь и заменяют прямые резы дугами", () => {
+  const geometry = itemGeometry({
+    productType: "island",
+    shape: "straight",
+    pieces: [{ lengthMm: 1800, widthMm: 900 }],
+    polishedSides: 4,
+    roundedCorners: 4,
+    cornerRadiusMm: 50,
+  });
+  assert.equal(geometry.areaM2, 1.617854);
+  assert.equal(geometry.straightCutM, 5);
+  assert.equal(geometry.curvedCutM, 0.314);
+  assert.equal(geometry.processedEdgeM, 5.314);
+});
+
+test("мойка, панель, бортик и монтаж создают производственные строки автоматически", () => {
+  const result = calculate(config({
+    items: [{
+      productType: "countertop",
+      shape: "straight",
+      pieces: [{ lengthMm: 2000, widthMm: 600 }],
+      automaticGeometry: true,
+      polishedSides: 1,
+      edgeCode: "edge_standard",
+      sinkType: "under",
+      hob: true,
+      tapHole: true,
+      backsplash: true,
+      installation: true,
+      operations: [],
+    }],
+  }), pricebook());
+  const quantities = Object.fromEntries(result.lines.map((line) => [line.code, line.quantity]));
+  assert.equal(quantities.cutout_sink_under, 1);
+  assert.equal(quantities.cutout_hob, 1);
+  assert.equal(quantities.hole_faucet, 1);
+  assert.equal(quantities.backsplash_make, 2);
+  assert.equal(quantities.backsplash, undefined);
+  assert.equal(quantities.install_countertop, 2);
+  assert.equal(quantities.install_plinth, 2);
+});
+
 test("расход округляется вверх до 0.5 и допускает ручное значение", () => {
   assert.equal(roundSlabs(0.01), 0.5);
+  assert.equal(roundSlabs(0.5), 0.5);
+  assert.equal(roundSlabs(0.5001), 1);
   assert.equal(roundSlabs(0.51), 1);
   const result = calculate(config({ manualSlabCount: 1.5 }), pricebook());
   assert.equal(result.material.slabCount, 1.5);
@@ -136,4 +342,185 @@ test("публичный результат не раскрывает USD и в�
   assert.equal(json.includes("usd"), false);
   assert.equal(json.includes("reserve"), false);
   assert.equal(result.currency, "BYN");
+  assert.equal(result.material.slabCount, 0.5);
+  assert.equal(result.material.slabFormat.code, "normal");
+  assert.equal(
+    result.totals.materialBynCents + result.totals.worksBynCents,
+    result.publicFromTotalCents,
+  );
+});
+
+test("радиусный бортик сохраняется без выдуманной публичной стоимости", () => {
+  const result = calculate(config({
+    items: [{
+      productType: "countertop",
+      shape: "straight",
+      pieces: [{ lengthMm: 2000, widthMm: 600 }],
+      automaticGeometry: true,
+      polishedSides: 1,
+      edgeCode: "edge_standard",
+      backsplashType: "coved",
+      backsplashLengthM: 2,
+      operations: [],
+    }],
+  }), pricebook());
+  assert.equal(result.lines.some((line) => line.code === "backsplash_make"), false);
+  assert.equal(result.lines.some((line) => line.code === "backsplash"), false);
+});
+
+test("розетки, дозатор и круглые вырезы считаются отдельными тарифами", () => {
+  const result = calculate(config({
+    items: [{
+      productType: "countertop",
+      shape: "straight",
+      pieces: [{ lengthMm: 2000, widthMm: 600 }],
+      automaticGeometry: true,
+      polishedSides: 1,
+      edgeCode: "edge_standard",
+      socketHoles: 2,
+      dispenserHoles: 1,
+      roundCutouts: 1,
+      operations: [],
+    }],
+  }), pricebook());
+  const quantities = Object.fromEntries(result.lines.map((line) => [line.code, line.quantity]));
+  assert.equal(quantities.hole_socket, 2);
+  assert.equal(quantities.hole_dispenser, 1);
+  assert.equal(quantities.cutout_round, 1);
+});
+
+test("эркерный подоконник имеет две стыковки и собственную геометрию", () => {
+  const geometry = itemGeometry({
+    productType: "windowsill",
+    shape: "u",
+    pieces: [
+      { lengthMm: 850, widthMm: 300 },
+      { lengthMm: 1600, widthMm: 300 },
+      { lengthMm: 850, widthMm: 300 },
+    ],
+    polishedSides: 1,
+  });
+  assert.equal(geometry.areaM2, 0.99);
+  assert.equal(geometry.jointCount, 2);
+  assert.equal(geometry.backLengthM, 3.3);
+  assert.equal(geometry.processedEdgeM, 3.3);
+});
+
+test("скинали по тыльному периметру получает автоматическую длину", () => {
+  const result = calculate(config({
+    items: [{
+      productType: "countertop",
+      shape: "l",
+      pieces: [
+        { lengthMm: 2000, widthMm: 600 },
+        { lengthMm: 1500, widthMm: 600 },
+      ],
+      automaticGeometry: true,
+      polishedSides: 1,
+      wallPanel: true,
+      wallPanelAutoLength: true,
+      wallPanelLengthM: 1,
+      operations: [],
+    }],
+  }), pricebook());
+  assert.equal(result.lines.find((line) => line.code === "wall_panel").quantity, 3.5);
+});
+
+test("прямоугольный, круглый и овальный столы считают площадь и полный периметр", () => {
+  const rectangle = itemGeometry({
+    productType: "table",
+    tableShape: "rectangle",
+    shape: "straight",
+    pieces: [{ lengthMm: 1600, widthMm: 900 }],
+    polishedSides: 4,
+  });
+  const round = itemGeometry({
+    productType: "table",
+    tableShape: "round",
+    shape: "straight",
+    pieces: [{ lengthMm: 1100, widthMm: 1100 }],
+    polishedSides: 4,
+  });
+  const oval = itemGeometry({
+    productType: "table",
+    tableShape: "oval",
+    shape: "straight",
+    pieces: [{ lengthMm: 1600, widthMm: 900 }],
+    polishedSides: 4,
+  });
+  assert.equal(rectangle.areaM2, 1.44);
+  assert.equal(rectangle.processedEdgeM, 5);
+  assert.equal(round.straightCutM, 0);
+  assert.equal(round.curvedCutM, 3.456);
+  assert.equal(round.processedEdgeM, 3.456);
+  assert.equal(oval.straightCutM, 0);
+  assert.ok(oval.areaM2 > 1.13 && oval.areaM2 < 1.14);
+  assert.ok(oval.processedEdgeM > 4 && oval.processedEdgeM < 4.1);
+});
+
+test("уточнение сторон добавляет только выбранные торцы к лицевой кромке", () => {
+  const geometry = itemGeometry({
+    productType: "countertop",
+    shape: "straight",
+    pieces: [{ lengthMm: 2000, widthMm: 600 }],
+    edgeSides: { front: true, left: true, right: false },
+    wallSides: { back: true, left: false, right: true },
+  });
+  assert.equal(geometry.processedEdgeM, 2.6);
+  assert.equal(geometry.backLengthM, 2.6);
+});
+
+test("скинали добавляет площадь материала, высоту и раскрой панели", () => {
+  const result = calculate(config({
+    items: [{
+      productType: "countertop",
+      shape: "straight",
+      pieces: [{ lengthMm: 2000, widthMm: 600 }],
+      automaticGeometry: true,
+      edgeCode: "edge_standard",
+      wallPanel: true,
+      wallPanelAutoLength: true,
+      wallPanelHeightMm: 600,
+      operations: [],
+    }],
+  }), pricebook());
+  assert.equal(result.metrics.items[0].productAreaM2, 1.2);
+  assert.equal(result.metrics.items[0].wallPanelAreaM2, 1.2);
+  assert.equal(result.metrics.areaM2, 2.4);
+  assert.equal(result.metrics.items[0].straightCutM, 5.2);
+});
+
+test("раскладка делит длинную деталь по слэбу и отмечает продолжение", () => {
+  const result = calculate(config({
+    items: [{
+      productType: "countertop",
+      shape: "straight",
+      pieces: [{ lengthMm: 4200, widthMm: 600 }],
+      automaticGeometry: true,
+      edgeCode: "edge_standard",
+      operations: [],
+    }],
+  }), pricebook());
+  const parts = result.metrics.slabLayout.slabs.flatMap((slab) => slab.parts);
+  assert.equal(parts.length, 2);
+  assert.equal(parts.filter((part) => part.continuation).length, 1);
+  assert.ok(parts.every((part) => part.lengthMm <= 3050 && part.widthMm <= 1440));
+});
+
+test("публичный ответ содержит только агрегаты материала и работ", () => {
+  const result = calculate(config({
+    items: [{
+      productType: "countertop",
+      shape: "straight",
+      pieces: [{ lengthMm: 2000, widthMm: 600 }],
+      automaticGeometry: true,
+      edgeCode: "edge_standard",
+      tapHole: true,
+      operations: [],
+    }],
+  }), pricebook(), "public");
+  assert.equal(Object.hasOwn(result, "lines"), false);
+  assert.equal(result.totals.materialBynCents + result.totals.worksBynCents, result.publicFromTotalCents);
+  assert.equal(JSON.stringify(result).includes("basePriceUsdCents"), false);
+  assert.equal(JSON.stringify(result).includes("hole_faucet"), false);
 });

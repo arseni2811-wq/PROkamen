@@ -15,6 +15,7 @@ test("file signatures accept matching supported formats", () => {
     hasAllowedFileSignature("a.docx", Buffer.from([0x50, 0x4b, 0x03, 0x04])),
     true,
   );
+  assert.equal(hasAllowedFileSignature("plan.dwg", Buffer.from("AC1032")), true);
 });
 
 test("file signatures reject extension spoofing", () => {

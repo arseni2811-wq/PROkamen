@@ -195,6 +195,42 @@ async function main() {
       !JSON.stringify(publicPreview).toLowerCase().includes("usd"),
       "Public preview leaked USD fields",
     );
+    assert(
+      !Object.hasOwn(publicPreview.calculation, "lines") &&
+        publicPreview.calculation.totals.materialBynCents +
+          publicPreview.calculation.totals.worksBynCents ===
+          publicPreview.calculation.publicFromTotalCents,
+      "Public preview leaked operation lines or returned inconsistent aggregates",
+    );
+    const publicLead = await readJson(
+      await fetch(`${baseUrl}/api/public/calculator/leads`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          ...calculatorPayload,
+          contact: { name: "Тестовый клиент", phone: "+375291112233", email: "", comment: "Эскиз приложен" },
+        }),
+      }),
+      201,
+    );
+    const publicAttachmentForm = new FormData();
+    publicAttachmentForm.append("token", publicLead.attachmentToken);
+    publicAttachmentForm.append("file", new Blob(["%PDF-1.4\n%%EOF\n"], { type: "application/pdf" }), "эскиз.pdf");
+    await readJson(
+      await fetch(`${baseUrl}/api/public/calculator/leads/${publicLead.leadId}/attachment`, {
+        method: "POST",
+        body: publicAttachmentForm,
+      }),
+      201,
+    );
+    const [publicLeadRows] = await pool.query(
+      "SELECT configuration_json FROM public_calculator_leads WHERE lead_id = ?",
+      [publicLead.leadId],
+    );
+    const publicLeadConfiguration = typeof publicLeadRows[0].configuration_json === "string"
+      ? JSON.parse(publicLeadRows[0].configuration_json)
+      : publicLeadRows[0].configuration_json;
+    assert(publicLeadConfiguration.customerAttachments?.length === 1, "Public lead attachment metadata was not stored");
     const internalPreview = await readJson(
       await fetch(`${baseUrl}/api/calculator/preview`, {
         method: "POST",
@@ -507,14 +543,25 @@ async function main() {
       items: [
         calculatorPayload.configuration.items[0],
         {
-          productType: "windowsill",
-          shape: "l",
-          pieces: [
-            { lengthMm: 1200, widthMm: 350 },
-            { lengthMm: 600, widthMm: 350 },
-          ],
+          productType: "island",
+          shape: "straight",
+          pieces: [{ lengthMm: 1800, widthMm: 900 }],
           edgeCode: "edge_round",
-          processedEdgeM: 1.8,
+          automaticGeometry: true,
+          polishedSides: 4,
+          roundedCorners: 4,
+          cornerRadiusMm: 100,
+          operations: [],
+        },
+        {
+          productType: "table",
+          shape: "straight",
+          tableShape: "oval",
+          pieces: [{ lengthMm: 1600, widthMm: 900 }],
+          edgeCode: "edge_standard",
+          edgeProfileModel: "model_7",
+          automaticGeometry: true,
+          polishedSides: 4,
           operations: [],
         },
       ],
@@ -544,8 +591,22 @@ async function main() {
       await fetch(`${baseUrl}/api/orders/${multiItemOrder.order_id}`, { headers: authHeaders }),
       200,
     );
-    assert(savedV2Order.order.items.length === 2, "Schema v2 did not save multiple items");
+    assert(savedV2Order.order.items.length === 3, "Schema v2 did not save multiple items");
     assert(savedV2Order.order.calculator_snapshot.schemaVersion === 2, "Schema v2 snapshot was not persisted");
+    assert(savedV2Order.order.product_type.includes("Остров"), "Island product label was not saved");
+    assert(savedV2Order.order.product_type.includes("Стол"), "Table product label was not saved");
+    assert(Number(savedV2Order.order.items[1].area_m2) < 1.62, "Rounded island area was not saved");
+    assert(Number(savedV2Order.order.items[1].edge_length_m) > 5, "Automatic island edge was not saved");
+    assert(Number(savedV2Order.order.items[2].area_m2) > 1.13, "Oval table area was not saved");
+    assert(Number(savedV2Order.order.items[2].edge_length_m) >= 4, "Oval table edge was not saved");
+    assert(
+      Number(savedV2Order.order.calculator_snapshot.metrics.items[2].processedEdgeM) > 4,
+      "Precise oval table edge was not retained in the calculator snapshot",
+    );
+    assert(
+      savedV2Order.order.calculator_snapshot.configuration.items[2].edgeProfileModel === "model_7",
+      "Selected edge profile model was not persisted",
+    );
     const v2Pdf = await fetch(`${baseUrl}/api/orders/${multiItemOrder.order_id}/pdf`, {
       headers: { authorization: authHeaders.authorization },
     });
@@ -830,6 +891,7 @@ async function main() {
         attachment_delete_consistency: true,
         invalid_ids_rejected: true,
         invalid_upload_extension_rejected: true,
+        public_calculator_attachment: true,
         financial_integrity: true,
       }),
     );
