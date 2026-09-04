@@ -68,6 +68,8 @@
     "install_sill", "install_sink", "install_plinth", "install_wall_panel", "polish_20", "polish_40",
   ]);
   const money = (cents) => `${(Number(cents || 0) / 100).toLocaleString("ru-RU", { maximumFractionDigits: 2 })} BYN`;
+  const formatMinor = (minor, currency) => `${(Number(minor) / 100).toLocaleString("ru-RU", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${currency}`;
+  const formatExchangeRate = (scaled, currency) => `1 ${currency} = ${(Number(scaled) / 10000).toFixed(4)} BYN`;
   const number = (value, digits = 3) => Number(value || 0).toLocaleString("ru-RU", { maximumFractionDigits: digits });
   const escape = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]);
   const unitName = (unit) => unit === "m" ? "м" : unit === "sqm" ? "м²" : unit === "pcs" ? "шт." : unit || "услуга";
@@ -336,6 +338,13 @@
     document.getElementById("manufacturerFilter").innerHTML = `<option value="">Все производители</option>${unique("manufacturer").map((value) => `<option>${escape(value)}</option>`).join("")}`;
     document.getElementById("seriesFilter").innerHTML = `<option value="">Все серии</option>${unique("series").map((value) => `<option>${escape(value)}</option>`).join("")}`;
     if (internal) {
+      const filters = document.querySelector(".catalog-filters");
+      if (filters && !document.getElementById("materialSearch")) {
+        const row = document.createElement("div");
+        row.className = "calc-row calc-spacer";
+        row.innerHTML = '<label class="calc-field calc-field--wide">Поиск материала<input id="materialSearch" placeholder="Бренд, артикул или название" /></label><label class="calc-field">Доступность<select id="availabilityFilter"><option value="all">Все</option><option value="ready">Доступные</option><option value="unavailable">Недоступные</option></select></label>';
+        filters.appendChild(row);
+      }
       document.getElementById("slabFormat").innerHTML = formats.map((format) => `<option value="${escape(format.code)}">${escape(format.name)}${format.custom ? " — свои размеры" : ` — ${format.lengthMm}×${format.widthMm}×${format.thicknessMm}`}</option>`).join("");
       document.getElementById("operations").innerHTML = state.catalog.operations.filter((operation) => !automaticCodes.has(operation.code)).map((operation) => `<label class="operation"><span>${escape(operation.name)}<small>${unitName(operation.unit)}</small></span><input aria-label="Количество: ${escape(operation.name)}" type="number" min="0" step="${operation.unit === "m" || operation.unit === "sqm" ? "0.1" : "1"}" value="${state.operations[operation.code] || 0}" data-operation="${escape(operation.code)}" /></label>`).join("");
     }
@@ -350,16 +359,19 @@
   }
   function syncMaterialFormat() {
     const { material, variant, format } = materialAndFormat();
-    if (!material || !format) return;
-    if (material.imported && variant) {
-      state.slabFormatCode = variant.slabFormatCode || format.code;
-      state.customFormat = { lengthMm: variant.lengthMm, widthMm: variant.widthMm, thicknessMm: variant.thicknessMm };
+    if (!material) return;
+    if (material.imported) {
       const slabFormat = document.getElementById("slabFormat");
       if (slabFormat) slabFormat.disabled = true;
+      if (variant) {
+        state.slabFormatCode = variant.slabFormatCode || format?.code || "";
+        state.customFormat = { lengthMm: variant.lengthMm, widthMm: variant.widthMm, thicknessMm: variant.thicknessMm };
+      }
       return;
     }
     const slabFormat = document.getElementById("slabFormat");
     if (slabFormat) slabFormat.disabled = false;
+    if (!format) return;
     if (internal) return;
     state.slabFormatCode = format.code;
     state.customFormat = { lengthMm: format.lengthMm, widthMm: format.widthMm, thicknessMm: material.thicknessMm || format.thicknessMm };
@@ -371,12 +383,38 @@
     const thickness = variant?.thicknessMm || material?.thicknessMm || format?.thicknessMm;
     host.innerHTML = material && format ? `<span>Выбранный камень</span><strong>${escape(material.title)}</strong><div><span>${escape(material.manufacturer || "ПРО Камень")}</span><span>${escape(variant?.commercialFormat || format.name)} · ${format.lengthMm} × ${format.widthMm}</span><span>Толщина ${thickness}</span></div>` : "";
   }
+  function buildVariantLabel(variant) {
+    const dimensions = [variant.lengthMm, variant.widthMm, variant.thicknessMm].filter((value) => value !== null && value !== undefined && value !== "").join("×");
+    return [variant.commercialFormat, dimensions, variant.surface].filter(Boolean).join(" · ");
+  }
+  function isReadyVariant(variant) { return Boolean(variant?.availability?.ready ?? variant?.isCalculatorReady); }
+  function selectedVariantMessage(material) {
+    if (!material?.imported) return "";
+    const selected = material.variants?.find((variant) => Number(variant.materialVariantId) === Number(state.materialVariantId));
+    if (selected && !isReadyVariant(selected)) return selected.availability?.message || "Вариант недоступен для расчёта";
+    if (!selected) return material.variants?.find((variant) => !isReadyVariant(variant))?.availability?.message || "Выберите доступный вариант материала";
+    return "";
+  }
   function renderMaterials() {
     const category = document.getElementById("categoryFilter").value;
     const manufacturer = document.getElementById("manufacturerFilter").value;
     const series = document.getElementById("seriesFilter").value;
-    const list = state.catalog.materials.filter((item) => allowedCategories.has(item.category) && (!category || item.category === category) && (!manufacturer || item.manufacturer === manufacturer) && (!series || item.series === series));
-    document.getElementById("materials").innerHTML = list.length ? list.map((item) => { const compared = state.comparisonMaterialIds.includes(item.id); const variants = item.variants || []; const variantSelect = internal && variants.length ? `<label class="calc-field"><small>Коммерческий формат</small><select data-material-variant="${escape(item.id)}">${variants.map((variant) => `<option value="${variant.materialVariantId}" ${Number(variant.materialVariantId) === Number(state.materialVariantId) ? "selected" : ""} ${variant.isCalculatorReady ? "" : "disabled"}>${escape(variant.commercialFormat || `${variant.lengthMm}×${variant.widthMm}×${variant.thicknessMm}`)}${variant.isCalculatorReady ? "" : " — недоступно для расчёта"}</option>`).join("")}</select></label>` : ""; return `<article class="material-card ${state.materialId === item.id ? "is-selected" : ""}">${item.image ? `<img src="${escape(new URL(item.image, apiOrigin).href)}" alt="Образец ${escape(item.title)}" loading="lazy" />` : `<span class="material-card__placeholder" aria-hidden="true"></span>`}<button class="material-card__select" type="button" data-material="${escape(item.id)}" aria-pressed="${state.materialId === item.id}"><span class="material-card__body"><strong>${escape(item.title)}</strong><small>${escape([item.manufacturer, item.series].filter(Boolean).join(" · ") || "ПРО Камень")}</small></span></button>${variantSelect}${internal ? "" : `<button class="material-card__compare ${compared ? "is-selected" : ""}" type="button" data-compare-material="${escape(item.id)}" aria-pressed="${compared}">${compared ? "✓ В сравнении" : "+ Сравнить"}</button>`}</article>`; }).join("") : `<p class="material-empty">Материалы по выбранному фильтру не найдены.</p>`;
+    const query = String(document.getElementById("materialSearch")?.value || "").trim().toLowerCase();
+    const availabilityFilter = document.getElementById("availabilityFilter")?.value || "all";
+    const searchable = (item) => [item.manufacturer, item.sku, item.title, item.series].filter(Boolean).join(" ").toLowerCase();
+    const list = state.catalog.materials.filter((item) => {
+      const variants = item.variants || [];
+      const ready = !item.imported || variants.some(isReadyVariant);
+      return allowedCategories.has(item.category) && (!category || item.category === category) && (!manufacturer || item.manufacturer === manufacturer) && (!series || item.series === series) && (!query || searchable(item).includes(query)) && (availabilityFilter === "all" || (availabilityFilter === "ready" ? ready : !ready));
+    });
+    document.getElementById("materials").innerHTML = list.length ? list.map((item) => {
+      const compared = state.comparisonMaterialIds.includes(item.id);
+      const variants = item.variants || [];
+      const selected = variants.find((variant) => Number(variant.materialVariantId) === Number(state.materialVariantId));
+      const message = state.materialId === item.id ? selectedVariantMessage(item) : "";
+      const variantSelect = internal && item.imported && variants.length ? `<label class="calc-field"><small>Коммерческий формат</small><select data-material-variant="${escape(item.id)}"><option value="" ${selected ? "" : "selected"} disabled>Выберите вариант</option>${variants.map((variant) => { const ready = isReadyVariant(variant); const suffix = ready ? (variant.isDiscontinued ? " · OUT" : "") : " — недоступно"; return `<option value="${variant.materialVariantId}" ${Number(variant.materialVariantId) === Number(state.materialVariantId) ? "selected" : ""} ${ready ? "" : "disabled"}>${escape(buildVariantLabel(variant))}${suffix}</option>`; }).join("")}</select>${message ? `<small class="material-card__availability">${escape(message)}</small>` : ""}</label>` : "";
+      return `<article class="material-card ${state.materialId === item.id ? "is-selected" : ""}">${item.image ? `<img src="${escape(new URL(item.image, apiOrigin).href)}" alt="Образец ${escape(item.title)}" loading="lazy" />` : `<span class="material-card__placeholder" aria-hidden="true"></span>`}<button class="material-card__select" type="button" data-material="${escape(item.id)}" aria-pressed="${state.materialId === item.id}"><span class="material-card__body"><strong>${escape(item.title)}</strong><small>${escape([item.manufacturer, item.series].filter(Boolean).join(" · ") || "ПРО Камень")}</small></span></button>${variantSelect}${internal ? "" : `<button class="material-card__compare ${compared ? "is-selected" : ""}" type="button" data-compare-material="${escape(item.id)}" aria-pressed="${compared}">${compared ? "✓ В сравнении" : "+ Сравнить"}</button>`}</article>`;
+    }).join("") : `<p class="material-empty">Материалы по выбранному фильтру не найдены.</p>`;
     renderSelectedMaterialMeta();
     renderMaterialComparison();
   }
@@ -446,6 +484,11 @@
   function scheduleCalculate() { clearTimeout(state.timer); state.timer = setTimeout(calculate, 180); }
   async function calculate() {
     if (!state.materialId) return showStatus("Выберите материал.");
+    const material = state.catalog.materials.find((item) => item.id === state.materialId);
+    const variant = material?.variants?.find((item) => Number(item.materialVariantId) === Number(state.materialVariantId));
+    if (internal && material?.imported && (!variant || !isReadyVariant(variant))) {
+      return showStatus(variant?.availability?.message || "Выберите доступный вариант материала", true);
+    }
     showStatus("Рассчитываем…");
     try {
       const result = await request(internal ? "/api/calculator/preview" : "/api/public/calculator/preview", { method: "POST", body: JSON.stringify(payload()) });
@@ -500,6 +543,29 @@
     host.innerHTML = `<div class="result-products">${itemCards}</div><div class="result-columns"><section class="result-card"><h3>Материал и расход</h3><dl class="result-facts"><div><dt>Камень</dt><dd>${escape([selectedMaterial?.manufacturer, calculation.material.title].filter(Boolean).join(" · "))}</dd></div><div><dt>Формат слэба</dt><dd>${escape(slab.name || slab.code || "—")} · ${slab.lengthMm || "—"} × ${slab.widthMm || "—"}</dd></div><div><dt>Толщина</dt><dd>${slab.thicknessMm || selectedMaterial?.thicknessMm || "—"}</dd></div><div><dt>Площадь изделий${calculation.metrics.wallPanelAreaM2 ? " и скинали" : ""}</dt><dd>${number(calculation.metrics.areaM2)} м²</dd></div><div><dt>С технологическим запасом</dt><dd>${number(calculation.metrics.areaWithWasteM2)} м²</dd></div><div class="result-facts__accent"><dt>Расход материала</dt><dd>${number(calculation.material.slabCount, 1)} слэба</dd></div></dl><p class="result-formula">${number(calculation.metrics.areaWithWasteM2)} м² ÷ ${number(calculation.metrics.slabAreaM2)} м² = ${number(calculation.metrics.areaWithWasteM2 / calculation.metrics.slabAreaM2)} → <strong>${number(calculation.material.slabCount, 1)} слэба</strong><br />Округление вверх до ближайших 0,5.</p>${slabLayoutMarkup(calculation)}</section><section class="result-card result-card--cost"><h3>Стоимость</h3><p class="cost-intro">Показываем итог понятно, без внутренних ставок и цены каждой операции.</p><table class="result-table"><tbody><tr><td><strong>Материал</strong><small>${number(calculation.material.slabCount, 1)} слэба</small></td><td>${money(calculation.totals.materialBynCents)}</td></tr><tr><td><strong>Все работы</strong><small>Раскрой, обработка, стыки и выбранные опции</small></td><td>${money(calculation.totals.worksBynCents)}</td></tr></tbody><tfoot><tr class="result-total"><td>Итого от</td><td>${money(calculation.publicFromTotalCents)}</td></tr></tfoot></table>${unpriced.length ? `<div class="unpriced-note"><strong>По запросу, без включения в сумму:</strong> ${unpriced.join(", ")}.</div>` : ""}</section></div><p class="result-disclaimer">Расчёт является ориентировочным. Точная стоимость определяется после замера и подтверждения наличия выбранного камня.</p>`;
     document.getElementById("resultPrice").textContent = `от ${money(calculation.publicFromTotalCents)}`;
   }
+  function materialPriceTrace(calculation, selectedMaterial) {
+    const material = calculation.material;
+    if (!material?.sourceCurrency) return "";
+    const selectedVariant = selectedMaterial?.variants?.find((variant) => Number(variant.materialVariantId) === Number(material.materialVariantId));
+    const rows = [
+      ["Бренд", selectedMaterial?.manufacturer],
+      ["Материал", [selectedMaterial?.sku, material.title].filter(Boolean).join(" ")],
+      ["Вариант", selectedVariant ? buildVariantLabel(selectedVariant) : null],
+      ["Поверхность", selectedVariant?.surface],
+      ["Валюта", material.sourceCurrency],
+      ["Цена полного слэба", material.fullPriceMinor == null ? null : formatMinor(material.fullPriceMinor, material.sourceCurrency)],
+      ["Цена половины", material.halfPriceMinor == null ? null : formatMinor(material.halfPriceMinor, material.sourceCurrency)],
+      ["Расчётный расход", material.automaticSlabCount == null ? null : `${number(material.automaticSlabCount, 1)} слэба`],
+      ["Использовано", material.slabCount == null ? null : `${number(material.slabCount, 1)} слэба`],
+      ["Стоимость до наценки", material.materialBaseMinor == null ? null : formatMinor(material.materialBaseMinor, material.sourceCurrency)],
+      ["Наценка", material.markupBps == null ? null : `${number(Number(material.markupBps) / 100, 2)} %`],
+      ["После наценки", material.materialTotalMinor == null ? null : formatMinor(material.materialTotalMinor, material.sourceCurrency)],
+      ["Курс", material.exchangeRateToBynScaled == null ? null : formatExchangeRate(material.exchangeRateToBynScaled, material.sourceCurrency)],
+      ["Дата курса", material.exchangeRateDate],
+      ["Стоимость материала", material.materialBynCents == null ? null : money(material.materialBynCents)],
+    ].filter(([, value]) => value !== null && value !== undefined && value !== "");
+    return rows.length ? `<section class="internal-material-trace"><h4>Расчёт материала</h4><dl>${rows.map(([label, value]) => `<div><dt>${escape(label)}</dt><dd>${escape(value)}</dd></div>`).join("")}</dl></section>` : "";
+  }
   function renderSummary() {
     const calculation = state.calculation; if (!calculation) return;
     const totalCents = internal ? calculation.totals.finalQuoteTotalCents : calculation.publicFromTotalCents; const firstItem = state.items.find((item) => ["countertop", "windowsill", "table"].includes(item.productType)) || state.items[0] || defaultItem(); const selectedMaterial = state.catalog.materials.find((item) => item.id === state.materialId);
@@ -507,7 +573,7 @@
     document.getElementById("summaryLines").innerHTML = internal ? [`<li><span>Материал (${calculation.material.slabCount} слэба)</span><strong>${money(calculation.totals.materialBynCents)}</strong></li>`, ...calculation.lines.filter((line) => Number(line.amountBynCents) > 0).map((line) => `<li><span>${escape(line.name)} × ${number(line.quantity)}</span><strong>${money(line.amountBynCents)}</strong></li>`)].join("") : `<li><span>Материал</span><strong>${money(calculation.totals.materialBynCents)}</strong></li><li><span>Все работы</span><strong>${money(calculation.totals.worksBynCents)}</strong></li>`;
     document.getElementById("autoNote").textContent = `Раскрой, ${calculation.metrics.jointCount ? `${calculation.metrics.jointCount} стык(а)` : "без стыков"}, кромка ${number(calculation.metrics.processedEdgeM)} м и расход с шагом 0,5`;
     updateSummaryVisual();
-    if (internal) { const box = document.getElementById("internalTotals"); box.classList.remove("hidden"); box.innerHTML = `Техническая сумма: <strong>${money(calculation.totals.technicalTotalCents)}</strong><br>Резерв: <strong>${money(calculation.totals.reserveCents)}</strong><br>Рекомендуемая цена: <strong>${money(calculation.totals.recommendedManagerTotalCents)}</strong><br>Версия прайса: <strong>${calculation.pricebookVersion}</strong>`; } else renderDetailedResult();
+    if (internal) { const box = document.getElementById("internalTotals"); box.classList.remove("hidden"); box.innerHTML = `Техническая сумма: <strong>${money(calculation.totals.technicalTotalCents)}</strong><br>Резерв: <strong>${money(calculation.totals.reserveCents)}</strong><br>Рекомендуемая цена: <strong>${money(calculation.totals.recommendedManagerTotalCents)}</strong><br>Версия прайса: <strong>${calculation.pricebookVersion}</strong>${materialPriceTrace(calculation, selectedMaterial)}`; } else renderDetailedResult();
   }
   function showStatus(message, isError = false) { const node = document.getElementById("status"); if (!node) return; node.textContent = message || ""; node.classList.toggle("error", isError); node.classList.toggle("success", !isError && Boolean(message)); }
   function showLeadStatus(message, isError = false) { const node = document.getElementById("leadStatus"); if (!node) return; node.textContent = message || ""; node.classList.toggle("error", isError); node.classList.toggle("success", !isError && Boolean(message)); }
@@ -547,7 +613,7 @@
       if (event.target.closest("#printAction")) { window.print(); return; }
       if (event.target.closest("#addManualLine")) { state.additionalLines.push({ name: "Дополнительная услуга", quantity: 1, unit: "услуга", unitPriceCents: 0, currency: "BYN", category: "additional", comment: "" }); renderManualLines(); return; }
       const compareMaterial = event.target.closest("[data-compare-material]"); if (compareMaterial) { const id = compareMaterial.dataset.compareMaterial; if (state.comparisonMaterialIds.includes(id)) state.comparisonMaterialIds = state.comparisonMaterialIds.filter((entry) => entry !== id); else if (state.comparisonMaterialIds.length < 3) state.comparisonMaterialIds.push(id); else { showStatus("Для сравнения можно выбрать не больше трёх камней.", true); return; } state.comparisonResults = []; renderMaterials(); scheduleCalculate(); return; }
-      const materialCard = event.target.closest("[data-material]"); if (materialCard) { state.materialId = materialCard.dataset.material; const material = state.catalog.materials.find((item) => item.id === state.materialId); state.materialVariantId = material?.imported ? material.variants?.find((variant) => variant.isCalculatorReady)?.materialVariantId || null : null; syncMaterialFormat(); renderMaterials(); scheduleCalculate(); return; }
+      const materialCard = event.target.closest("[data-material]"); if (materialCard) { state.materialId = materialCard.dataset.material; const material = state.catalog.materials.find((item) => item.id === state.materialId); state.materialVariantId = null; state.slabFormatCode = ""; if (material?.imported) { const readyVariants = (material.variants || []).filter(isReadyVariant); if (readyVariants.length === 1) state.materialVariantId = readyVariants[0].materialVariantId; } else { const format = state.catalog.formats.find((item) => Number(item.id) === Number(material?.slabFormatId)); state.slabFormatCode = format?.code || "normal"; } syncMaterialFormat(); renderMaterials(); scheduleCalculate(); return; }
       const itemCard = event.target.closest("[data-item]"); if (itemCard) { const index = Number(itemCard.dataset.item); const item = state.items[index]; if (event.target.closest(".remove-item")) state.items.splice(index, 1); else if (event.target.closest(".item-product-choice")) { const nextType = event.target.closest(".item-product-choice").dataset.value; if (item.productType !== nextType) { state.items[index] = defaultMainItem(nextType); if (nextType !== "countertop" && !state.items.some((entry) => entry.productType === "countertop")) state.items = state.items.filter((entry) => entry.productType !== "island" && entry.productType !== "bar"); } } else if (event.target.closest(".item-shape-choice")) { item.shape = event.target.closest(".item-shape-choice").dataset.value; item.pieces = shapePieces(item.shape, item.productType); } else if (event.target.closest(".table-shape-choice")) { item.tableShape = event.target.closest(".table-shape-choice").dataset.value; item.pieces = item.tableShape === "round" ? [{ lengthMm: 1100, widthMm: 1100 }] : [{ lengthMm: 1600, widthMm: 900 }]; } else return; renderItems(); scheduleCalculate(); return; }
       const extraToggle = event.target.closest("[data-extra-toggle]"); if (extraToggle) { const index = state.items.findIndex((item) => item.productType === extraToggle.dataset.extraToggle); if (index >= 0) state.items.splice(index, 1); else state.items.push(defaultExtra(extraToggle.dataset.extraToggle)); renderItems(); scheduleCalculate(); return; }
       const extraCard = event.target.closest("[data-extra-item]"); if (extraCard) { const index = Number(extraCard.dataset.extraItem); const item = state.items[index]; if (event.target.closest(".remove-extra")) state.items.splice(index, 1); else if (event.target.closest("[data-extra-corners]")) item.roundedCorners = Number(event.target.closest("[data-extra-corners]").dataset.extraCorners); else if (event.target.closest("[data-extra-radius]")) item.cornerRadiusMm = Number(event.target.closest("[data-extra-radius]").dataset.extraRadius); else return; renderItems(); scheduleCalculate(); return; }
@@ -555,6 +621,7 @@
       const lineCard = event.target.closest("[data-line]"); if (lineCard && event.target.closest(".remove-line")) { state.additionalLines.splice(Number(lineCard.dataset.line), 1); renderManualLines(); scheduleCalculate(); }
     });
     root.addEventListener("input", (event) => {
+      if (event.target.id === "materialSearch") { renderMaterials(); return; }
       const itemCard = event.target.closest("[data-item]"); if (itemCard) { const item = state.items[Number(itemCard.dataset.item)]; if (event.target.matches(".piece-length")) { item.pieces[Number(event.target.dataset.piece)].lengthMm = Number(event.target.value); if (event.target.matches(".table-diameter")) item.pieces[0].widthMm = Number(event.target.value); } if (event.target.matches(".piece-width")) item.pieces[Number(event.target.dataset.piece)].widthMm = Number(event.target.value); scheduleCalculate(); return; }
       const extraCard = event.target.closest("[data-extra-item]"); if (extraCard) { const item = state.items[Number(extraCard.dataset.extraItem)]; if (event.target.matches(".extra-length")) item.pieces[0].lengthMm = Number(event.target.value); if (event.target.matches(".extra-width")) item.pieces[0].widthMm = Number(event.target.value); scheduleCalculate(); return; }
       const optionGroup = event.target.closest("[data-option-item]"); if (optionGroup) { const item = state.items[Number(optionGroup.dataset.optionItem)]; if (event.target.matches(".backsplash-length")) item.backsplashLengthM = Number(event.target.value || 0); if (event.target.matches(".wall-panel-length")) item.wallPanelLengthM = Number(event.target.value || 0); if (event.target.matches(".wall-panel-height")) item.wallPanelHeightMm = Number(event.target.value || 600); if (event.target.matches(".service-quantity")) item[event.target.dataset.field] = Number(event.target.value || 0); scheduleCalculate(); return; }
@@ -562,7 +629,7 @@
       const lineCard = event.target.closest("[data-line]"); if (lineCard) { const line = state.additionalLines[Number(lineCard.dataset.line)]; if (event.target.matches(".line-name")) line.name = event.target.value; if (event.target.matches(".line-quantity")) line.quantity = Number(event.target.value); if (event.target.matches(".line-unit")) line.unit = event.target.value; if (event.target.matches(".line-price")) line.unitPriceCents = Math.round(Number(event.target.value) * 100); if (event.target.matches(".line-comment")) line.comment = event.target.value; scheduleCalculate(); return; }
       if (!internal) return; if (event.target.id === "manualSlabs") state.manualSlabCount = event.target.value === "" ? null : Number(event.target.value); if (event.target.id === "manualMaterialPrice") state.manualMaterialPriceUsdCents = Math.round(Number(event.target.value) * 100); if (event.target.id === "materialMarkup") state.materialMarkupBps = Math.round(Number(event.target.value) * 100); if (event.target.id === "materialExtra") state.additionalMaterialBynCents = Math.round(Number(event.target.value) * 100); if (event.target.id === "managerAdjustment") state.managerAdjustmentBynCents = Math.round(Number(event.target.value) * 100); if (["customLength", "customWidth", "thickness"].includes(event.target.id)) { state.customFormat.lengthMm = Number(document.getElementById("customLength").value); state.customFormat.widthMm = Number(document.getElementById("customWidth").value); state.customFormat.thicknessMm = Number(document.getElementById("thickness").value); } scheduleCalculate();
     });
-    root.addEventListener("change", (event) => { if (["categoryFilter", "manufacturerFilter", "seriesFilter"].includes(event.target.id)) { renderMaterials(); return; } if (event.target.dataset.materialVariant) { state.materialId = event.target.dataset.materialVariant; state.materialVariantId = Number(event.target.value); syncMaterialFormat(); renderMaterials(); scheduleCalculate(); return; } if (event.target.id === "slabFormat") { state.slabFormatCode = event.target.value; document.getElementById("customFormat").classList.toggle("hidden", state.slabFormatCode !== "custom"); scheduleCalculate(); } });
+    root.addEventListener("change", (event) => { if (["categoryFilter", "manufacturerFilter", "seriesFilter", "availabilityFilter"].includes(event.target.id)) { renderMaterials(); return; } if (event.target.dataset.materialVariant) { const material = state.catalog.materials.find((item) => item.id === event.target.dataset.materialVariant); const variant = material?.variants?.find((item) => Number(item.materialVariantId) === Number(event.target.value)); if (!variant || !isReadyVariant(variant)) { state.materialVariantId = null; showStatus(variant?.availability?.message || "Выберите доступный вариант материала", true); renderMaterials(); return; } state.materialId = event.target.dataset.materialVariant; state.materialVariantId = Number(event.target.value); syncMaterialFormat(); renderMaterials(); scheduleCalculate(); return; } if (event.target.id === "slabFormat") { state.slabFormatCode = event.target.value; document.getElementById("customFormat").classList.toggle("hidden", state.slabFormatCode !== "custom"); scheduleCalculate(); } });
   }
 
   function restoreSnapshot(snapshot) {

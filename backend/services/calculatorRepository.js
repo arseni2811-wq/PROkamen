@@ -29,6 +29,26 @@ function validationError(message) {
   return Object.assign(new Error(message), { status: 400 });
 }
 
+function variantAvailability(priceRows, exchangeRates = {}, variant = {}) {
+  if (variant.is_active === false || Number(variant.is_active) === 0) return { ready: false, code: "VARIANT_INACTIVE", message: "Вариант неактивен" };
+  const byCurrency = new Map();
+  for (const row of priceRows) {
+    const entries = byCurrency.get(row.source_currency) || { full: [], half: [] };
+    (Number(row.quantity_fraction) === 1 ? entries.full : entries.half).push(row);
+    byCurrency.set(row.source_currency, entries);
+  }
+  const entries = [...byCurrency.values()];
+  if (!entries.some((item) => item.full.length)) return { ready: false, code: "MISSING_FULL", message: "Отсутствует цена полного слэба" };
+  if (!entries.some((item) => item.half.length)) return { ready: false, code: "MISSING_HALF", message: "Отсутствует цена половины слэба" };
+  const completeCurrencies = [...byCurrency.entries()].filter(([, item]) => item.full.length && item.half.length);
+  if (!completeCurrencies.length) return { ready: false, code: "MIXED_CURRENCIES", message: "Цены FULL и HALF указаны в разных валютах" };
+  const pairs = completeCurrencies.filter(([, item]) => item.full.length === 1 && item.half.length === 1);
+  if (pairs.length !== 1 || completeCurrencies.length !== 1) return { ready: false, code: "AMBIGUOUS_PRICES", message: "Неоднозначная пара цен FULL/HALF" };
+  const [currency] = pairs[0];
+  if (!exchangeRates[currency]) return { ready: false, code: "MISSING_EXCHANGE_RATE", message: `Не задан курс ${currency} → BYN`, sourceCurrency: currency };
+  return { ready: true, code: "READY", message: "Доступно для расчёта", sourceCurrency: currency };
+}
+
 function getRequiredFractionPrices(priceRows, exchangeRates = {}) {
   const grouped = new Map();
   for (const row of priceRows) {
@@ -75,9 +95,6 @@ async function getMaterialVariantForCalculator(materialId, materialVariantId, sl
   if (!variant) {
     throw validationError("Выбранный вариант не принадлежит материалу или недоступен");
   }
-  if (!variant.is_calculator_ready) {
-    throw validationError("Выбранный вариант недоступен для автоматического расчёта");
-  }
   if (slabFormatCode && slabFormatCode !== variant.slab_format_code) {
     throw validationError("Формат слэба не соответствует выбранному варианту");
   }
@@ -88,6 +105,8 @@ async function getMaterialVariantForCalculator(materialId, materialVariantId, sl
        AND quantity_fraction IN (1.00, 0.50)`,
     [variant.material_variant_id],
   );
+  const availability = variantAvailability(prices, exchangeRates, variant);
+  if (!availability.ready) throw validationError(availability.message);
   return { ...variant, sourcePrices: getRequiredFractionPrices(prices, exchangeRates) };
 }
 
@@ -295,12 +314,12 @@ async function getInternalCatalog() {
     const materialId = variant.materialId;
     const variants = variantsByMaterial.get(materialId) || [];
     const sourcePrices = pricesByVariant.get(Number(variant.materialVariantId)) || [];
-    let resolved = null;
-    try { resolved = getRequiredFractionPrices(sourcePrices, publishedRateMap); } catch (_) { /* not available */ }
+    const availability = variantAvailability(sourcePrices, publishedRateMap, { is_active: true, is_discontinued: variant.isDiscontinued });
     variants.push({
       ...variant,
       materialVariantId: Number(variant.materialVariantId),
-      isCalculatorReady: Boolean(resolved),
+      isCalculatorReady: availability.ready,
+      availability,
       isDiscontinued: Boolean(variant.isDiscontinued),
       pricesAvailable: {
         full: sourcePrices.some((price) => Number(price.quantity_fraction) === 1),
@@ -603,6 +622,7 @@ async function publishDraft(actorId) {
 }
 
 module.exports = {
+  variantAvailability,
   getRequiredFractionPrices,
   getMaterialVariantForCalculator,
   getPublishedPricebook,
