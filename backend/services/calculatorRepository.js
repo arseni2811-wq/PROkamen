@@ -377,6 +377,39 @@ async function getAdminPricebook() {
   const [materials] = await pool.query(
     "SELECT * FROM materials ORDER BY sort_order, title",
   );
+  const [variants] = await pool.query(
+    `SELECT v.material_variant_id AS materialVariantId, v.material_id AS materialId,
+            v.commercial_format AS commercialFormat, v.length_mm AS lengthMm, v.width_mm AS widthMm,
+            v.thickness_mm AS thicknessMm, v.surface, v.is_active AS active,
+            v.is_discontinued AS discontinued, v.public_available AS publicAvailable,
+            v.public_sort_order AS publicSortOrder, v.source_name AS sourceName
+     FROM material_variants v ORDER BY v.material_id, v.public_sort_order, v.material_variant_id`,
+  );
+  const [sourcePrices] = await pool.query(
+    `SELECT material_variant_id AS materialVariantId, quantity_fraction AS fraction,
+            source_amount_minor AS amountMinor, source_currency AS currency, price_type AS priceType,
+            vat_info AS vatInfo, source_file AS sourceFile, source_location AS sourceLocation,
+            is_active AS active FROM material_prices ORDER BY material_variant_id, quantity_fraction DESC`,
+  );
+  const [publishedRates] = await pool.query(
+    `SELECT e.currency_code AS currencyCode, e.byn_per_unit_scaled AS bynPerUnitScaled
+     FROM calculator_exchange_rates e JOIN calculator_pricebooks p ON p.pricebook_id=e.pricebook_id
+     WHERE p.status='published'`,
+  );
+  const ratesByCurrency = Object.fromEntries(publishedRates.map((row) => [row.currencyCode, { bynPerUnitScaled: Number(row.bynPerUnitScaled) }]));
+  const pricesByVariant = new Map();
+  for (const price of sourcePrices) {
+    const list = pricesByVariant.get(Number(price.materialVariantId)) || [];
+    list.push(price); pricesByVariant.set(Number(price.materialVariantId), list);
+  }
+  const variantsByMaterial = new Map();
+  for (const variant of variants) {
+    const prices = pricesByVariant.get(Number(variant.materialVariantId)) || [];
+    const availability = variantAvailability(prices.map((price) => ({ quantity_fraction: price.fraction, source_amount_minor: price.amountMinor, source_currency: price.currency })), ratesByCurrency, { is_active: variant.active });
+    const list = variantsByMaterial.get(variant.materialId) || [];
+    list.push({ ...variant, active: Boolean(variant.active), discontinued: Boolean(variant.discontinued), publicAvailable: Boolean(variant.publicAvailable), availability, sourcePrices: prices.map((price) => ({ ...price, active: Boolean(price.active) })) });
+    variantsByMaterial.set(variant.materialId, list);
+  }
   const [formats] = await pool.query(
     "SELECT * FROM calculator_slab_formats ORDER BY sort_order, format_id",
   );
@@ -390,7 +423,7 @@ async function getAdminPricebook() {
     "SELECT currency_code AS currencyCode, byn_per_unit_scaled AS bynPerUnitScaled, rate_date AS rateDate FROM calculator_exchange_rates WHERE pricebook_id = ? ORDER BY currency_code",
     [pricebook.pricebook_id],
   );
-  return { pricebook, exchangeRates, rates: rates.map(mapRate), materials: materials.map(mapMaterial), formats, history };
+  return { pricebook, exchangeRates, rates: rates.map(mapRate), materials: materials.map((material) => ({ ...mapMaterial(material), variants: variantsByMaterial.get(material.material_id) || [] })), formats, history };
 }
 
 async function updateMaterial(actorId, materialId, changes) {
@@ -402,6 +435,15 @@ async function updateMaterial(actorId, materialId, changes) {
       [materialId],
     );
     if (!before) throw Object.assign(new Error("Материал не найден"), { status: 404 });
+    if (before.import_key) {
+      const after = { active: changes.active, publicAvailable: changes.publicAvailable, description: changes.description, image: changes.image, color: changes.color, sortOrder: changes.sortOrder };
+      await connection.query(
+        "UPDATE materials SET is_active=?, public_available=?, description=?, image_path=?, color=?, sort_order=? WHERE material_id=?",
+        [after.active, after.publicAvailable, after.description, after.image, after.color, after.sortOrder, materialId],
+      );
+      await connection.query("INSERT INTO calculator_change_history (actor_id, entity_type, entity_key, action, before_json, after_json) VALUES (?, 'material', ?, 'admin_update', ?, ?)", [actorId, materialId, JSON.stringify(before), JSON.stringify(after)]);
+      await connection.commit(); return;
+    }
     await connection.query(
       `UPDATE materials SET type_id = ?, fabricator = ?, series_name = ?,
        title = ?, sku = ?, description = ?, image_path = ?, color = ?,
@@ -426,6 +468,22 @@ async function updateMaterial(actorId, materialId, changes) {
   } catch (error) {
     await connection.rollback(); throw error;
   } finally { connection.release(); }
+}
+
+async function updateMaterialVariant(actorId, materialId, variantId, changes) {
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+    const [[variant]] = await connection.query("SELECT * FROM material_variants WHERE material_variant_id=? AND material_id=? FOR UPDATE", [variantId, materialId]);
+    if (!variant) throw Object.assign(new Error("Вариант материала не найден"), { status: 404 });
+    const [prices] = await connection.query("SELECT quantity_fraction, source_amount_minor, source_currency FROM material_prices WHERE material_variant_id=? AND is_active=1", [variantId]);
+    const [rates] = await connection.query("SELECT e.currency_code, e.byn_per_unit_scaled FROM calculator_exchange_rates e JOIN calculator_pricebooks p ON p.pricebook_id=e.pricebook_id WHERE p.status='published'");
+    const availability = variantAvailability(prices, Object.fromEntries(rates.map((row) => [row.currency_code, { bynPerUnitScaled: Number(row.byn_per_unit_scaled) }])), variant);
+    if (changes.publicAvailable && (!availability.ready || variant.is_discontinued)) throw Object.assign(new Error(variant.is_discontinued ? "Вариант OUT нельзя публиковать" : `Вариант нельзя публиковать: ${availability.message}`), { status: 409 });
+    await connection.query("UPDATE material_variants SET is_active=?, public_available=?, public_sort_order=? WHERE material_variant_id=?", [changes.active, changes.publicAvailable, changes.publicSortOrder, variantId]);
+    await connection.query("INSERT INTO calculator_change_history (actor_id, entity_type, entity_key, action, before_json, after_json) VALUES (?, 'material_variant', ?, 'admin_update', ?, ?)", [actorId, String(variantId), JSON.stringify(variant), JSON.stringify(changes)]);
+    await connection.commit();
+  } catch (error) { await connection.rollback(); throw error; } finally { connection.release(); }
 }
 
 async function updateSlabFormat(actorId, systemCode, changes) {
@@ -630,6 +688,7 @@ module.exports = {
   getInternalCatalog,
   getAdminPricebook,
   updateMaterial,
+  updateMaterialVariant,
   updateSlabFormat,
   updateDraftRate,
   updateDraftSettings,

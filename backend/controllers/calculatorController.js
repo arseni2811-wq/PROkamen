@@ -163,6 +163,13 @@ async function updateMaterial(req, res, next) {
   } catch (error) { next(error); }
 }
 
+async function updateMaterialVariant(req, res, next) {
+  try {
+    await repository.updateMaterialVariant(req.user.user_id, req.params.id, Number(req.params.variantId), req.validatedBody);
+    res.json({ success: true });
+  } catch (error) { next(error); }
+}
+
 async function updateSlabFormat(req, res, next) {
   try {
     await repository.updateSlabFormat(req.user.user_id, req.params.code, req.validatedBody);
@@ -170,4 +177,4 @@ async function updateSlabFormat(req, res, next) {
   } catch (error) { next(error); }
 }
 
-module.exports = { getPublicCatalog, getInternalCatalog, publicPreview, publicPdf, internalPreview, submitPublicLead, uploadPublicLeadAttachment, getAdminData, updateRate, updateSettings, publish, updateMaterial, updateSlabFormat };
+module.exports = { getPublicCatalog, getInternalCatalog, publicPreview, publicPdf, internalPreview, submitPublicLead, uploadPublicLeadAttachment, getAdminData, updateRate, updateSettings, publish, updateMaterial, updateMaterialVariant, updateSlabFormat };

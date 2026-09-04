@@ -369,6 +369,12 @@ const calculatorMaterialUpdateSchema = z
   })
   .strict();
 
+const calculatorMaterialVariantUpdateSchema = z.object({
+  active: z.boolean(),
+  publicAvailable: z.boolean(),
+  publicSortOrder: z.coerce.number().int().min(-100000).max(100000),
+}).strict();
+
 const calculatorSlabFormatUpdateSchema = z
   .object({
     name: z.string().trim().min(1).max(80),
@@ -393,5 +399,6 @@ module.exports = {
   calculatorRateUpdateSchema,
   calculatorSettingsUpdateSchema,
   calculatorMaterialUpdateSchema,
+  calculatorMaterialVariantUpdateSchema,
   calculatorSlabFormatUpdateSchema,
 };

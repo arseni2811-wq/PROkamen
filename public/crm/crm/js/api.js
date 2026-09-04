@@ -276,6 +276,11 @@ const api = {
       method: "PUT",
       body: JSON.stringify(data),
     }),
+  updateCalculatorMaterialVariant: (materialId, variantId, data) =>
+    apiFetch(`/api/calculator/admin/materials/${encodeURIComponent(materialId)}/variants/${encodeURIComponent(variantId)}`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    }),
 
   updateCalculatorFormat: (code, data) =>
     apiFetch(`/api/calculator/admin/formats/${encodeURIComponent(code)}`, {

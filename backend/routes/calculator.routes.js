@@ -14,6 +14,7 @@ const {
   calculatorRateUpdateSchema,
   calculatorSettingsUpdateSchema,
   calculatorMaterialUpdateSchema,
+  calculatorMaterialVariantUpdateSchema,
   calculatorSlabFormatUpdateSchema,
 } = require("../middleware/schemas");
 const { hasAllowedFileSignature } = require("../utils/fileSignatures");
@@ -68,6 +69,7 @@ router.get("/calculator/admin", authenticateJWT, authorize(1), controller.getAdm
 router.put("/calculator/admin/rates/:code", authenticateJWT, authorize(1), validate(calculatorRateUpdateSchema), controller.updateRate);
 router.put("/calculator/admin/settings", authenticateJWT, authorize(1), validate(calculatorSettingsUpdateSchema), controller.updateSettings);
 router.put("/calculator/admin/materials/:id", authenticateJWT, authorize(1), validate(calculatorMaterialUpdateSchema), controller.updateMaterial);
+router.patch("/calculator/admin/materials/:id/variants/:variantId", authenticateJWT, authorize(1), validate(calculatorMaterialVariantUpdateSchema), controller.updateMaterialVariant);
 router.put("/calculator/admin/formats/:code", authenticateJWT, authorize(1), validate(calculatorSlabFormatUpdateSchema), controller.updateSlabFormat);
 router.post("/calculator/admin/publish", authenticateJWT, authorize(1), controller.publish);
 
