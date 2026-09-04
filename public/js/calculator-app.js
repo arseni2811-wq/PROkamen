@@ -172,6 +172,7 @@
   const state = {
     catalog: null,
     materialId: "",
+    materialVariantId: null,
     slabFormatCode: "normal",
     customFormat: { lengthMm: 3050, widthMm: 1440, thicknessMm: 20 },
     items: [defaultItem()],
@@ -343,27 +344,39 @@
 
   function materialAndFormat() {
     const material = state.catalog?.materials.find((item) => item.id === state.materialId);
-    const format = state.catalog?.formats.find((item) => Number(item.id) === Number(material?.slabFormatId)) || state.catalog?.formats.find((item) => item.code === state.slabFormatCode);
-    return { material, format };
+    const variant = material?.variants?.find((item) => Number(item.materialVariantId) === Number(state.materialVariantId));
+    const format = state.catalog?.formats.find((item) => Number(item.id) === Number(variant?.slabFormatId || material?.slabFormatId)) || state.catalog?.formats.find((item) => item.code === state.slabFormatCode);
+    return { material, variant, format };
   }
   function syncMaterialFormat() {
-    const { material, format } = materialAndFormat();
-    if (!material || !format || internal) return;
+    const { material, variant, format } = materialAndFormat();
+    if (!material || !format) return;
+    if (material.imported && variant) {
+      state.slabFormatCode = variant.slabFormatCode || format.code;
+      state.customFormat = { lengthMm: variant.lengthMm, widthMm: variant.widthMm, thicknessMm: variant.thicknessMm };
+      const slabFormat = document.getElementById("slabFormat");
+      if (slabFormat) slabFormat.disabled = true;
+      return;
+    }
+    const slabFormat = document.getElementById("slabFormat");
+    if (slabFormat) slabFormat.disabled = false;
+    if (internal) return;
     state.slabFormatCode = format.code;
     state.customFormat = { lengthMm: format.lengthMm, widthMm: format.widthMm, thicknessMm: material.thicknessMm || format.thicknessMm };
   }
   function renderSelectedMaterialMeta() {
     const host = document.getElementById("selectedMaterialMeta");
     if (!host) return;
-    const { material, format } = materialAndFormat();
-    host.innerHTML = material && format ? `<span>Выбранный камень</span><strong>${escape(material.title)}</strong><div><span>${escape(material.manufacturer || "ПРО Камень")}</span><span>${escape(format.name)} · ${format.lengthMm} × ${format.widthMm}</span><span>Толщина ${material.thicknessMm || format.thicknessMm}</span></div>` : "";
+    const { material, variant, format } = materialAndFormat();
+    const thickness = variant?.thicknessMm || material?.thicknessMm || format?.thicknessMm;
+    host.innerHTML = material && format ? `<span>Выбранный камень</span><strong>${escape(material.title)}</strong><div><span>${escape(material.manufacturer || "ПРО Камень")}</span><span>${escape(variant?.commercialFormat || format.name)} · ${format.lengthMm} × ${format.widthMm}</span><span>Толщина ${thickness}</span></div>` : "";
   }
   function renderMaterials() {
     const category = document.getElementById("categoryFilter").value;
     const manufacturer = document.getElementById("manufacturerFilter").value;
     const series = document.getElementById("seriesFilter").value;
     const list = state.catalog.materials.filter((item) => allowedCategories.has(item.category) && (!category || item.category === category) && (!manufacturer || item.manufacturer === manufacturer) && (!series || item.series === series));
-    document.getElementById("materials").innerHTML = list.length ? list.map((item) => { const compared = state.comparisonMaterialIds.includes(item.id); return `<article class="material-card ${state.materialId === item.id ? "is-selected" : ""}">${item.image ? `<img src="${escape(new URL(item.image, apiOrigin).href)}" alt="Образец ${escape(item.title)}" loading="lazy" />` : `<span class="material-card__placeholder" aria-hidden="true"></span>`}<button class="material-card__select" type="button" data-material="${escape(item.id)}" aria-pressed="${state.materialId === item.id}"><span class="material-card__body"><strong>${escape(item.title)}</strong><small>${escape([item.manufacturer, item.series].filter(Boolean).join(" · ") || "ПРО Камень")}</small></span></button>${internal ? "" : `<button class="material-card__compare ${compared ? "is-selected" : ""}" type="button" data-compare-material="${escape(item.id)}" aria-pressed="${compared}">${compared ? "✓ В сравнении" : "+ Сравнить"}</button>`}</article>`; }).join("") : `<p class="material-empty">Материалы по выбранному фильтру не найдены.</p>`;
+    document.getElementById("materials").innerHTML = list.length ? list.map((item) => { const compared = state.comparisonMaterialIds.includes(item.id); const variants = item.variants || []; const variantSelect = internal && variants.length ? `<label class="calc-field"><small>Коммерческий формат</small><select data-material-variant="${escape(item.id)}">${variants.map((variant) => `<option value="${variant.materialVariantId}" ${Number(variant.materialVariantId) === Number(state.materialVariantId) ? "selected" : ""} ${variant.isCalculatorReady ? "" : "disabled"}>${escape(variant.commercialFormat || `${variant.lengthMm}×${variant.widthMm}×${variant.thicknessMm}`)}${variant.isCalculatorReady ? "" : " — недоступно для расчёта"}</option>`).join("")}</select></label>` : ""; return `<article class="material-card ${state.materialId === item.id ? "is-selected" : ""}">${item.image ? `<img src="${escape(new URL(item.image, apiOrigin).href)}" alt="Образец ${escape(item.title)}" loading="lazy" />` : `<span class="material-card__placeholder" aria-hidden="true"></span>`}<button class="material-card__select" type="button" data-material="${escape(item.id)}" aria-pressed="${state.materialId === item.id}"><span class="material-card__body"><strong>${escape(item.title)}</strong><small>${escape([item.manufacturer, item.series].filter(Boolean).join(" · ") || "ПРО Камень")}</small></span></button>${variantSelect}${internal ? "" : `<button class="material-card__compare ${compared ? "is-selected" : ""}" type="button" data-compare-material="${escape(item.id)}" aria-pressed="${compared}">${compared ? "✓ В сравнении" : "+ Сравнить"}</button>`}</article>`; }).join("") : `<p class="material-empty">Материалы по выбранному фильтру не найдены.</p>`;
     renderSelectedMaterialMeta();
     renderMaterialComparison();
   }
@@ -419,7 +432,7 @@
     });
     return { items, operations: Object.entries(state.operations).filter(([, value]) => Number(value) > 0).map(([code, value]) => ({ code, quantity: Number(value) })), additionalLines: internal ? state.additionalLines : [], manualSlabCount: internal ? state.manualSlabCount : null, manualMaterialPriceUsdCents: internal ? state.manualMaterialPriceUsdCents : 0, materialMarkupBps: internal ? state.materialMarkupBps : 0, additionalMaterialBynCents: internal ? state.additionalMaterialBynCents : 0, managerAdjustmentBynCents: internal ? state.managerAdjustmentBynCents : 0 };
   }
-  function payload() { return { materialId: state.materialId, slabFormatCode: state.slabFormatCode, ...(state.slabFormatCode === "custom" ? { customFormat: state.customFormat } : {}), configuration: configuration() }; }
+  function payload() { return { materialId: state.materialId, ...(state.materialVariantId ? { materialVariantId: state.materialVariantId } : {}), slabFormatCode: state.slabFormatCode, ...(state.slabFormatCode === "custom" ? { customFormat: state.customFormat } : {}), configuration: configuration() }; }
   function payloadForMaterial(materialId) {
     const material = state.catalog.materials.find((item) => item.id === materialId);
     const format = state.catalog.formats.find((item) => Number(item.id) === Number(material?.slabFormatId));
@@ -534,7 +547,7 @@
       if (event.target.closest("#printAction")) { window.print(); return; }
       if (event.target.closest("#addManualLine")) { state.additionalLines.push({ name: "Дополнительная услуга", quantity: 1, unit: "услуга", unitPriceCents: 0, currency: "BYN", category: "additional", comment: "" }); renderManualLines(); return; }
       const compareMaterial = event.target.closest("[data-compare-material]"); if (compareMaterial) { const id = compareMaterial.dataset.compareMaterial; if (state.comparisonMaterialIds.includes(id)) state.comparisonMaterialIds = state.comparisonMaterialIds.filter((entry) => entry !== id); else if (state.comparisonMaterialIds.length < 3) state.comparisonMaterialIds.push(id); else { showStatus("Для сравнения можно выбрать не больше трёх камней.", true); return; } state.comparisonResults = []; renderMaterials(); scheduleCalculate(); return; }
-      const materialCard = event.target.closest("[data-material]"); if (materialCard) { state.materialId = materialCard.dataset.material; syncMaterialFormat(); renderMaterials(); scheduleCalculate(); return; }
+      const materialCard = event.target.closest("[data-material]"); if (materialCard) { state.materialId = materialCard.dataset.material; const material = state.catalog.materials.find((item) => item.id === state.materialId); state.materialVariantId = material?.imported ? material.variants?.find((variant) => variant.isCalculatorReady)?.materialVariantId || null : null; syncMaterialFormat(); renderMaterials(); scheduleCalculate(); return; }
       const itemCard = event.target.closest("[data-item]"); if (itemCard) { const index = Number(itemCard.dataset.item); const item = state.items[index]; if (event.target.closest(".remove-item")) state.items.splice(index, 1); else if (event.target.closest(".item-product-choice")) { const nextType = event.target.closest(".item-product-choice").dataset.value; if (item.productType !== nextType) { state.items[index] = defaultMainItem(nextType); if (nextType !== "countertop" && !state.items.some((entry) => entry.productType === "countertop")) state.items = state.items.filter((entry) => entry.productType !== "island" && entry.productType !== "bar"); } } else if (event.target.closest(".item-shape-choice")) { item.shape = event.target.closest(".item-shape-choice").dataset.value; item.pieces = shapePieces(item.shape, item.productType); } else if (event.target.closest(".table-shape-choice")) { item.tableShape = event.target.closest(".table-shape-choice").dataset.value; item.pieces = item.tableShape === "round" ? [{ lengthMm: 1100, widthMm: 1100 }] : [{ lengthMm: 1600, widthMm: 900 }]; } else return; renderItems(); scheduleCalculate(); return; }
       const extraToggle = event.target.closest("[data-extra-toggle]"); if (extraToggle) { const index = state.items.findIndex((item) => item.productType === extraToggle.dataset.extraToggle); if (index >= 0) state.items.splice(index, 1); else state.items.push(defaultExtra(extraToggle.dataset.extraToggle)); renderItems(); scheduleCalculate(); return; }
       const extraCard = event.target.closest("[data-extra-item]"); if (extraCard) { const index = Number(extraCard.dataset.extraItem); const item = state.items[index]; if (event.target.closest(".remove-extra")) state.items.splice(index, 1); else if (event.target.closest("[data-extra-corners]")) item.roundedCorners = Number(event.target.closest("[data-extra-corners]").dataset.extraCorners); else if (event.target.closest("[data-extra-radius]")) item.cornerRadiusMm = Number(event.target.closest("[data-extra-radius]").dataset.extraRadius); else return; renderItems(); scheduleCalculate(); return; }
@@ -549,19 +562,19 @@
       const lineCard = event.target.closest("[data-line]"); if (lineCard) { const line = state.additionalLines[Number(lineCard.dataset.line)]; if (event.target.matches(".line-name")) line.name = event.target.value; if (event.target.matches(".line-quantity")) line.quantity = Number(event.target.value); if (event.target.matches(".line-unit")) line.unit = event.target.value; if (event.target.matches(".line-price")) line.unitPriceCents = Math.round(Number(event.target.value) * 100); if (event.target.matches(".line-comment")) line.comment = event.target.value; scheduleCalculate(); return; }
       if (!internal) return; if (event.target.id === "manualSlabs") state.manualSlabCount = event.target.value === "" ? null : Number(event.target.value); if (event.target.id === "manualMaterialPrice") state.manualMaterialPriceUsdCents = Math.round(Number(event.target.value) * 100); if (event.target.id === "materialMarkup") state.materialMarkupBps = Math.round(Number(event.target.value) * 100); if (event.target.id === "materialExtra") state.additionalMaterialBynCents = Math.round(Number(event.target.value) * 100); if (event.target.id === "managerAdjustment") state.managerAdjustmentBynCents = Math.round(Number(event.target.value) * 100); if (["customLength", "customWidth", "thickness"].includes(event.target.id)) { state.customFormat.lengthMm = Number(document.getElementById("customLength").value); state.customFormat.widthMm = Number(document.getElementById("customWidth").value); state.customFormat.thicknessMm = Number(document.getElementById("thickness").value); } scheduleCalculate();
     });
-    root.addEventListener("change", (event) => { if (["categoryFilter", "manufacturerFilter", "seriesFilter"].includes(event.target.id)) { renderMaterials(); return; } if (event.target.id === "slabFormat") { state.slabFormatCode = event.target.value; document.getElementById("customFormat").classList.toggle("hidden", state.slabFormatCode !== "custom"); scheduleCalculate(); } });
+    root.addEventListener("change", (event) => { if (["categoryFilter", "manufacturerFilter", "seriesFilter"].includes(event.target.id)) { renderMaterials(); return; } if (event.target.dataset.materialVariant) { state.materialId = event.target.dataset.materialVariant; state.materialVariantId = Number(event.target.value); syncMaterialFormat(); renderMaterials(); scheduleCalculate(); return; } if (event.target.id === "slabFormat") { state.slabFormatCode = event.target.value; document.getElementById("customFormat").classList.toggle("hidden", state.slabFormatCode !== "custom"); scheduleCalculate(); } });
   }
 
   function restoreSnapshot(snapshot) {
     if (!snapshot || snapshot.schemaVersion !== 2) return;
-    state.items = (snapshot.configuration?.items || state.items).map(normalizeItem); state.operations = Object.fromEntries((snapshot.configuration?.operations || []).map((item) => [item.code, item.quantity])); state.additionalLines = snapshot.configuration?.additionalLines || []; state.manualSlabCount = snapshot.configuration?.manualSlabCount ?? null; state.manualMaterialPriceUsdCents = snapshot.configuration?.manualMaterialPriceUsdCents || 0; state.materialMarkupBps = snapshot.configuration?.materialMarkupBps || 0; state.additionalMaterialBynCents = snapshot.configuration?.additionalMaterialBynCents || 0; state.managerAdjustmentBynCents = snapshot.configuration?.managerAdjustmentBynCents || 0; state.materialId = snapshot.material?.id || ""; state.slabFormatCode = snapshot.material?.slabFormat?.code || "normal";
+    state.items = (snapshot.configuration?.items || state.items).map(normalizeItem); state.operations = Object.fromEntries((snapshot.configuration?.operations || []).map((item) => [item.code, item.quantity])); state.additionalLines = snapshot.configuration?.additionalLines || []; state.manualSlabCount = snapshot.configuration?.manualSlabCount ?? null; state.manualMaterialPriceUsdCents = snapshot.configuration?.manualMaterialPriceUsdCents || 0; state.materialMarkupBps = snapshot.configuration?.materialMarkupBps || 0; state.additionalMaterialBynCents = snapshot.configuration?.additionalMaterialBynCents || 0; state.managerAdjustmentBynCents = snapshot.configuration?.managerAdjustmentBynCents || 0; state.materialId = snapshot.material?.id || ""; state.materialVariantId = snapshot.material?.materialVariantId || null; state.slabFormatCode = snapshot.material?.slabFormat?.code || "normal";
   }
   async function init() {
     renderShell(); bind(); setupSummaryVisibility();
     try {
       const [catalog, orderResponse] = await Promise.all([request(internal ? "/api/calculator/catalog" : "/api/public/calculator/catalog"), orderId ? request(`/api/orders/${encodeURIComponent(orderId)}`) : Promise.resolve(null)]); state.catalog = catalog;
       if (orderResponse?.order) { state.orderVersion = orderResponse.order.version; restoreSnapshot(orderResponse.order.calculator_snapshot); document.getElementById("calculatorBack").href = `order.html?id=${encodeURIComponent(orderId)}`; }
-      if (!state.materialId) state.materialId = catalog.materials.find((item) => allowedCategories.has(item.category))?.id || ""; syncMaterialFormat(); renderItems(); renderCatalogFilters(); renderManualLines();
+      if (!state.materialId) state.materialId = catalog.materials.find((item) => allowedCategories.has(item.category))?.id || ""; const initialMaterial = catalog.materials.find((item) => item.id === state.materialId); if (initialMaterial?.imported && !state.materialVariantId) state.materialVariantId = initialMaterial.variants?.find((variant) => variant.isCalculatorReady)?.materialVariantId || null; syncMaterialFormat(); renderItems(); renderCatalogFilters(); renderManualLines();
       if (internal) { document.getElementById("manualSlabs").value = state.manualSlabCount ?? ""; document.getElementById("manualMaterialPrice").value = state.manualMaterialPriceUsdCents / 100; document.getElementById("materialMarkup").value = state.materialMarkupBps / 100; document.getElementById("materialExtra").value = state.additionalMaterialBynCents / 100; document.getElementById("managerAdjustment").value = state.managerAdjustmentBynCents / 100; document.getElementById("slabFormat").value = state.slabFormatCode; document.getElementById("customFormat").classList.toggle("hidden", state.slabFormatCode !== "custom"); }
       scheduleCalculate();
     } catch (error) { root.innerHTML = `<section class="setup-error"><span class="setup-error__icon" aria-hidden="true">!</span><h2>Калькулятор временно настраивается</h2><p>${escape(error.message || "Не удалось загрузить актуальные материалы и цены.")}</p><button type="button" class="btn btn--ghost" id="retryCalculator">Попробовать снова</button></section>`; document.getElementById("retryCalculator")?.addEventListener("click", init, { once: true }); }

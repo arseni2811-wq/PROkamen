@@ -288,6 +288,30 @@ test("расход округляется вверх до 0.5 и допуска�
   assert.equal(result.material.slabCount, 1.5);
 });
 
+test("импортированный материал складывает FULL и HALF в центах без деления FULL пополам", () => {
+  const expected = new Map([[0, 0], [0.5, 315], [1, 610], [1.5, 925], [2, 1220], [2.5, 1535], [3, 1830]]);
+  for (const [slabCount, baseUsdCents] of expected) {
+    const book = pricebook();
+    book.material = {
+      ...book.material,
+      importKey: "imported",
+      materialVariantId: 1,
+      fractionPricesUsdCents: { "1": 610, "0.5": 315 },
+    };
+    const result = calculate(config({ manualSlabCount: slabCount }), book);
+    assert.equal(result.material.materialBaseUsdCents, baseUsdCents);
+  }
+  const book = pricebook();
+  book.material = { ...book.material, importKey: "imported", materialVariantId: 1, fractionPricesUsdCents: { "1": 700, "0.5": 360 } };
+  assert.equal(calculate(config({ manualSlabCount: 1.5 }), book).material.materialBaseUsdCents, 1060);
+});
+
+test("импортированный материал без HALF блокируется даже при целом числе слэбов", () => {
+  const book = pricebook();
+  book.material = { ...book.material, importKey: "imported", materialVariantId: 1, fractionPricesUsdCents: { "1": 780 } };
+  assert.throws(() => calculate(config({ manualSlabCount: 1 }), book), /полного и половины/);
+});
+
 test("вырезы, стыки, кромки, монтаж и дополнительные строки входят в смету", () => {
   const result = calculate(config({
     operations: [

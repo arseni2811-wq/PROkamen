@@ -475,6 +475,12 @@ function calculateMaterial(
   switch (material.priceUnit) {
     case "slab":
       if (material.fractionPricesUsdCents) {
+        if (material.importKey && (
+          material.fractionPricesUsdCents["1"] === undefined ||
+          material.fractionPricesUsdCents["0.5"] === undefined
+        )) {
+          throw new TypeError("Для импортированного материала необходимы цены полного и половины слэба");
+        }
         const full = asNonNegativeInteger(material.fractionPricesUsdCents["1"], "Цена полного слэба");
         const wholeSlabs = Math.floor(slabCount);
         const hasHalf = slabCount % 1 === 0.5;
@@ -682,6 +688,20 @@ function calculate(configuration, pricebook, mode = "internal") {
       slabCount,
       automaticSlabCount,
       basePriceUsdCents: pricebook.material.basePriceUsdCents,
+      materialId: pricebook.material.id,
+      materialVariantId: pricebook.material.materialVariantId || null,
+      commercialFormat: pricebook.material.commercialFormat || null,
+      dimensions: pricebook.material.materialVariantId
+        ? {
+            lengthMm: pricebook.material.lengthMm,
+            widthMm: pricebook.material.widthMm,
+            thicknessMm: pricebook.material.thicknessMm,
+          }
+        : null,
+      surface: pricebook.material.surface || null,
+      fullPriceUsdCents: pricebook.material.fractionPricesUsdCents?.["1"] ?? null,
+      halfPriceUsdCents: pricebook.material.fractionPricesUsdCents?.["0.5"] ?? null,
+      materialBaseUsdCents: material.baseUsdCents,
       markupBps: material.markupBps,
       materialUsdCents: material.totalUsdCents,
       materialBynCents,

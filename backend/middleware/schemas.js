@@ -283,6 +283,7 @@ const calculatorUpdateSchema = z.object({
 const calculatorPreviewSchema = z
   .object({
     materialId: z.string().trim().min(1).max(50),
+    materialVariantId: z.coerce.number().int().positive().optional(),
     slabFormatCode: z.string().trim().min(1).max(40).regex(/^[a-z0-9_]+$/),
     customFormat: z
       .object({

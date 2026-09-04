@@ -16,6 +16,7 @@ function mapMaterial(row) {
     markupBps: Number(row.markup_bps || 0),
     publicAvailable: Boolean(row.public_available),
     active: Boolean(row.is_active),
+    importKey: row.import_key || null,
     slabFormatId: row.slab_format_id,
     lengthMm: row.length_mm === null ? null : Number(row.length_mm),
     widthMm: row.width_mm === null ? null : Number(row.width_mm),
@@ -24,32 +25,64 @@ function mapMaterial(row) {
   };
 }
 
-async function getVariantForFormat(materialId, formatId) {
-  try {
-    const [[variant]] = await pool.query(
-      `SELECT * FROM material_variants
-       WHERE material_id = ? AND slab_format_id = ? AND is_active = 1
-       ORDER BY is_calculator_ready DESC, material_variant_id LIMIT 1`,
-      [materialId, formatId],
-    );
-    if (!variant) return null;
-    const [prices] = await pool.query(
-      `SELECT quantity_fraction, calculator_amount_usd_cents
-       FROM material_prices
-       WHERE material_variant_id = ? AND is_active = 1 AND is_calculator_price = 1
-         AND calculator_amount_usd_cents IS NOT NULL`,
-      [variant.material_variant_id],
-    );
-    return {
-      ...variant,
-      fractionPricesUsdCents: Object.fromEntries(prices.map((price) => [
-        String(Number(price.quantity_fraction)), Number(price.calculator_amount_usd_cents),
-      ])),
-    };
-  } catch (error) {
-    if (error.code === "ER_NO_SUCH_TABLE") return null;
-    throw error;
+function validationError(message) {
+  return Object.assign(new Error(message), { status: 400 });
+}
+
+function getRequiredFractionPrices(priceRows) {
+  const grouped = new Map([["1", []], ["0.5", []]]);
+  for (const row of priceRows) {
+    const fraction = String(Number(row.quantity_fraction));
+    if (grouped.has(fraction)) grouped.get(fraction).push(row);
   }
+  const full = grouped.get("1");
+  const half = grouped.get("0.5");
+  if (full.length > 1 || half.length > 1) {
+    throw validationError("Для выбранного варианта обнаружено несколько активных цен");
+  }
+  if (full.length === 0) {
+    throw validationError("Для выбранного варианта отсутствует актуальная цена полного слэба");
+  }
+  if (half.length === 0) {
+    throw validationError("Для выбранного варианта отсутствует цена половины слэба");
+  }
+  return {
+    "1": Number(full[0].calculator_amount_usd_cents),
+    "0.5": Number(half[0].calculator_amount_usd_cents),
+  };
+}
+
+async function getMaterialVariantForCalculator(materialId, materialVariantId, slabFormatCode) {
+  if (!materialVariantId) {
+    throw validationError("Для импортированного материала необходимо выбрать вариант");
+  }
+  const [[variant]] = await pool.query(
+    `SELECT v.*, f.system_code AS slab_format_code, f.display_name AS slab_format_name,
+            f.is_custom AS slab_format_custom
+     FROM material_variants v
+     JOIN calculator_slab_formats f ON f.format_id = v.slab_format_id AND f.is_active = 1
+     WHERE v.material_variant_id = ? AND v.material_id = ? AND v.is_active = 1
+     LIMIT 1`,
+    [materialVariantId, materialId],
+  );
+  if (!variant) {
+    throw validationError("Выбранный вариант не принадлежит материалу или недоступен");
+  }
+  if (!variant.is_calculator_ready) {
+    throw validationError("Выбранный вариант недоступен для автоматического расчёта");
+  }
+  if (slabFormatCode && slabFormatCode !== variant.slab_format_code) {
+    throw validationError("Формат слэба не соответствует выбранному варианту");
+  }
+  const [prices] = await pool.query(
+    `SELECT quantity_fraction, calculator_amount_usd_cents
+     FROM material_prices
+     WHERE material_variant_id = ? AND is_active = 1 AND is_calculator_price = 1
+       AND calculator_amount_usd_cents IS NOT NULL
+       AND quantity_fraction IN (1.00, 0.50)`,
+    [variant.material_variant_id],
+  );
+  return { ...variant, fractionPricesUsdCents: getRequiredFractionPrices(prices) };
 }
 
 function mapFormat(row, custom = {}) {
@@ -85,7 +118,7 @@ function mapRate(row) {
   };
 }
 
-async function getPublishedPricebook({ materialId, slabFormatCode, customFormat, publicMode = false }) {
+async function getPublishedPricebook({ materialId, materialVariantId, slabFormatCode, customFormat, publicMode = false }) {
   const [[pricebook]] = await pool.query(
     `SELECT p.*, s.reserve_bps, s.public_factor_bps,
             s.minimum_order_byn_cents, s.rounding_step_byn_cents,
@@ -105,7 +138,11 @@ async function getPublishedPricebook({ materialId, slabFormatCode, customFormat,
     [materialId],
   );
   if (!materialRow) return null;
-  const formatCode = slabFormatCode || null;
+  const imported = Boolean(materialRow.import_key);
+  const variant = imported
+    ? await getMaterialVariantForCalculator(materialRow.material_id, materialVariantId, slabFormatCode)
+    : null;
+  const formatCode = imported ? variant.slab_format_code : slabFormatCode || null;
   const [[formatRow]] = formatCode
     ? await pool.query(
         "SELECT * FROM calculator_slab_formats WHERE system_code = ? AND is_active = 1 LIMIT 1",
@@ -117,13 +154,14 @@ async function getPublishedPricebook({ materialId, slabFormatCode, customFormat,
         [materialRow.slab_format_id],
       );
   if (!formatRow) return null;
-  const variant = await getVariantForFormat(materialRow.material_id, formatRow.format_id);
-  if (materialRow.import_key && !variant) return null;
   const mappedMaterial = mapMaterial(materialRow);
-  if (variant && variant.fractionPricesUsdCents["1"] !== undefined) {
+  if (imported) {
     mappedMaterial.priceUnit = "slab";
     mappedMaterial.basePriceUsdCents = variant.fractionPricesUsdCents["1"];
     mappedMaterial.fractionPricesUsdCents = variant.fractionPricesUsdCents;
+    mappedMaterial.materialVariantId = Number(variant.material_variant_id);
+    mappedMaterial.commercialFormat = variant.commercial_format || null;
+    mappedMaterial.surface = variant.surface || null;
     mappedMaterial.lengthMm = Number(variant.length_mm);
     mappedMaterial.widthMm = Number(variant.width_mm);
     mappedMaterial.thicknessMm = Number(variant.thickness_mm);
@@ -200,10 +238,51 @@ async function getInternalCatalog() {
   const [materials] = await pool.query(
     `SELECT material_id AS id, type_id AS category, fabricator AS manufacturer,
             series_name AS series, title, sku, description, image_path AS image,
-            color, slab_format_id AS slabFormatId, thickness_mm AS thicknessMm
+            color, slab_format_id AS slabFormatId, thickness_mm AS thicknessMm,
+            import_key AS importKey
      FROM materials WHERE is_active = 1
      ORDER BY sort_order, title`,
   );
+  const [variantRows] = await pool.query(
+    `SELECT v.material_variant_id AS materialVariantId, v.material_id AS materialId,
+            v.slab_format_id AS slabFormatId, f.system_code AS slabFormatCode,
+            v.commercial_format AS commercialFormat, v.length_mm AS lengthMm,
+            v.width_mm AS widthMm, v.thickness_mm AS thicknessMm, v.surface,
+            v.is_calculator_ready AS isCalculatorReady, v.is_discontinued AS isDiscontinued
+     FROM material_variants v
+     JOIN materials m ON m.material_id = v.material_id AND m.import_key IS NOT NULL
+     LEFT JOIN calculator_slab_formats f ON f.format_id = v.slab_format_id
+     WHERE v.is_active = 1
+     ORDER BY v.material_id, v.material_variant_id`,
+  );
+  const [priceRows] = await pool.query(
+    `SELECT material_variant_id AS materialVariantId, quantity_fraction AS quantityFraction
+     FROM material_prices
+     WHERE is_active = 1 AND is_calculator_price = 1
+       AND calculator_amount_usd_cents IS NOT NULL
+       AND quantity_fraction IN (1.00, 0.50)`,
+  );
+  const pricesByVariant = new Map();
+  for (const price of priceRows) {
+    const id = Number(price.materialVariantId);
+    const availability = pricesByVariant.get(id) || { full: false, half: false };
+    if (Number(price.quantityFraction) === 1) availability.full = true;
+    if (Number(price.quantityFraction) === 0.5) availability.half = true;
+    pricesByVariant.set(id, availability);
+  }
+  const variantsByMaterial = new Map();
+  for (const variant of variantRows) {
+    const materialId = variant.materialId;
+    const variants = variantsByMaterial.get(materialId) || [];
+    variants.push({
+      ...variant,
+      materialVariantId: Number(variant.materialVariantId),
+      isCalculatorReady: Boolean(variant.isCalculatorReady),
+      isDiscontinued: Boolean(variant.isDiscontinued),
+      pricesAvailable: pricesByVariant.get(Number(variant.materialVariantId)) || { full: false, half: false },
+    });
+    variantsByMaterial.set(materialId, variants);
+  }
   const [formats] = await pool.query(
     `SELECT format_id AS id, system_code AS code, display_name AS name,
             length_mm AS lengthMm, width_mm AS widthMm,
@@ -221,7 +300,11 @@ async function getInternalCatalog() {
   );
   return {
     categories,
-    materials,
+    materials: materials.map((material) => ({
+      ...material,
+      imported: Boolean(material.importKey),
+      variants: variantsByMaterial.get(material.id) || [],
+    })),
     formats,
     operations: operations
       .filter((item) => !["manual_polish_small", "manual_polish_large"].includes(item.code))
@@ -466,6 +549,8 @@ async function publishDraft(actorId) {
 }
 
 module.exports = {
+  getRequiredFractionPrices,
+  getMaterialVariantForCalculator,
   getPublishedPricebook,
   getPublicCatalog,
   getInternalCatalog,

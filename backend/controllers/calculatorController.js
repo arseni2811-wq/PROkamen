@@ -21,6 +21,7 @@ function publicConfiguration(configuration) {
 async function loadPricebook(body, publicMode) {
   const pricebook = await repository.getPublishedPricebook({
     materialId: body.materialId,
+    materialVariantId: body.materialVariantId,
     slabFormatCode: body.slabFormatCode,
     customFormat: body.customFormat,
     publicMode,
