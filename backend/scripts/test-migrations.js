@@ -69,17 +69,33 @@ async function main() {
       const [calculatorRates] = await check.query(
         "SELECT COUNT(*) AS count FROM calculator_rates",
       );
+      const [publicationColumns] = await check.query(
+        `SELECT COLUMN_NAME
+         FROM information_schema.COLUMNS
+         WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'material_variants'
+           AND COLUMN_NAME IN ('public_available', 'public_sort_order')`,
+        [database],
+      );
+      const [publicationIndex] = await check.query(
+        `SELECT COUNT(*) AS count
+         FROM information_schema.STATISTICS
+         WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'material_variants'
+           AND INDEX_NAME = 'idx_material_variants_public'`,
+        [database],
+      );
       if (
         statusRows[0].count !== 1 ||
         uniqueRows[0].count !== 1 ||
-        migrationRows[0].count !== 7 ||
+        migrationRows[0].count !== 9 ||
         versionRows.length !== 1 ||
         Number(versionRows[0].COLUMN_DEFAULT) !== 1 ||
         versionRows[0].IS_NULLABLE !== "NO" ||
         idempotencyRows.length !== 1 ||
         idempotencyRows[0].column_count !== 2 ||
         calculatorTables.length !== 1 ||
-        Number(calculatorRates[0].count) < 30
+        Number(calculatorRates[0].count) < 30 ||
+        publicationColumns.length !== 2 ||
+        publicationIndex[0].count !== 4
       ) {
         throw new Error(
           `Migration verification failed: ${JSON.stringify({
@@ -89,6 +105,8 @@ async function main() {
             version: versionRows[0],
             idempotency_unique: idempotencyRows[0],
             calculator_rates: calculatorRates[0],
+            material_variant_publication_columns: publicationColumns,
+            material_variant_publication_index_columns: publicationIndex[0],
           })}`,
         );
       }
@@ -102,6 +120,7 @@ async function main() {
           orders_version: true,
           idempotency_unique: true,
           calculator_pricebook: true,
+          material_variant_publication: true,
           rerun_idempotent: true,
         }),
       );
@@ -147,7 +166,7 @@ async function main() {
         "SHOW TABLES LIKE 'order_idempotency_keys'",
       );
       if (
-        legacyMigrations[0].count !== 6 ||
+        legacyMigrations[0].count !== 9 ||
         legacyVersion.length !== 1 ||
         legacyIdempotency.length !== 1
       ) {
@@ -158,7 +177,7 @@ async function main() {
           success: true,
           database: legacyDatabase,
           baseline_adoption: true,
-          incremental_migrations: 6,
+          incremental_migrations: 8,
         }),
       );
     } finally {
