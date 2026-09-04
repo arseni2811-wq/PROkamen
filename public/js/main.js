@@ -99,12 +99,12 @@ export async function renderHeaderFooter(activePath) {
     <nav class="nav" id="site-nav" role="navigation" aria-label="Главное меню">
       <ul class="nav__list">
         <li class="nav__item"><a href="/">Главная</a></li>
-        <li class="nav__item"><a href="/pages/catalog.html">Коллекция</a></li>
-        <li class="nav__item"><a href="/pages/services.html">Услуги</a></li>
-        <li class="nav__item"><a href="/pages/calculator.html">Калькулятор</a></li>
-        <li class="nav__item"><a href="/pages/works.html">Наши работы</a></li>
-        <li class="nav__item"><a href="/pages/about.html">О проекте</a></li>
-        <li class="nav__item"><a href="/pages/contacts.html">Контакты</a></li>
+        <li class="nav__item"><a href="/stoleshnicy/">Столешницы</a></li>
+        <li class="nav__item"><a href="/services/">Услуги</a></li>
+        <li class="nav__item"><a href="/calculator/">Калькулятор</a></li>
+        <li class="nav__item"><a href="/works/">Наши работы</a></li>
+        <li class="nav__item"><a href="/about/">О проекте</a></li>
+        <li class="nav__item"><a href="/contacts/">Контакты</a></li>
         
       </ul>
     </nav>
@@ -255,16 +255,21 @@ export function renderBreadcrumbs(activePath) {
   const ol = nav.querySelector(".breadcrumbs__list");
   ol.innerHTML = "";
 
-  const trail = [
-    { href: HOME, title: TITLES[HOME] },
-    {
-      href: currentPath,
-      title:
-        TITLES[currentPath] ||
-        document.title.replace(/\s+—.+$/, "").trim() ||
-        "Страница",
-    },
-  ];
+  const currentTitle =
+    TITLES[currentPath] ||
+    document.title.replace(/\s+—.+$/, "").trim() ||
+    "Страница";
+  const trail =
+    currentPath.startsWith("/works/") && currentPath !== "/works/"
+      ? [
+          { href: HOME, title: TITLES[HOME] },
+          { href: "/works/", title: TITLES["/works/"] },
+          { href: currentPath, title: currentTitle },
+        ]
+      : [
+          { href: HOME, title: TITLES[HOME] },
+          { href: currentPath, title: currentTitle },
+        ];
 
   trail.forEach((c, i, arr) => {
     const li = document.createElement("li");
@@ -421,6 +426,7 @@ export async function initWorks() {
   if (!grid || !filter) return;
 
   const all = await getData("works");
+  const projectSlugs = await loadJSON("/assets/data/project-slugs.json");
 
   const chipButtons = Array.from(filter.querySelectorAll(".chip"));
   const allowedTypes = new Set(["all"]);
@@ -452,6 +458,9 @@ export async function initWorks() {
     const images = Array.isArray(w.images)
       ? w.images
       : [w.image].filter(Boolean);
+    const projectUrl = projectSlugs[w.id]
+      ? `/works/${projectSlugs[w.id]}/`
+      : "";
     const slides = (images.length ? images : ["/assets/images/ui/ph-3x2.webp"])
       .map(
         (src, i) => `
@@ -475,12 +484,17 @@ export async function initWorks() {
         }
       </div>
       <div class="work-card__body">
-        <h3>${w.title || ""}</h3>
+        <h3>${
+          projectUrl
+            ? `<a href="${projectUrl}">${w.title || ""}</a>`
+            : w.title || ""
+        }</h3>
         <ul>
           <li><strong>Материал:</strong> ${matRu || "—"}</li>
           <li><strong>Локация:</strong> ${w.location || "—"}</li>
         </ul>
         <p>${w.desc || ""}</p>
+        ${projectUrl ? `<a class="work-card__link" href="${projectUrl}">Открыть проект</a>` : ""}
       </div>
     </article>`;
   };

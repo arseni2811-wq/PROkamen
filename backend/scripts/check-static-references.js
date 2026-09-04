@@ -2,6 +2,16 @@ const fs = require("fs");
 const path = require("path");
 
 const publicDir = path.resolve(__dirname, "..", "..", "public");
+const projectSlugs = new Set(
+  Object.values(
+    JSON.parse(
+      fs.readFileSync(
+        path.join(publicDir, "assets", "data", "project-slugs.json"),
+        "utf8",
+      ),
+    ),
+  ),
+);
 const htmlFiles = [];
 const prettyRoutes = new Set([
   "/catalog/",
@@ -9,6 +19,13 @@ const prettyRoutes = new Set([
   "/works/",
   "/about/",
   "/contacts/",
+  "/calculator/",
+  "/stoleshnicy/",
+  "/stoleshnicy/dlya-kuhni/",
+  "/stoleshnicy/iz-kvarca/",
+  "/stoleshnicy/dlya-vannoy/",
+  "/podokonniki/",
+  "/materialy/kvarcevyj-aglomerat/",
 ]);
 
 function walk(directory) {
@@ -33,8 +50,14 @@ function localTarget(htmlFile, reference) {
   }
   // Extensionless links are application routes, not static file references.
   if (!path.extname(clean) && !clean.endsWith("/")) return null;
-  // These trailing-slash links are served by Express PRETTY_URLS, not files.
+  // These trailing-slash links are served by Express public routes, not files.
   if (prettyRoutes.has(clean)) return null;
+  if (
+    /^\/works\/[^/]+\/$/.test(clean) &&
+    projectSlugs.has(clean.slice("/works/".length, -1))
+  ) {
+    return null;
+  }
   return clean.startsWith("/")
     ? path.join(publicDir, clean)
     : path.resolve(path.dirname(htmlFile), clean);

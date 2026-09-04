@@ -159,6 +159,63 @@
   margin: 0 0 8px;
   font-size: var(--fs-600);
 }
+.work-card__link {
+  display: inline-block;
+  margin-top: 8px;
+  font-weight: 700;
+}
+
+.project-facts {
+  display: grid;
+  gap: 12px;
+  margin: 24px 0;
+}
+.project-facts > div {
+  padding: 12px 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #fff;
+}
+.project-facts dt {
+  color: var(--muted);
+  font-size: 14px;
+}
+.project-facts dd {
+  margin: 4px 0 0;
+  font-weight: 700;
+}
+.project-gallery__item {
+  margin: 0;
+  overflow: hidden;
+  border-radius: 12px;
+  background: #f3f4f6;
+}
+.project-gallery__item img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.project-links {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+}
+.project-related {
+  display: grid;
+  gap: 12px;
+  padding: 0;
+  list-style: none;
+}
+.project-related a { font-weight: 700; }
+.project-related span {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted);
+}
+@media (min-width: 640px) {
+  .project-facts { grid-template-columns: repeat(3, 1fr); }
+  .project-gallery__item--hero { grid-column: span 2; }
+}
 
 /* ==========================================================================
    Carousel (для работ)

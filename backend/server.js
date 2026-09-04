@@ -121,6 +121,7 @@ app.use("/api", calculatorRoutes);
 // т.е. от папки файла server.js, а не от текущего process.cwd().
 // =========================================================
 const PUBLIC_DIR = path.join(__dirname, "..", "public");
+const PROJECT_SLUGS = require("../public/assets/data/project-slugs.json");
 
 // Служебные HTML-страницы исключаем из индексации также HTTP-заголовком.
 // Это дополняет meta robots и продолжает работать для ответов 401/403.
@@ -199,6 +200,46 @@ if (process.env.DEBUG_STATIC === "1") {
 // файл браузеру как обычный текст)
 app.use("/php", (req, res) => res.status(404).send("Not found"));
 
+// Canonical public URLs serve their source HTML without an internal redirect.
+const PUBLIC_PAGE_ROUTES = {
+  "/catalog": "/pages/catalog.html",
+  "/services": "/pages/services.html",
+  "/works": "/pages/works.html",
+  "/about": "/pages/about.html",
+  "/contacts": "/pages/contacts.html",
+  "/calculator": "/pages/calculator.html",
+  "/stoleshnicy": "/pages/stoleshnicy.html",
+  "/stoleshnicy/dlya-kuhni": "/pages/stoleshnicy-dlya-kuhni.html",
+  "/stoleshnicy/iz-kvarca": "/pages/stoleshnicy-iz-kvarca.html",
+  "/stoleshnicy/dlya-vannoy": "/pages/stoleshnicy-dlya-vannoy.html",
+  "/podokonniki": "/pages/podokonniki.html",
+  "/materialy/kvarcevyj-aglomerat": "/pages/kvarcevyj-aglomerat.html",
+  ...Object.fromEntries(
+    Object.values(PROJECT_SLUGS).map((slug) => [
+      `/works/${slug}`,
+      `/pages/works/${slug}.html`,
+    ]),
+  ),
+};
+
+for (const [publicPath, sourcePath] of Object.entries(PUBLIC_PAGE_ROUTES)) {
+  const canonicalPath = `${publicPath}/`;
+
+  // Retain links to the old technical URLs with one permanent redirect.
+  app.get(sourcePath, (req, res) => res.redirect(301, canonicalPath));
+
+  // Express routes are non-strict by default, so normalize the slash inside
+  // one handler instead of registering overlapping routes.
+  app.get([publicPath, canonicalPath], (req, res, next) => {
+    if (!req.path.endsWith("/")) return res.redirect(301, canonicalPath);
+
+    // Express also handles HEAD through this GET route.
+    res.sendFile(path.join(PUBLIC_DIR, sourcePath), (error) => {
+      if (error) next(error);
+    });
+  });
+}
+
 app.use(express.static(PUBLIC_DIR, { index: "index.html" }));
 
 // =========================================================
@@ -208,19 +249,11 @@ app.use(express.static(PUBLIC_DIR, { index: "index.html" }));
 //   /api/*                       → JSON 404 (API не трогаем)
 //   *.css, *.js, *.jpg, *.png,
 //   *.csv и любой файл с «.»     → пропускаем → жёсткий 404
-//   остальные GET/HEAD           → public/index.html (страницы SPA)
+//   остальные GET/HEAD           → public/404.html со статусом 404
 //
 // В Express 5 нельзя использовать app.get("*") — wildcard-строки
 // убраны, поэтому используем app.use().
 // =========================================================
-const PRETTY_URLS = {
-  "/catalog": "/pages/catalog.html",
-  "/services": "/pages/services.html",
-  "/works": "/pages/works.html",
-  "/about": "/pages/about.html",
-  "/contacts": "/pages/contacts.html",
-};
-
 app.use((req, res, next) => {
   // API-запросы к несуществующим эндпоинтам → JSON 404
   if (req.path.startsWith("/api/")) {
@@ -240,21 +273,8 @@ app.use((req, res, next) => {
     return next();
   }
 
-  // Главная защита: запросы к файлам с расширением НЕ подменяем
-  // index.html — браузер должен получить честный 404, а не HTML.
-  if (path.extname(req.path) !== "") {
-    return next();
-  }
-
-  // ЧПУ-редиректы из .htaccess: /catalog/ → /pages/catalog.html
-  const cleanPath = req.path.replace(/\/+$/, "") || "/";
-  const prettyTarget = PRETTY_URLS[cleanPath];
-  if (prettyTarget) {
-    return res.redirect(301, prettyTarget);
-  }
-
-  // SPA-fallback: «страничные» пути → index.html
-  res.sendFile(path.join(PUBLIC_DIR, "index.html"));
+  // Unknown public URLs must be real 404s, not the home page with HTTP 200.
+  return res.status(404).sendFile(path.join(PUBLIC_DIR, "404.html"));
 });
 
 // =========================================================
@@ -597,7 +617,7 @@ async function startServer(listenPort = port) {
       );
       console.log(`📁 Загрузка файлов: /uploads/orders/`);
       console.log(
-        `📄 Статика: ${PUBLIC_DIR} (fallback: index.html для страниц, 404 для *.css/*.js/*.jpg/*.csv)`,
+        `📄 Статика: ${PUBLIC_DIR} (неизвестные публичные URL возвращают 404)`,
       );
       resolve(server);
     });

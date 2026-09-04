@@ -1,59 +1,55 @@
 <!doctype html>
-<html lang="ru" data-calculator-mode="public">
+<html lang="ru">
   <head>
-    <meta charset="UTF-8" />
+    <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="description" content="Онлайн-расчёт столешницы, подоконника или стола из кварцевого агломерата, гранита и оникса в белорусских рублях." />
-    <meta name="robots" content="index,follow" />
-    <title>Калькулятор изделий из камня — ПРО Камень</title>
+    <meta name="description" content="Онлайн-калькулятор PRO Камень находится в разработке. Для предварительного расчёта свяжитесь с нами и отправьте размеры изделия." />
+    <meta name="robots" content="noindex,follow" />
+    <link rel="canonical" href="https://prokamen.by/calculator/" />
+    <title>Онлайн-калькулятор — скоро будет | PRO Камень</title>
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Онлайн-калькулятор — скоро будет | PRO Камень" />
+    <meta property="og:description" content="Пока калькулятор находится в разработке, поможем с предварительным расчётом по вашим размерам." />
+    <meta property="og:url" content="https://prokamen.by/calculator/" />
+    <meta property="og:image" content="https://prokamen.by/assets/images/ui/og-cover.webp" />
+    <meta property="og:locale" content="ru_RU" />
+    <meta property="og:site_name" content="PRO Камень" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Онлайн-калькулятор — скоро будет | PRO Камень" />
+    <meta name="twitter:description" content="Поможем с предварительным расчётом изделия из камня по вашим размерам." />
+    <meta name="twitter:image" content="https://prokamen.by/assets/images/ui/og-cover.webp" />
     <link rel="stylesheet" href="/css/base.css" />
     <link rel="stylesheet" href="/css/layout.css" />
     <link rel="stylesheet" href="/css/components.css" />
-    <link rel="stylesheet" href="/css/calculator.css" />
     <link rel="icon" href="/assets/images/ui/favicon.ico" />
   </head>
-  <body class="calculator-page">
+  <body class="page">
     <a class="skip-link" href="#main">Перейти к содержимому</a>
     <header class="header" role="banner"></header>
-
-    <main class="main calculator-main" id="main">
-      <section class="calculator-hero" aria-labelledby="calculator-title">
-        <div class="container calculator-hero__inner">
-          <div>
-            <p class="calculator-eyebrow">Онлайн-калькулятор</p>
-            <h1 id="calculator-title">Соберите своё изделие из камня</h1>
-            <p class="calculator-hero__lead">
-              Выберите изделие, форму, размеры и материал. Стоимость обновляется
-              автоматически и показывается в белорусских рублях.
-            </p>
-          </div>
-          <div class="calculator-hero__note">
-            <span class="calculator-hero__note-icon" aria-hidden="true">≈</span>
-            <p><strong>Расчёт ориентировочный</strong><br />Точную цену подтвердит менеджер после замера.</p>
-          </div>
-        </div>
-      </section>
-
-      <section class="container calculator-workspace" aria-label="Расчёт изделия">
-        <div class="calculator-progress" aria-label="Этапы расчёта">
-          <span><b>1</b> Изделие</span>
-          <span><b>2</b> Камень</span>
-          <span><b>3</b> Кромка</span>
-          <span><b>4</b> Услуги</span>
-          <span><b>5</b> Итог</span>
-          <span><b>6</b> Заявка</span>
-        </div>
-        <div id="calculatorApp" class="calc-grid" aria-live="polite">
-          <div class="calculator-loading" role="status">
-            <span class="calculator-loader" aria-hidden="true"></span>
-            Загружаем материалы и актуальные цены…
+    <main id="main" class="main">
+      <section class="section section-hero">
+        <div class="container text-center">
+          <p class="eyebrow">Скоро будет</p>
+          <h1 class="section-title">Онлайн-калькулятор</h1>
+          <p class="section-subtitle">
+            Калькулятор стоимости изделий из камня находится в разработке.
+            Скоро здесь можно будет самостоятельно выполнить предварительный
+            расчёт стоимости столешницы или другого изделия.
+          </p>
+          <p class="section-subtitle">
+            Пока вы можете связаться с нами — поможем рассчитать стоимость по
+            вашим размерам и ответим на вопросы по материалам.
+          </p>
+          <div class="hero__actions">
+            <a class="btn btn-primary" href="/contacts/">Оставить заявку</a>
+            <a class="btn btn-outline" href="/catalog/">Посмотреть материалы</a>
+            <a class="btn btn-outline" href="/works/">Посмотреть наши работы</a>
           </div>
         </div>
       </section>
     </main>
-
     <footer class="footer" role="contentinfo"></footer>
+    <script src="/js/metrika.js" defer></script>
     <script type="module" src="/js/main.js?v=4"></script>
-    <script src="/js/calculator-app.js?v=4" defer></script>
   </body>
 </html>

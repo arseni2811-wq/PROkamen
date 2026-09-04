@@ -1,20 +1,72 @@
 DirectoryIndex index.html
 
-# Корректные страницы ошибок (путь — URL, не файловая система)
+# URL paths are used here so Apache keeps the original 404 HTTP status.
 ErrorDocument 404 /404.html
 ErrorDocument 403 /404.html
 
-# Безопасный дефолт для статического сайта: ничего не переписываем для существующих файлов
 <IfModule mod_rewrite.c>
   RewriteEngine On
   RewriteBase /
+
+  # Redirect only direct browser requests for technical source files. The
+  # THE_REQUEST condition prevents loops after an internal rewrite below.
+  RewriteCond %{THE_REQUEST} \s/+pages/catalog\.html(?:[?\s]) [NC]
+  RewriteRule ^pages/catalog\.html$ /catalog/ [R=301,L,NE]
+  RewriteCond %{THE_REQUEST} \s/+pages/services\.html(?:[?\s]) [NC]
+  RewriteRule ^pages/services\.html$ /services/ [R=301,L,NE]
+  RewriteCond %{THE_REQUEST} \s/+pages/works\.html(?:[?\s]) [NC]
+  RewriteRule ^pages/works\.html$ /works/ [R=301,L,NE]
+  RewriteCond %{THE_REQUEST} \s/+pages/about\.html(?:[?\s]) [NC]
+  RewriteRule ^pages/about\.html$ /about/ [R=301,L,NE]
+  RewriteCond %{THE_REQUEST} \s/+pages/contacts\.html(?:[?\s]) [NC]
+  RewriteRule ^pages/contacts\.html$ /contacts/ [R=301,L,NE]
+  RewriteCond %{THE_REQUEST} \s/+pages/calculator\.html(?:[?\s]) [NC]
+  RewriteRule ^pages/calculator\.html$ /calculator/ [R=301,L,NE]
+
+  RewriteCond %{THE_REQUEST} \s/+pages/stoleshnicy\.html(?:[?\s]) [NC]
+  RewriteRule ^pages/stoleshnicy\.html$ /stoleshnicy/ [R=301,L,NE]
+  RewriteCond %{THE_REQUEST} \s/+pages/stoleshnicy-dlya-kuhni\.html(?:[?\s]) [NC]
+  RewriteRule ^pages/stoleshnicy-dlya-kuhni\.html$ /stoleshnicy/dlya-kuhni/ [R=301,L,NE]
+  RewriteCond %{THE_REQUEST} \s/+pages/stoleshnicy-dlya-vannoy\.html(?:[?\s]) [NC]
+  RewriteRule ^pages/stoleshnicy-dlya-vannoy\.html$ /stoleshnicy/dlya-vannoy/ [R=301,L,NE]
+  RewriteCond %{THE_REQUEST} \s/+pages/stoleshnicy-iz-kvarca\.html(?:[?\s]) [NC]
+  RewriteRule ^pages/stoleshnicy-iz-kvarca\.html$ /stoleshnicy/iz-kvarca/ [R=301,L,NE]
+  RewriteCond %{THE_REQUEST} \s/+pages/podokonniki\.html(?:[?\s]) [NC]
+  RewriteRule ^pages/podokonniki\.html$ /podokonniki/ [R=301,L,NE]
+  RewriteCond %{THE_REQUEST} \s/+pages/kvarcevyj-aglomerat\.html(?:[?\s]) [NC]
+  RewriteRule ^pages/kvarcevyj-aglomerat\.html$ /materialy/kvarcevyj-aglomerat/ [R=301,L,NE]
+  RewriteCond %{THE_REQUEST} \s/+pages/works/([a-z0-9-]+)\.html(?:[?\s]) [NC]
+  RewriteRule ^pages/works/([a-z0-9-]+)\.html$ /works/$1/ [R=301,L,NE]
+
+  # Normalize the known canonical URL set in a single redirect.
+  RewriteRule ^(catalog|services|works|about|contacts|calculator)$ /$1/ [R=301,L,NE]
+  RewriteRule ^stoleshnicy$ /stoleshnicy/ [R=301,L,NE]
+  RewriteRule ^stoleshnicy/(dlya-kuhni|dlya-vannoy|iz-kvarca)$ /stoleshnicy/$1/ [R=301,L,NE]
+  RewriteRule ^podokonniki$ /podokonniki/ [R=301,L,NE]
+  RewriteRule ^materialy/kvarcevyj-aglomerat$ /materialy/kvarcevyj-aglomerat/ [R=301,L,NE]
+  RewriteRule ^works/([a-z0-9-]+)$ /works/$1/ [R=301,L,NE]
+
+  # Existing files and directories (assets, CSS, JS) stay public as files.
   RewriteCond %{REQUEST_FILENAME} -f [OR]
   RewriteCond %{REQUEST_FILENAME} -d
   RewriteRule ^ - [L]
-  # ЧПУ-правила: перенаправляем человеко-понятные адреса на файлы
-  RewriteRule ^catalog/?$ /pages/catalog.html [L]
-  RewriteRule ^services/?$ /pages/services.html [L]
-  RewriteRule ^works/?$ /pages/works.html [L]
-  RewriteRule ^about/?$ /pages/about.html [L]
-  RewriteRule ^contacts/?$ /pages/contacts.html [L]
+
+  # Static clean URL routing. These are internal rewrites and keep HTTP 200.
+  RewriteRule ^catalog/$ /pages/catalog.html [L]
+  RewriteRule ^services/$ /pages/services.html [L]
+  RewriteRule ^works/$ /pages/works.html [L]
+  RewriteRule ^about/$ /pages/about.html [L]
+  RewriteRule ^contacts/$ /pages/contacts.html [L]
+  RewriteRule ^calculator/$ /pages/calculator.html [L]
+  RewriteRule ^stoleshnicy/$ /pages/stoleshnicy.html [L]
+  RewriteRule ^stoleshnicy/dlya-kuhni/$ /pages/stoleshnicy-dlya-kuhni.html [L]
+  RewriteRule ^stoleshnicy/dlya-vannoy/$ /pages/stoleshnicy-dlya-vannoy.html [L]
+  RewriteRule ^stoleshnicy/iz-kvarca/$ /pages/stoleshnicy-iz-kvarca.html [L]
+  RewriteRule ^podokonniki/$ /pages/podokonniki.html [L]
+  RewriteRule ^materialy/kvarcevyj-aglomerat/$ /pages/kvarcevyj-aglomerat.html [L]
+
+  # Rewrite a project only when its generated static file exists. Unknown
+  # project slugs therefore fall through to Apache's real 404 response.
+  RewriteCond %{DOCUMENT_ROOT}/pages/works/$1.html -f
+  RewriteRule ^works/([a-z0-9-]+)/$ /pages/works/$1.html [L]
 </IfModule>

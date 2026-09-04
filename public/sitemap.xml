@@ -4,45 +4,53 @@
   <!-- Главная страница -->
   <url>
     <loc>https://prokamen.by/</loc>
-    <lastmod>2025-09-14</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>1.0</priority>
   </url>
 
   <!-- Внутренние страницы -->
   <url>
     <loc>https://prokamen.by/catalog/</loc>
-    <lastmod>2025-09-14</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.9</priority>
   </url>
 
   <url>
     <loc>https://prokamen.by/services/</loc>
-    <lastmod>2025-09-14</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
   </url>
 
   <url>
     <loc>https://prokamen.by/works/</loc>
-    <lastmod>2025-09-14</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
   </url>
 
   <url>
     <loc>https://prokamen.by/about/</loc>
-    <lastmod>2025-09-14</lastmod>
-    <changefreq>yearly</changefreq>
-    <priority>0.6</priority>
   </url>
 
   <url>
     <loc>https://prokamen.by/contacts/</loc>
-    <lastmod>2025-09-14</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.9</priority>
   </url>
+
+  <url><loc>https://prokamen.by/stoleshnicy/</loc></url>
+  <url><loc>https://prokamen.by/stoleshnicy/dlya-kuhni/</loc></url>
+  <url><loc>https://prokamen.by/stoleshnicy/iz-kvarca/</loc></url>
+  <url><loc>https://prokamen.by/stoleshnicy/dlya-vannoy/</loc></url>
+  <url><loc>https://prokamen.by/podokonniki/</loc></url>
+  <url><loc>https://prokamen.by/materialy/kvarcevyj-aglomerat/</loc></url>
+
+  <!-- PROJECT_URLS_START -->
+  <url><loc>https://prokamen.by/works/kvarcevyy-podokonnik-v-dome-i-na-ulice-bobruisk/</loc></url>
+  <url><loc>https://prokamen.by/works/stoleshnica-dlya-vannoy-podluzhe/</loc></url>
+  <url><loc>https://prokamen.by/works/stoleshnica-dlya-vannoy-minsk/</loc></url>
+  <url><loc>https://prokamen.by/works/kvarcevyy-podokonnik-chastnyy-dom-bobruisk/</loc></url>
+  <url><loc>https://prokamen.by/works/kaminnaya-polka-iz-kvarca-dubovka/</loc></url>
+  <url><loc>https://prokamen.by/works/granitnaya-stoleshnica-dlya-zhurnalnogo-stolika-bobruisk/</loc></url>
+  <url><loc>https://prokamen.by/works/stoleshnica-dlya-obedennogo-stolika-bobruisk/</loc></url>
+  <url><loc>https://prokamen.by/works/ulichnaya-stoleshnica-v-besedke-bobruisk/</loc></url>
+  <url><loc>https://prokamen.by/works/stoleshnica-avarus-r122-almazy-yakutii-bobruisk/</loc></url>
+  <url><loc>https://prokamen.by/works/ulichnyy-kompleks-dymovskiy-granit-bobruisk/</loc></url>
+  <url><loc>https://prokamen.by/works/stoleshnica-stratos-c1005-milky-white-bobruisk/</loc></url>
+  <url><loc>https://prokamen.by/works/ulichnyy-kompleks-gabbro-diabaz-bobruisk/</loc></url>
+  <url><loc>https://prokamen.by/works/stoleshnicy-avarus-r677-moskovskaya-noch-bobruisk/</loc></url>
+  <url><loc>https://prokamen.by/works/stupenka-i-zhurnalnyy-stolik-noble-perlato-luna-bobruisk/</loc></url>
+  <url><loc>https://prokamen.by/works/ulichnaya-kuhnya-kimen-red-aurora-bobruisk/</loc></url>
+  <url><loc>https://prokamen.by/works/stoleshnica-q757-calacatta-aurum-moskva/</loc></url>
+  <!-- PROJECT_URLS_END -->
 
 </urlset>

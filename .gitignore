@@ -19,6 +19,7 @@ coverage/
 *.tmp
 *.temp
 *.pdf
+deploy/
 
 # User-controlled CRM uploads (store outside Git)
 backend/uploads/
