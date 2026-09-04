@@ -4,7 +4,11 @@ const byn = (cents) => (Number(cents || 0) / 100).toFixed(2);
 const html = (value) => escapeHtml(value ?? "");
 
 function currentRate() {
-  return Number(calculatorAdmin?.pricebook?.exchange_rate_scaled || 0) / 10000;
+  return Number(calculatorAdmin?.exchangeRates?.find((rate) => rate.currencyCode === "USD")?.bynPerUnitScaled || calculatorAdmin?.pricebook?.exchange_rate_scaled || 0) / 10000;
+}
+
+function exchangeRate(currency) {
+  return calculatorAdmin?.exchangeRates?.find((rate) => rate.currencyCode === currency) || null;
 }
 
 function renderSettings() {
@@ -17,6 +21,7 @@ function renderSettings() {
   fields.dataset.calculatorSetting = "true";
   fields.className = "grid grid-cols-2 gap-3";
   fields.innerHTML = `
+    <div class="col-span-2 border rounded p-3 bg-amber-50"><strong class="text-sm">Курсы валют к BYN</strong><div class="grid grid-cols-1 gap-2 mt-2">${["USD", "EUR", "RUB"].map((currency) => { const rate = exchangeRate(currency); return `<label class="text-xs">1 ${currency} = <input data-fx-rate="${currency}" type="number" min="0" step="0.0001" value="${rate ? (Number(rate.bynPerUnitScaled) / 10000).toFixed(4) : ""}" class="border rounded p-1 w-28"> BYN <input data-fx-date="${currency}" type="date" value="${rate?.rateDate ? String(rate.rateDate).slice(0, 10) : ""}" class="border rounded p-1 ml-2"></label>`; }).join("")}</div></div>
     <label class="text-xs text-gray-600">Резерв, %<input id="reservePercent" type="number" step="0.1" value="${Number(pricebook.reserve_bps) / 100}" class="w-full border rounded p-2 mt-1"></label>
     <label class="text-xs text-gray-600">Публичный коэффициент, %<input id="publicFactor" type="number" step="0.1" value="${Number(pricebook.public_factor_bps) / 100}" class="w-full border rounded p-2 mt-1"></label>
     <label class="text-xs text-gray-600">Отходы, %<input id="wastePercent" type="number" step="0.1" value="${Number(pricebook.waste_bps) / 100}" class="w-full border rounded p-2 mt-1"></label>
@@ -115,6 +120,8 @@ async function saveFormat(row) {
 
 async function saveSettings() {
   try {
+    const exchangeRates = {};
+    document.querySelectorAll("[data-fx-rate]").forEach((input) => { const value = input.value.trim(); if (value) { const currency = input.dataset.fxRate; exchangeRates[currency] = { bynPerUnitScaled: Math.round(Number(value) * 10000), rateDate: document.querySelector(`[data-fx-date="${currency}"]`).value || null }; } });
     await api.updateCalculatorSettings({
       exchangeRateScaled: Math.round(Number(document.getElementById("exchangeRateInput").value) * 10000),
       reserveBps: Math.round(Number(document.getElementById("reservePercent").value) * 100),
@@ -124,6 +131,7 @@ async function saveSettings() {
       wasteBps: Math.round(Number(document.getElementById("wastePercent").value) * 100),
       minimumMaterialMarkupBps: Math.round(Number(document.getElementById("minimumMarkup").value) * 100),
       publicWording: document.getElementById("publicWording").value.trim(),
+      exchangeRates,
     });
     await loadAdmin(); alert("Настройки сохранены в черновик.");
   } catch (error) { alert(`❌ ${error.message}`); }

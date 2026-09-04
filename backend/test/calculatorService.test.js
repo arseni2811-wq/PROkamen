@@ -312,6 +312,17 @@ test("импортированный материал без HALF блокиру
   assert.throws(() => calculate(config({ manualSlabCount: 1 }), book), /полного и половины/);
 });
 
+test("EUR и RUB материалы конвертируются прямо в BYN", () => {
+  for (const [currency, full, half, rate, expected] of [["EUR", 61000, 31500, 36000, 333000], ["RUB", 7000000, 3600000, 350, 371000]]) {
+    const book = pricebook();
+    book.exchangeRates = { USD: { bynPerUnitScaled: 99999 }, [currency]: { bynPerUnitScaled: rate } };
+    book.material = { ...book.material, importKey: "imported", materialVariantId: 1, sourceCurrency: currency, fractionPricesMinor: { "1": full, "0.5": half } };
+    const result = calculate(config({ manualSlabCount: 1.5 }), book);
+    assert.equal(result.material.materialBynCents, expected);
+    assert.equal(result.material.sourceCurrency, currency);
+  }
+});
+
 test("вырезы, стыки, кромки, монтаж и дополнительные строки входят в смету", () => {
   const result = calculate(config({
     operations: [

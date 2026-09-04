@@ -41,6 +41,10 @@ function usdToBynCents(usdCents, exchangeRateScaled) {
   );
 }
 
+function minorToBynCents(amountMinor, exchangeRateScaled) {
+  return Math.round(asNonNegativeInteger(amountMinor, "Сумма материала") * asNonNegativeInteger(exchangeRateScaled, "Курс") / BPS);
+}
+
 function roundUpCents(value, stepCents) {
   const step = Math.max(1, asNonNegativeInteger(stepCents, "Шаг округления"));
   return Math.ceil(asNonNegativeInteger(value, "Сумма") / step) * step;
@@ -472,8 +476,16 @@ function calculateMaterial(
   manualUsdCents,
 ) {
   let baseUsdCents;
+  let baseMinor;
   switch (material.priceUnit) {
     case "slab":
+      if (material.fractionPricesMinor) {
+        const full = asNonNegativeInteger(material.fractionPricesMinor["1"], "Цена полного слэба");
+        const half = asNonNegativeInteger(material.fractionPricesMinor["0.5"], "Цена половины слэба");
+        baseMinor = Math.floor(slabCount) * full + (slabCount % 1 === 0.5 ? half : 0);
+        baseUsdCents = material.sourceCurrency === "USD" ? baseMinor : 0;
+        break;
+      }
       if (material.fractionPricesUsdCents) {
         if (material.importKey && (
           material.fractionPricesUsdCents["1"] === undefined ||
@@ -512,8 +524,10 @@ function calculateMaterial(
   );
   return {
     baseUsdCents,
+    baseMinor: baseMinor ?? baseUsdCents,
     markupBps: effectiveMarkupBps,
     totalUsdCents: Math.round(baseUsdCents * (BPS + effectiveMarkupBps) / BPS),
+    totalMinor: Math.round((baseMinor ?? baseUsdCents) * (BPS + effectiveMarkupBps) / BPS),
   };
 }
 
@@ -646,8 +660,12 @@ function calculate(configuration, pricebook, mode = "internal") {
     configuration.additionalMaterialBynCents,
     "Дополнительная стоимость материала",
   );
+  const materialRate = pricebook.material.sourceCurrency
+    ? pricebook.exchangeRates?.[pricebook.material.sourceCurrency]?.bynPerUnitScaled
+    : pricebook.exchangeRateScaled;
+  if (!materialRate) throw new TypeError("Для валюты материала не задан прямой курс к BYN");
   const materialBynCents =
-    usdToBynCents(material.totalUsdCents, pricebook.exchangeRateScaled) +
+    minorToBynCents(material.totalMinor, materialRate) +
     additionalMaterialBynCents;
   const productionBynCents = usdToBynCents(productionUsdCents, pricebook.exchangeRateScaled);
   const technicalTotalCents = materialBynCents + productionBynCents + manualBynCents;
@@ -702,6 +720,13 @@ function calculate(configuration, pricebook, mode = "internal") {
       fullPriceUsdCents: pricebook.material.fractionPricesUsdCents?.["1"] ?? null,
       halfPriceUsdCents: pricebook.material.fractionPricesUsdCents?.["0.5"] ?? null,
       materialBaseUsdCents: material.baseUsdCents,
+      sourceCurrency: pricebook.material.sourceCurrency || "USD",
+      fullPriceMinor: pricebook.material.fractionPricesMinor?.["1"] ?? pricebook.material.fractionPricesUsdCents?.["1"] ?? null,
+      halfPriceMinor: pricebook.material.fractionPricesMinor?.["0.5"] ?? pricebook.material.fractionPricesUsdCents?.["0.5"] ?? null,
+      materialBaseMinor: material.baseMinor,
+      materialTotalMinor: material.totalMinor,
+      exchangeRateToBynScaled: materialRate,
+      exchangeRateDate: pricebook.exchangeRates?.[pricebook.material.sourceCurrency]?.rateDate || null,
       markupBps: material.markupBps,
       materialUsdCents: material.totalUsdCents,
       materialBynCents,
@@ -803,5 +828,6 @@ module.exports = {
   roundUpCents,
   toPublicResult,
   usdToBynCents,
+  minorToBynCents,
   calculateMaterial,
 };

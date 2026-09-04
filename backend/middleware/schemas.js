@@ -338,6 +338,11 @@ const calculatorSettingsUpdateSchema = z
     wasteBps: z.coerce.number().int().min(0).max(100000),
     minimumMaterialMarkupBps: z.coerce.number().int().min(0).max(100000),
     publicWording: z.string().trim().min(1).max(160),
+    exchangeRates: z.object({
+      USD: z.object({ bynPerUnitScaled: z.coerce.number().int().positive().max(100000000), rateDate: z.string().date().optional().nullable() }),
+      EUR: z.object({ bynPerUnitScaled: z.coerce.number().int().positive().max(100000000), rateDate: z.string().date().optional().nullable() }).optional(),
+      RUB: z.object({ bynPerUnitScaled: z.coerce.number().int().positive().max(100000000), rateDate: z.string().date().optional().nullable() }).optional(),
+    }).optional(),
   })
   .strict();
 

@@ -29,30 +29,37 @@ function validationError(message) {
   return Object.assign(new Error(message), { status: 400 });
 }
 
-function getRequiredFractionPrices(priceRows) {
-  const grouped = new Map([["1", []], ["0.5", []]]);
+function getRequiredFractionPrices(priceRows, exchangeRates = {}) {
+  const grouped = new Map();
   for (const row of priceRows) {
-    const fraction = String(Number(row.quantity_fraction));
-    if (grouped.has(fraction)) grouped.get(fraction).push(row);
+    const currency = row.source_currency;
+    const key = `${currency}:${String(Number(row.quantity_fraction))}`;
+    const entries = grouped.get(key) || [];
+    entries.push(row);
+    grouped.set(key, entries);
   }
-  const full = grouped.get("1");
-  const half = grouped.get("0.5");
-  if (full.length > 1 || half.length > 1) {
-    throw validationError("Для выбранного варианта обнаружено несколько активных цен");
+  const currencies = [...new Set(priceRows.map((row) => row.source_currency))];
+  const candidates = currencies.filter((currency) => {
+    const full = grouped.get(`${currency}:1`) || [];
+    const half = grouped.get(`${currency}:0.5`) || [];
+    return full.length === 1 && half.length === 1 && exchangeRates[currency];
+  });
+  if (candidates.length !== 1) {
+    throw validationError("Для выбранного варианта нет однозначной пары FULL/HALF в валюте с прямым курсом BYN");
   }
-  if (full.length === 0) {
-    throw validationError("Для выбранного варианта отсутствует актуальная цена полного слэба");
-  }
-  if (half.length === 0) {
-    throw validationError("Для выбранного варианта отсутствует цена половины слэба");
-  }
+  const currency = candidates[0];
+  const full = grouped.get(`${currency}:1`);
+  const half = grouped.get(`${currency}:0.5`);
   return {
-    "1": Number(full[0].calculator_amount_usd_cents),
-    "0.5": Number(half[0].calculator_amount_usd_cents),
+    currency,
+    fullMinor: Number(full[0].source_amount_minor),
+    halfMinor: Number(half[0].source_amount_minor),
+    exchangeRateToBynScaled: Number(exchangeRates[currency].bynPerUnitScaled),
+    exchangeRateDate: exchangeRates[currency].rateDate || null,
   };
 }
 
-async function getMaterialVariantForCalculator(materialId, materialVariantId, slabFormatCode) {
+async function getMaterialVariantForCalculator(materialId, materialVariantId, slabFormatCode, exchangeRates) {
   if (!materialVariantId) {
     throw validationError("Для импортированного материала необходимо выбрать вариант");
   }
@@ -75,14 +82,13 @@ async function getMaterialVariantForCalculator(materialId, materialVariantId, sl
     throw validationError("Формат слэба не соответствует выбранному варианту");
   }
   const [prices] = await pool.query(
-    `SELECT quantity_fraction, calculator_amount_usd_cents
+    `SELECT quantity_fraction, source_amount_minor, source_currency
      FROM material_prices
      WHERE material_variant_id = ? AND is_active = 1 AND is_calculator_price = 1
-       AND calculator_amount_usd_cents IS NOT NULL
        AND quantity_fraction IN (1.00, 0.50)`,
     [variant.material_variant_id],
   );
-  return { ...variant, fractionPricesUsdCents: getRequiredFractionPrices(prices) };
+  return { ...variant, sourcePrices: getRequiredFractionPrices(prices, exchangeRates) };
 }
 
 function mapFormat(row, custom = {}) {
@@ -129,6 +135,13 @@ async function getPublishedPricebook({ materialId, materialVariantId, slabFormat
      ORDER BY p.version_number DESC LIMIT 1`,
   );
   if (!pricebook) return null;
+  const [exchangeRateRows] = await pool.query(
+    "SELECT currency_code, byn_per_unit_scaled, rate_date FROM calculator_exchange_rates WHERE pricebook_id = ?",
+    [pricebook.pricebook_id],
+  );
+  const exchangeRates = Object.fromEntries(exchangeRateRows.map((row) => [row.currency_code, {
+    bynPerUnitScaled: Number(row.byn_per_unit_scaled), rateDate: row.rate_date,
+  }]));
 
   const materialConditions = publicMode
     ? "AND m.is_active = 1 AND m.public_available = 1 AND m.type_id IN ('quartz','granite','onyx')"
@@ -140,7 +153,7 @@ async function getPublishedPricebook({ materialId, materialVariantId, slabFormat
   if (!materialRow) return null;
   const imported = Boolean(materialRow.import_key);
   const variant = imported
-    ? await getMaterialVariantForCalculator(materialRow.material_id, materialVariantId, slabFormatCode)
+    ? await getMaterialVariantForCalculator(materialRow.material_id, materialVariantId, slabFormatCode, exchangeRates)
     : null;
   const formatCode = imported ? variant.slab_format_code : slabFormatCode || null;
   const [[formatRow]] = formatCode
@@ -157,8 +170,8 @@ async function getPublishedPricebook({ materialId, materialVariantId, slabFormat
   const mappedMaterial = mapMaterial(materialRow);
   if (imported) {
     mappedMaterial.priceUnit = "slab";
-    mappedMaterial.basePriceUsdCents = variant.fractionPricesUsdCents["1"];
-    mappedMaterial.fractionPricesUsdCents = variant.fractionPricesUsdCents;
+    mappedMaterial.sourceCurrency = variant.sourcePrices.currency;
+    mappedMaterial.fractionPricesMinor = { "1": variant.sourcePrices.fullMinor, "0.5": variant.sourcePrices.halfMinor };
     mappedMaterial.materialVariantId = Number(variant.material_variant_id);
     mappedMaterial.commercialFormat = variant.commercial_format || null;
     mappedMaterial.surface = variant.surface || null;
@@ -178,6 +191,7 @@ async function getPublishedPricebook({ materialId, materialVariantId, slabFormat
     id: Number(pricebook.pricebook_id),
     version: Number(pricebook.version_number),
     exchangeRateScaled: Number(pricebook.exchange_rate_scaled),
+    exchangeRates,
     publicWording: pricebook.public_wording,
     material: mappedMaterial,
     slabFormat: mapFormat(formatRow, customFormat),
@@ -256,30 +270,42 @@ async function getInternalCatalog() {
      ORDER BY v.material_id, v.material_variant_id`,
   );
   const [priceRows] = await pool.query(
-    `SELECT material_variant_id AS materialVariantId, quantity_fraction AS quantityFraction
+    `SELECT material_variant_id AS materialVariantId, quantity_fraction AS quantityFraction,
+            source_currency AS sourceCurrency, source_amount_minor AS sourceAmountMinor
      FROM material_prices
-     WHERE is_active = 1 AND is_calculator_price = 1
-       AND calculator_amount_usd_cents IS NOT NULL
+     WHERE is_active = 1
        AND quantity_fraction IN (1.00, 0.50)`,
   );
+  const [publishedRates] = await pool.query(
+    `SELECT e.currency_code AS currencyCode, e.byn_per_unit_scaled AS bynPerUnitScaled
+     FROM calculator_exchange_rates e
+     JOIN calculator_pricebooks p ON p.pricebook_id = e.pricebook_id
+     WHERE p.status = 'published'`,
+  );
+  const publishedRateMap = Object.fromEntries(publishedRates.map((rate) => [rate.currencyCode, { bynPerUnitScaled: rate.bynPerUnitScaled }]));
   const pricesByVariant = new Map();
   for (const price of priceRows) {
     const id = Number(price.materialVariantId);
-    const availability = pricesByVariant.get(id) || { full: false, half: false };
-    if (Number(price.quantityFraction) === 1) availability.full = true;
-    if (Number(price.quantityFraction) === 0.5) availability.half = true;
+    const availability = pricesByVariant.get(id) || [];
+    availability.push({ quantity_fraction: price.quantityFraction, source_currency: price.sourceCurrency, source_amount_minor: price.sourceAmountMinor });
     pricesByVariant.set(id, availability);
   }
   const variantsByMaterial = new Map();
   for (const variant of variantRows) {
     const materialId = variant.materialId;
     const variants = variantsByMaterial.get(materialId) || [];
+    const sourcePrices = pricesByVariant.get(Number(variant.materialVariantId)) || [];
+    let resolved = null;
+    try { resolved = getRequiredFractionPrices(sourcePrices, publishedRateMap); } catch (_) { /* not available */ }
     variants.push({
       ...variant,
       materialVariantId: Number(variant.materialVariantId),
-      isCalculatorReady: Boolean(variant.isCalculatorReady),
+      isCalculatorReady: Boolean(resolved),
       isDiscontinued: Boolean(variant.isDiscontinued),
-      pricesAvailable: pricesByVariant.get(Number(variant.materialVariantId)) || { full: false, half: false },
+      pricesAvailable: {
+        full: sourcePrices.some((price) => Number(price.quantity_fraction) === 1),
+        half: sourcePrices.some((price) => Number(price.quantity_fraction) === 0.5),
+      },
     });
     variantsByMaterial.set(materialId, variants);
   }
@@ -341,7 +367,11 @@ async function getAdminPricebook() {
             after_json AS afterValue, created_at AS createdAt
      FROM calculator_change_history ORDER BY change_id DESC LIMIT 100`,
   );
-  return { pricebook, rates: rates.map(mapRate), materials: materials.map(mapMaterial), formats, history };
+  const [exchangeRates] = await pool.query(
+    "SELECT currency_code AS currencyCode, byn_per_unit_scaled AS bynPerUnitScaled, rate_date AS rateDate FROM calculator_exchange_rates WHERE pricebook_id = ? ORDER BY currency_code",
+    [pricebook.pricebook_id],
+  );
+  return { pricebook, exchangeRates, rates: rates.map(mapRate), materials: materials.map(mapMaterial), formats, history };
 }
 
 async function updateMaterial(actorId, materialId, changes) {
@@ -431,6 +461,12 @@ async function ensureDraft(connection, actorId) {
     [insert.insertId, published.pricebook_id],
   );
   await connection.query(
+    `INSERT INTO calculator_exchange_rates (pricebook_id, currency_code, byn_per_unit_scaled, rate_date)
+     SELECT ?, currency_code, byn_per_unit_scaled, rate_date
+     FROM calculator_exchange_rates WHERE pricebook_id = ?`,
+    [insert.insertId, published.pricebook_id],
+  );
+  await connection.query(
     `INSERT INTO calculator_rates
      (pricebook_id, system_code, display_name, category, unit_code,
       base_price_usd_cents, calculation_mode, dependent_code, percent_bps,
@@ -490,6 +526,24 @@ async function updateDraftSettings(actorId, changes) {
       `UPDATE calculator_pricebooks SET exchange_rate_scaled = ? WHERE pricebook_id = ?`,
       [changes.exchangeRateScaled, draft.pricebook_id],
     );
+    for (const [currencyCode, rate] of Object.entries(changes.exchangeRates || {})) {
+      const [[before]] = await connection.query(
+        "SELECT * FROM calculator_exchange_rates WHERE pricebook_id = ? AND currency_code = ? FOR UPDATE",
+        [draft.pricebook_id, currencyCode],
+      );
+      await connection.query(
+        `INSERT INTO calculator_exchange_rates (pricebook_id, currency_code, byn_per_unit_scaled, rate_date)
+         VALUES (?, ?, ?, ?)
+         ON DUPLICATE KEY UPDATE byn_per_unit_scaled = VALUES(byn_per_unit_scaled), rate_date = VALUES(rate_date)`,
+        [draft.pricebook_id, currencyCode, rate.bynPerUnitScaled, rate.rateDate || null],
+      );
+      await connection.query(
+        `INSERT INTO calculator_change_history
+         (pricebook_id, actor_id, entity_type, entity_key, action, before_json, after_json)
+         VALUES (?, ?, 'exchange_rate', ?, 'update', ?, ?)`,
+        [draft.pricebook_id, actorId, currencyCode, JSON.stringify(before || null), JSON.stringify(rate)],
+      );
+    }
     await connection.query(
       `UPDATE calculator_settings SET reserve_bps = ?, public_factor_bps = ?,
        minimum_order_byn_cents = ?, rounding_step_byn_cents = ?, waste_bps = ?,
