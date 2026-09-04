@@ -2,6 +2,11 @@
 
 ## Сейчас
 
+- [ ] Выполнить production-rollout портфолио в отдельное окно обслуживания
+  - Контекст: код миграции 010, импорт 16 работ и статический экспорт готовы, но production DB и deployment намеренно не изменялись.
+  - Порядок: backup → миграция 010 → `npm run db:import:portfolio` → проверка 16 slug → `npm run generate:portfolio` → проверка ZIP/static preview → deployment по отдельному подтверждению.
+  - Критерий готовности: опубликованные страницы и sitemap проверены до загрузки, Node/API и Apache static release обновлены согласованно.
+
 - [x] Применить миграции 002–006 к рабочей БД в отдельное окно обслуживания
   - Контекст: код требует UNIQUE finance, `orders.version` и таблицу `order_idempotency`; рабочая БД автоматически не изменялась.
   - Файлы: `backend/migrations/002_unique_order_finances.sql`–`006_calculator_manual_material.sql`, `backend/scripts/adopt-baseline.js`, `backend/scripts/import-calculator-catalog.js`
