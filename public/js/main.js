@@ -98,36 +98,57 @@ export async function renderHeaderFooter(activePath) {
 
     <nav class="nav" id="site-nav" role="navigation" aria-label="Главное меню">
       <ul class="nav__list">
-        <li class="nav__item"><a href="/">Главная</a></li>
-        <li class="nav__item"><a href="/stoleshnicy/">Столешницы</a></li>
-        <li class="nav__item"><a href="/services/">Услуги</a></li>
-        <li class="nav__item"><a href="/calculator/">Калькулятор</a></li>
-        <li class="nav__item"><a href="/works/">Наши работы</a></li>
-        <li class="nav__item"><a href="/about/">О проекте</a></li>
+        <li class="nav__item"><a href="/catalog/">Каталог</a></li>
+        <li class="nav__item nav__products">
+          <button class="nav__products-toggle" type="button" aria-expanded="false" aria-controls="products-menu">
+            Изделия <span class="nav__chevron" aria-hidden="true"></span>
+          </button>
+          <div class="nav__submenu" id="products-menu">
+            <p class="nav__group-title">Изделия</p>
+            <ul class="nav__submenu-list">
+              <li><a href="/stoleshnicy/">Столешницы</a></li>
+              <li><a href="/stoleshnicy/dlya-kuhni/">Для кухни</a></li>
+              <li><a href="/stoleshnicy/dlya-vannoy/">Для ванной</a></li>
+              <li><a href="/stoleshnicy/iz-kvarca/">Из кварца</a></li>
+              <li><a href="/podokonniki/">Подоконники</a></li>
+            </ul>
+            <p class="nav__group-title nav__group-title--secondary">Дополнительно</p>
+            <ul class="nav__submenu-list">
+              <li><a href="/services/">Услуги</a></li>
+              <li><a href="/works/">Работы</a></li>
+            </ul>
+          </div>
+        </li>
+        <li class="nav__item"><a href="/about/">О компании</a></li>
         <li class="nav__item"><a href="/contacts/">Контакты</a></li>
-        
       </ul>
+      <div class="nav__actions">
+        <a class="btn btn--primary" href="/contacts/#request">Получить расчёт</a>
+        <a class="btn btn--outline" href="${telLink(mainPhone)}">Позвонить</a>
+      </div>
     </nav>
 
-    <div class="header__contacts">
-      <a class="contact contact--tel" href="${telLink(
-        mainPhone,
-      )}">${mainPhone}</a>
-      <a class="contact contact--mail" href="${mailtoLink(contacts.email)}">${
-        contacts.email
-      }</a>
+    <div class="header__actions">
+      <a class="header__phone" href="${telLink(mainPhone)}">${mainPhone}</a>
+      <a class="btn btn--primary header__cta" href="/contacts/#request">Получить расчёт</a>
     </div>
   </div>`;
 
-  // обработчик гамбургера
   const navToggle = header.querySelector(".nav-toggle");
   const nav = header.querySelector(".nav");
+  const productsToggle = header.querySelector(".nav__products-toggle");
+  const products = header.querySelector(".nav__products");
   if (navToggle && nav) {
+    const closeProducts = () => {
+      products?.classList.remove("nav__products--open");
+      productsToggle?.setAttribute("aria-expanded", "false");
+    };
     const closeNav = () => {
       nav.classList.remove("nav--open");
       navToggle.setAttribute("aria-expanded", "false");
       navToggle.setAttribute("aria-label", "Меню");
       navToggle.classList.remove("nav-toggle--active");
+      closeProducts();
     };
 
     navToggle.addEventListener("click", () => {
@@ -137,16 +158,33 @@ export async function renderHeaderFooter(activePath) {
       navToggle.classList.toggle("nav-toggle--active", isOpen);
     });
 
+    productsToggle?.addEventListener("click", () => {
+      const isOpen = products?.classList.toggle("nav__products--open");
+      productsToggle.setAttribute("aria-expanded", String(Boolean(isOpen)));
+    });
+
     document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape" && nav.classList.contains("nav--open")) {
-        closeNav();
+      if (e.key === "Escape") {
+        if (products?.classList.contains("nav__products--open")) {
+          closeProducts();
+          productsToggle?.focus();
+        } else if (nav.classList.contains("nav--open")) {
+          closeNav();
+          navToggle.focus();
+        }
       }
     });
 
-    // Закрывать меню после клика по ссылке на мобильных
+    document.addEventListener("pointerdown", (e) => {
+      if (products?.classList.contains("nav__products--open") && !products.contains(e.target)) {
+        closeProducts();
+      }
+    });
+
     nav.addEventListener("click", (e) => {
       const a = e.target.closest("a");
       if (!a) return;
+      closeProducts();
       if (getComputedStyle(navToggle).display !== "none") {
         closeNav();
       }
@@ -161,6 +199,12 @@ export async function renderHeaderFooter(activePath) {
     a.toggleAttribute("aria-current", isActive);
     a.classList.toggle("nav__link--active", isActive);
   });
+  products?.classList.toggle(
+    "nav__products--active",
+    $$(".nav__submenu a", products).some((a) =>
+      new URL(a.getAttribute("href"), location.origin).pathname === currentPath,
+    ),
+  );
 
   // FOOTER
   const footer =
@@ -212,8 +256,8 @@ export function renderBreadcrumbs(activePath) {
     [HOME]: "Главная",
     "/catalog/": "Коллекция камня",
     "/services/": "Услуги",
-    "/works/": "Наши работы",
-    "/about/": "О проекте",
+    "/works/": "Работы",
+    "/about/": "О компании",
     "/contacts/": "Контакты",
     "/pages/admin.html": "Администрирование",
   };

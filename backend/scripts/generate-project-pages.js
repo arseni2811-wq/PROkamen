@@ -117,6 +117,7 @@ function linkedSection(work) {
   const links = [
     `<a class="btn btn-primary" href="${landing}">Подобрать изделие</a>`,
     `<a class="btn btn-outline" href="/calculator/">Рассчитать изделие</a>`,
+    `<a href="/works/">Смотреть все работы</a>`,
     `<a href="/catalog/">Смотреть каталог камня</a>`,
   ];
   if (String(work.materialRu).includes("кварцевый агломерат")) {

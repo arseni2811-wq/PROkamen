@@ -3,7 +3,11 @@ const path = require("path");
 
 const projectRoot = path.resolve(__dirname, "..", "..");
 const publicDir = path.join(projectRoot, "public");
-const deployDir = path.join(projectRoot, "deploy", "prokamen-public");
+const outputName = process.argv[2] || "prokamen-public";
+if (!/^[a-z0-9][a-z0-9-]*$/i.test(outputName)) {
+  throw new Error("Deploy directory name may contain only letters, digits and hyphens");
+}
+const deployDir = path.join(projectRoot, "deploy", outputName);
 
 if (fs.existsSync(deployDir)) {
   throw new Error(`Deploy directory already exists: ${deployDir}`);
