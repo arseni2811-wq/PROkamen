@@ -67,15 +67,21 @@ function buildSummary(analysis, state) {
   const currencies = [...new Set(accepted.map((row) => row.prices.map((price) => price.currency)).flat().filter(Boolean))].sort();
   const existingFormats = new Set(state.formats.map((row) => [Number(row.length_mm), Number(row.width_mm), Number(row.thickness_mm)].join("x")));
   const candidateMaterialKeys = new Set(candidates.map((row) => row.materialKey));
+  const calculatorDecisions = candidates.map((row) => calculatorPriceDecision(row));
   const existingImportKeys = new Set(state.materials.map((row) => row.import_key).filter(Boolean));
   const updatingMaterials = [...candidateMaterialKeys].filter((key) => existingImportKeys.has(key)).length;
   const uniqueCandidateFormats = new Set(candidates.map(formatIdentity));
-  const priceCounts = { FULL: 0, HALF: 0, QUARTER: 0 };
-  for (const row of accepted) for (const price of row.prices) {
-    if (price.fraction === 1) priceCounts.FULL += 1;
-    if (price.fraction === 0.5) priceCounts.HALF += 1;
-    if (price.fraction === 0.25) priceCounts.QUARTER += 1;
-  }
+  const countPrices = (rows) => {
+    const counts = { FULL: 0, HALF: 0, QUARTER: 0 };
+    for (const row of rows) for (const price of row.prices) {
+      if (price.fraction === 1) counts.FULL += 1;
+      if (price.fraction === 0.5) counts.HALF += 1;
+      if (price.fraction === 0.25) counts.QUARTER += 1;
+    }
+    return counts;
+  };
+  const sourcePriceCounts = countPrices(accepted);
+  const importablePriceCounts = countPrices(candidates);
   const hasPrice = (row, fraction) => row.prices.some((price) => price.fraction === fraction);
   const priceCombinations = {
     fullAndHalf: accepted.filter((row) => hasPrice(row, 1) && hasPrice(row, 0.5)).length,
@@ -130,6 +136,8 @@ function buildSummary(analysis, state) {
     uniqueMaterials: candidateMaterialKeys.size,
     uniqueVariants: new Set(candidates.map((row) => row.variantKey)).size,
     uniquePrices: new Set(candidates.flatMap((row) => row.prices.map((price) => price.fingerprint))).size,
+    calculatorReady: calculatorDecisions.filter((decision) => decision.calculatorReady).length,
+    notCalculatorReady: calculatorDecisions.filter((decision) => !decision.calculatorReady).length,
     discontinued: accepted.filter((row) => row.discontinued).length,
     rowsWithoutDimensions: accepted.filter((row) => !row.lengthMm || !row.widthMm).length,
     rowsWithoutThickness: accepted.filter((row) => !row.thicknessMm).length,
@@ -139,7 +147,8 @@ function buildSummary(analysis, state) {
     brands,
     dimensions,
     currencies,
-    priceCounts,
+    sourcePriceCounts,
+    importablePriceCounts,
     priceCombinations,
     dimensionRecovery,
     newFormatDetails,
@@ -230,7 +239,13 @@ function buildReport(analysis, summary) {
 - Без чистого имени: ${summary.rowsWithoutName}
 - Без цены: ${summary.rowsWithoutPrices}
 - Duplicate candidates: ${summary.duplicateCandidates}
-- FULL/HALF/QUARTER: ${summary.priceCounts.FULL}/${summary.priceCounts.HALF}/${summary.priceCounts.QUARTER}
+### Source price counts
+
+- FULL/HALF/QUARTER: ${summary.sourcePriceCounts.FULL}/${summary.sourcePriceCounts.HALF}/${summary.sourcePriceCounts.QUARTER}
+
+### Importable price counts
+
+- FULL/HALF/QUARTER: ${summary.importablePriceCounts.FULL}/${summary.importablePriceCounts.HALF}/${summary.importablePriceCounts.QUARTER}
 - FULL+HALF: ${summary.priceCombinations.fullAndHalf}
 - FULL без HALF: ${summary.priceCombinations.fullWithoutHalf}
 - HALF без FULL: ${summary.priceCombinations.halfWithoutFull}
@@ -287,7 +302,7 @@ ${JSON.stringify(noblle?.sourceValues || null, null, 2)}
 
 ${noblleNeighbors.map((row) => `\`\`\`json\n${JSON.stringify(row.sourceValues, null, 2)}\n\`\`\``).join("\n\n")}
 
-Значение 26 попало в HALF без вычислений: это непосредственное значение ячейки колонки \`Цена 1/2\`.
+Q840 содержит только FULL 780 USD: ячейки HALF и QUARTER пустые и остаются \`null\`. Значение из соседней ячейки или source location в цену не переносится.
 
 ### Belenco Aizano
 
@@ -334,9 +349,9 @@ ${missingNames.map((row) => `### Строка ${row.sourceRow}\n\nПричина
 ## Важные замечания
 
 - Цена 1/4 сохраняется моделью, но automatic slab calculator продолжает работать с шагом 0.5.
-- EUR не трактуется как USD. Для реального импорта и выбора EUR-цены калькулятором нужен явный \`--eur-per-usd\` и дата курса.
+- EUR не трактуется как USD. Исходная EUR-цена импортируется без курса, но до явной конвертации не получает calculator USD price и не делает variant calculator-ready.
 - NORMAL/НОРМАЛ, JUMBO и SUPER JUMBO нормализуются по утверждённому business mapping; явные размеры всегда имеют приоритет.
-- В исходном XLSX у части строк полная цена фактически находится в числовой ячейке «Поверхность» при пустой «Цена»; dry-run восстанавливает её с предупреждением и не выдумывает поверхность.
+- Пустые ценовые ячейки остаются пустыми: importer не восстанавливает FULL/HALF/QUARTER из соседних колонок, source location или иных значений строки.
 - Натуральный гранит отсутствует и не импортируется по словам Granite внутри названий других категорий.
 `;
 }

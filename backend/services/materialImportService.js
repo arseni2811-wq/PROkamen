@@ -95,6 +95,23 @@ function cleanDecorName(value) {
     .trim();
 }
 
+function recoverStratosSplitName(brand, article, sourceName) {
+  const prefix = clean(article);
+  const suffix = clean(sourceName);
+  const knownRows = new Set([
+    "ABSOLUT|BLACK matt",
+    "BELGIAN|BLUE matt",
+    "CLOUD|matt",
+    "CREAM|matt",
+    "CRUSH|matt",
+    "FLAKE|matt",
+  ]);
+  if (brand !== "Stratos" || /\d/.test(prefix) || !knownRows.has(`${prefix}|${suffix}`)) {
+    return { article: prefix, sourceName: suffix };
+  }
+  return { article: "", sourceName: `${prefix} ${suffix}` };
+}
+
 function rowObject(headers, row) {
   return Object.fromEntries(headers.map((header, index) => [header, row[index] ?? null]));
 }
@@ -105,8 +122,13 @@ function normalizeRow(source, rowNumber, sourceFile) {
   const categoryLabel = clean(source["Категория"]);
   const category = CATEGORY_CODES.get(categoryLabel.toLowerCase()) || null;
   const brand = clean(source["Бренд"]);
-  const article = clean(source["Артикул"]);
-  const sourceName = clean(source["Наименование"]);
+  const recoveredName = recoverStratosSplitName(
+    brand,
+    source["Артикул"],
+    source["Наименование"],
+  );
+  const article = recoveredName.article;
+  const sourceName = recoveredName.sourceName;
   const name = cleanDecorName(sourceName);
   const dimensions = parseDimensions(source["Размер"], source["Толщина"]);
   const currency = clean(source["Валюта"]).toUpperCase();
@@ -274,5 +296,6 @@ module.exports = {
   normalizeRow,
   parseDimensions,
   parseMoney,
+  recoverStratosSplitName,
   rebuildIdentities,
 };

@@ -76,6 +76,26 @@ function normalizeTarget(target) {
   return stripped.startsWith("xl/") ? stripped : `xl/${stripped.replace(/^\.\.\//, "")}`;
 }
 
+function parseWorksheetRows(worksheet, sharedStrings = []) {
+  return [...worksheet.matchAll(/<row\b[^>]*>([\s\S]*?)<\/row>/g)].map((rowMatch) => {
+    const values = [];
+    for (const cellMatch of rowMatch[1].matchAll(/<c\b([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g)) {
+      const attrs = cellMatch[1];
+      const body = cellMatch[2];
+      const reference = attrs.match(/\br="([^"]+)"/)?.[1];
+      const type = attrs.match(/\bt="([^"]+)"/)?.[1];
+      const raw = body?.match(/<v(?:\s[^>]*)?>([\s\S]*?)<\/v>/)?.[1];
+      let value = raw === undefined ? textRuns(body) : decodeXml(raw);
+      if (type === "s") value = sharedStrings[Number(value)] ?? null;
+      else if (type === "b") value = value === "1";
+      else if (!type && value !== "" && Number.isFinite(Number(value))) value = Number(value);
+      if (value === "") value = null;
+      values[columnIndex(reference)] = value;
+    }
+    return values;
+  });
+}
+
 function readWorksheet(filePath, requestedSheetName) {
   const entries = readZipEntries(filePath);
   const workbook = entries.get("xl/workbook.xml")?.toString("utf8");
@@ -107,22 +127,7 @@ function readWorksheet(filePath, requestedSheetName) {
   const sharedStrings = [...sharedStringsXml.matchAll(/<si(?:\s[^>]*)?>([\s\S]*?)<\/si>/g)]
     .map((match) => textRuns(match[1]));
 
-  return [...worksheet.matchAll(/<row\b[^>]*>([\s\S]*?)<\/row>/g)].map((rowMatch) => {
-    const values = [];
-    for (const cellMatch of rowMatch[1].matchAll(/<c\b([^>]*)>([\s\S]*?)<\/c>/g)) {
-      const attrs = cellMatch[1];
-      const body = cellMatch[2];
-      const reference = attrs.match(/\br="([^"]+)"/)?.[1];
-      const type = attrs.match(/\bt="([^"]+)"/)?.[1];
-      const raw = body.match(/<v(?:\s[^>]*)?>([\s\S]*?)<\/v>/)?.[1];
-      let value = raw === undefined ? textRuns(body) : decodeXml(raw);
-      if (type === "s") value = sharedStrings[Number(value)] ?? "";
-      else if (type === "b") value = value === "1";
-      else if (!type && value !== "" && Number.isFinite(Number(value))) value = Number(value);
-      values[columnIndex(reference)] = value;
-    }
-    return values;
-  });
+  return parseWorksheetRows(worksheet, sharedStrings);
 }
 
-module.exports = { readWorksheet, decodeXml, columnIndex };
+module.exports = { readWorksheet, decodeXml, columnIndex, parseWorksheetRows };

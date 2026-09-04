@@ -5,13 +5,14 @@ const path = require("node:path");
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const { calculatorPriceDecision, cleanDecorName, fractionalPrice, normalizeRow, parseDimensions, rebuildIdentities } = require("../services/materialImportService");
+const { parseWorksheetRows } = require("../utils/xlsxReader");
 const { calculateMaterial } = require("../services/calculatorService");
 
 function source(overrides = {}) {
   return {
     "Бренд": "Belenco", "Категория": "Кварцевый агломерат", "Артикул": "4043",
     "Наименование": "Aizano", "Размер": "NORMAL", "Толщина": "20 мм",
-    "Поверхность": 610, "Цена": null, "Валюта": "EUR", "Единица": "слэб",
+    "Поверхность": null, "Цена": 610, "Валюта": "EUR", "Единица": "слэб",
     "Цена 1/2": 315, "Цена 1/4": 185, "Тип цены": "ОПТ1", "НДС": "с НДС 20%",
     "Примечание": "", "Источник": "", "Место в источнике": "лист BELENCO, строка данных 55",
     ...overrides,
@@ -53,11 +54,18 @@ test("a numeric value is not treated as a slab format", () => {
   assert.equal(result.commercialFormat, null);
 });
 
-test("shifted numeric Surface recovers FULL without becoming a surface", () => {
-  const row = normalizeRow(source(), 2, "source.xlsx");
-  assert.equal(row.prices.find((price) => price.fraction === 1).amountMinor, 61000);
-  assert.equal(row.surface, null);
-  assert.ok(row.warnings.includes("SHIFTED_FULL_PRICE: Цена восстановлена из смещённой колонки Поверхность"));
+test("XLSX self-closing blank cells retain their own columns", () => {
+  const [row] = parseWorksheetRows(
+    '<row r="695"><c r="G695" t="s"><v>0</v></c><c r="H695"><v>780</v></c><c r="I695" t="s"><v>1</v></c><c r="J695" t="s"><v>2</v></c><c r="K695"/><c r="L695"/><c r="M695" t="s"><v>3</v></c></row>',
+    ["Глянцевая", "USD", "слэб", "ОПТ1"],
+  );
+  assert.deepEqual(row.slice(6, 13), ["Глянцевая", 780, "USD", "слэб", null, null, "ОПТ1"]);
+});
+
+test("blank price cells are not recovered from adjacent source columns", () => {
+  const row = normalizeRow(source({ "Цена": 780, "Цена 1/2": null, "Цена 1/4": null }), 695, "source.xlsx");
+  assert.deepEqual(row.prices.map((price) => [price.fraction, price.amountMinor]), [[1, 78000]]);
+  assert.equal(row.warnings.some((warning) => warning.includes("SHIFTED_FULL_PRICE")), false);
 });
 
 test("OUT markers leave clean decor name and remain in sourceName", () => {
@@ -110,6 +118,19 @@ test("FULL, HALF and QUARTER stay independent", () => {
   ]);
 });
 
+test("Aizano preserves all three direct source prices", () => {
+  const row = normalizeRow(source(), 180, "source.xlsx");
+  assert.deepEqual(row.prices.map((price) => [price.fraction, price.amountMinor, price.currency]), [
+    [1, 61000, "EUR"], [0.5, 31500, "EUR"], [0.25, 18500, "EUR"],
+  ]);
+});
+
+test("Caesarstone keeps blank HALF and QUARTER as null", () => {
+  const row = normalizeRow(source({ "Бренд": "Caesarstone", "Артикул": "5141", "Наименование": "Frosty Carrina",
+    "Размер": "3340х1640 – 20 мм", "Цена": 1170, "Цена 1/2": null, "Цена 1/4": null }), 451, "source.xlsx");
+  assert.deepEqual(row.prices.map((price) => [price.fraction, price.amountMinor, price.currency]), [[1, 117000, "EUR"]]);
+});
+
 test("0.5-step price composes explicit FULL and HALF through 3 slabs", () => {
   const prices = { 1: 61000, 0.5: 31500, 0.25: 18500 };
   assert.deepEqual([0.5, 1, 1.5, 2, 2.5, 3].map((count) => fractionalPrice(prices, count)),
@@ -121,14 +142,13 @@ test("calculator rejects half-slab use without commercial HALF", () => {
     fractionPricesUsdCents: { 1: 61000 }, markupBps: 0 }, 0.5, 0, 0, 0, 0), /отсутствует цена половины/);
 });
 
-test("suspicious HALF gets HIGH warning without correction", () => {
-  const row = normalizeRow(source({ "Цена": 780, "Поверхность": "Глянцевая", "Цена 1/2": 26, "Валюта": "USD" }), 2, "source.xlsx");
-  assert.equal(row.prices.find((price) => price.fraction === 0.5).amountMinor, 2600);
-  assert.ok(row.warnings.some((warning) => warning.includes("HIGH suspicious_half_price")));
+test("Q840 keeps only the actual FULL price when HALF and QUARTER are blank", () => {
+  const row = normalizeRow(source({ "Артикул": "Q840", "Наименование": "White Misterio OUT", "Цена": 780, "Цена 1/2": null, "Цена 1/4": null, "Валюта": "USD" }), 695, "source.xlsx");
+  assert.deepEqual(row.prices.map((price) => [price.fraction, price.amountMinor, price.currency]), [[1, 78000, "USD"]]);
   const decision = calculatorPriceDecision(row);
   assert.equal(decision.calculatorReady, false);
-  assert.equal(decision.calculatorAmountUsdCents(row.prices[0]), null);
-  assert.equal(decision.isCalculatorPrice(row.prices[1]), false);
+  assert.equal(decision.calculatorAmountUsdCents(row.prices[0]), 78000);
+  assert.equal(decision.isCalculatorPrice(row.prices[0]), false);
 });
 
 test("only safe USD FULL+HALF variant becomes calculator-ready", () => {
@@ -149,6 +169,26 @@ test("unknown format is rejected", () => {
 
 test("missing thickness is rejected", () => {
   assert.ok(normalizeRow(source({ "Размер": "3200х1600", "Толщина": "" }), 2, "source.xlsx").errors.includes("нет толщины"));
+});
+
+test("six known Stratos split names become normal variants without an article", () => {
+  const rows = [
+    ["ABSOLUT", "BLACK matt", 750, 385, 225, "ABSOLUT BLACK", "matt"],
+    ["BELGIAN", "BLUE matt", 780, 400, 235, "BELGIAN BLUE", "matt"],
+    ["CLOUD", "matt", 780, 400, 235, "CLOUD", "matt"],
+    ["CREAM", "matt", 780, 400, 235, "CREAM", "matt"],
+    ["CRUSH", "matt", 780, 400, 235, "CRUSH", "matt"],
+    ["FLAKE", "matt", 780, 400, 235, "FLAKE", "matt"],
+  ];
+  for (const [article, sourceName, full, half, quarter, name, surface] of rows) {
+    const row = normalizeRow(source({ "Бренд": "Stratos", "Артикул": article, "Наименование": sourceName,
+      "Размер": "3050х1400", "Цена": full, "Цена 1/2": half, "Цена 1/4": quarter, "Валюта": "USD" }), 64, "source.xlsx");
+    assert.equal(row.article, "");
+    assert.equal(row.name, name);
+    assert.equal(row.surface, surface);
+    assert.deepEqual([row.lengthMm, row.widthMm, row.thicknessMm], [3050, 1400, 20]);
+    assert.deepEqual(row.prices.map((price) => price.amountMinor), [full * 100, half * 100, quarter * 100]);
+  }
 });
 
 test("migration 007 uses DECIMAL fractions, FKs and required indexes", () => {

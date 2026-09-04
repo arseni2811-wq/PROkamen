@@ -1,7 +1,7 @@
 # Material import dry-run report
 
 - Источник: КВАРЦ.БЕЛ_единый_поиск (2).xlsx
-- Дата: 2026-09-02T13:09:09.665Z
+- Дата: 2026-09-04T06:03:02.157Z
 - База проверки: pro_erp_test
 - Режим: dry-run, записей в БД нет
 - Миграция 007 применена: да
@@ -10,8 +10,8 @@
 
 | Метрика | Dry-run №1 | Dry-run №2 |
 |---|---:|---:|
-| validCandidates | 122 | 322 |
-| rejectedRows | 239 | 39 |
+| validCandidates | 122 | 328 |
+| rejectedRows | 239 | 33 |
 | rowsWithoutDimensions | 237 | 33 |
 
 ## Текущая статистика
@@ -20,27 +20,33 @@
 - Кварцевый агломерат: 361
 - Натуральный гранит: 0
 - Пропущено других категорий: 388
-- Валидных кандидатов: 322
-- Отклонено строк / отдельных ошибок: 39 / 105
-- Строк с предупреждениями / предупреждений: 328 / 354
-- Новых материалов: 0
-- Обновляемых материалов: 259
+- Валидных кандидатов: 328
+- Отклонено строк / отдельных ошибок: 33 / 66
+- Строк с предупреждениями / предупреждений: 2 / 2
+- Новых материалов: 8
+- Обновляемых материалов: 257
 - Новых брендов: 1
 - Новых форматов: 0
-- Новых ценовых записей: 912
-- Уникальных materials / variants / prices: 259 / 322 / 912
+- Новых ценовых записей: 833
+- Уникальных materials / variants / prices: 265 / 328 / 833
 - OUT/discontinued: 12
 - Без физических размеров: 33
 - Без толщины: 33
-- Без чистого имени: 39
+- Без чистого имени: 0
 - Без цены: 0
 - Duplicate candidates: 0
-- FULL/HALF/QUARTER: 328/361/274
-- FULL+HALF: 328
-- FULL без HALF: 0
-- HALF без FULL: 33
+### Source price counts
+
+- FULL/HALF/QUARTER: 361/274/231
+
+### Importable price counts
+
+- FULL/HALF/QUARTER: 328/274/231
+- FULL+HALF: 274
+- FULL без HALF: 87
+- HALF без FULL: 0
 - QUARTER без FULL: 0
-- Без FULL: 33
+- Без FULL: 0
 
 ## Нормализация размеров
 
@@ -100,9 +106,7 @@
   ],
   "discontinued": false,
   "errors": [],
-  "warnings": [
-    "SHIFTED_FULL_PRICE: Цена восстановлена из смещённой колонки Поверхность"
-  ],
+  "warnings": [],
   "sourceLocation": "лист STRATOS, строка данных 3"
 }
 ```
@@ -141,9 +145,7 @@
   ],
   "discontinued": false,
   "errors": [],
-  "warnings": [
-    "SHIFTED_FULL_PRICE: Цена восстановлена из смещённой колонки Поверхность"
-  ],
+  "warnings": [],
   "sourceLocation": "лист BELENCO, строка данных 4"
 }
 ```
@@ -180,9 +182,7 @@
   ],
   "discontinued": false,
   "errors": [],
-  "warnings": [
-    "SHIFTED_FULL_PRICE: Цена восстановлена из смещённой колонки Поверхность"
-  ],
+  "warnings": [],
   "sourceLocation": "лист BELENCO, строка данных 5"
 }
 ```
@@ -219,9 +219,7 @@
   ],
   "discontinued": false,
   "errors": [],
-  "warnings": [
-    "SHIFTED_FULL_PRICE: Цена восстановлена из смещённой колонки Поверхность"
-  ],
+  "warnings": [],
   "sourceLocation": "лист BELENCO, строка данных 6"
 }
 ```
@@ -246,18 +244,11 @@
       "fraction": 1,
       "amountMinor": 78000,
       "currency": "USD"
-    },
-    {
-      "fraction": 0.5,
-      "amountMinor": 2600,
-      "currency": "USD"
     }
   ],
   "discontinued": true,
   "errors": [],
-  "warnings": [
-    "HIGH suspicious_half_price: подозрительное соотношение HALF/FULL"
-  ],
+  "warnings": [],
   "sourceLocation": "стр. 1, строка 27"
 }
 ```
@@ -276,12 +267,12 @@
   "Цена": 780,
   "Валюта": "USD",
   "Единица": "слэб",
-  "Цена 1/2": 26,
+  "Цена 1/2": null,
   "Цена 1/4": null,
-  "Тип цены": null,
-  "НДС": 1985,
+  "Тип цены": "Прайс",
+  "НДС": null,
   "Примечание": null,
-  "Источник": null,
+  "Источник": "NOBLLE/Noblle Quartz РБ Кварц.бел.pdf",
   "Место в источнике": "стр. 1, строка 27"
 }
 ```
@@ -300,12 +291,12 @@
   "Цена": 780,
   "Валюта": "USD",
   "Единица": "слэб",
-  "Цена 1/2": 26,
+  "Цена 1/2": null,
   "Цена 1/4": null,
-  "Тип цены": null,
-  "НДС": 1985,
+  "Тип цены": "Прайс",
+  "НДС": null,
   "Примечание": null,
-  "Источник": null,
+  "Источник": "NOBLLE/Noblle Quartz РБ Кварц.бел.pdf",
   "Место в источнике": "стр. 1, строка 25"
 }
 ```
@@ -322,12 +313,12 @@
   "Цена": 780,
   "Валюта": "USD",
   "Единица": "слэб",
-  "Цена 1/2": 26,
+  "Цена 1/2": null,
   "Цена 1/4": null,
-  "Тип цены": null,
-  "НДС": 1985,
+  "Тип цены": "Прайс",
+  "НДС": null,
   "Примечание": null,
-  "Источник": null,
+  "Источник": "NOBLLE/Noblle Quartz РБ Кварц.бел.pdf",
   "Место в источнике": "стр. 1, строка 26"
 }
 ```
@@ -344,12 +335,12 @@
   "Цена": 780,
   "Валюта": "USD",
   "Единица": "слэб",
-  "Цена 1/2": 26,
+  "Цена 1/2": null,
   "Цена 1/4": null,
-  "Тип цены": null,
-  "НДС": 1985,
+  "Тип цены": "Прайс",
+  "НДС": null,
   "Примечание": null,
-  "Источник": null,
+  "Источник": "NOBLLE/Noblle Quartz РБ Кварц.бел.pdf",
   "Место в источнике": "стр. 1, строка 27"
 }
 ```
@@ -366,12 +357,12 @@
   "Цена": 780,
   "Валюта": "USD",
   "Единица": "слэб",
-  "Цена 1/2": 26,
+  "Цена 1/2": null,
   "Цена 1/4": null,
-  "Тип цены": null,
-  "НДС": 1985,
+  "Тип цены": "Прайс",
+  "НДС": null,
   "Примечание": null,
-  "Источник": null,
+  "Источник": "NOBLLE/Noblle Quartz РБ Кварц.бел.pdf",
   "Место в источнике": "стр. 1, строка 28"
 }
 ```
@@ -388,17 +379,17 @@
   "Цена": 950,
   "Валюта": "USD",
   "Единица": "слэб",
-  "Цена 1/2": 26,
+  "Цена 1/2": null,
   "Цена 1/4": null,
-  "Тип цены": null,
-  "НДС": 1985,
+  "Тип цены": "Прайс",
+  "НДС": null,
   "Примечание": null,
-  "Источник": null,
+  "Источник": "NOBLLE/Noblle Quartz РБ Кварц.бел.pdf",
   "Место в источнике": "стр. 1, строка 29"
 }
 ```
 
-Значение 26 попало в HALF без вычислений: это непосредственное значение ячейки колонки `Цена 1/2`.
+Q840 содержит только FULL 780 USD: ячейки HALF и QUARTER пустые и остаются `null`. Значение из соседней ячейки или source location в цену не переносится.
 
 ### Belenco Aizano
 
@@ -434,9 +425,7 @@
   ],
   "discontinued": false,
   "errors": [],
-  "warnings": [
-    "SHIFTED_FULL_PRICE: Цена восстановлена из смещённой колонки Поверхность"
-  ],
+  "warnings": [],
   "sourceLocation": "лист BELENCO, строка данных 55"
 }
 ```
@@ -461,19 +450,11 @@
       "fraction": 1,
       "amountMinor": 117000,
       "currency": "EUR"
-    },
-    {
-      "fraction": 0.5,
-      "amountMinor": 1100,
-      "currency": "EUR"
     }
   ],
   "discontinued": false,
   "errors": [],
-  "warnings": [
-    "SHIFTED_FULL_PRICE: Цена восстановлена из смещённой колонки Поверхность",
-    "HIGH suspicious_half_price: подозрительное соотношение HALF/FULL"
-  ],
+  "warnings": [],
   "sourceLocation": "стр. 1, таблица 1, строка 22"
 }
 ```
@@ -512,632 +493,18 @@
   ],
   "discontinued": false,
   "errors": [],
-  "warnings": [
-    "SHIFTED_FULL_PRICE: Цена восстановлена из смещённой колонки Поверхность"
-  ],
+  "warnings": [],
   "sourceLocation": "лист BELENCO, строка данных 55"
 }
 ```
 
 ## HALF без FULL — первые 20
 
-- {
-  "row": 276,
-  "category": "quartz",
-  "brand": "Quartzforms",
-  "article": "760",
-  "materialId": "imp-52999878b68d682c9387d93813eaca0c",
-  "sourceName": "",
-  "name": "",
-  "commercialFormat": null,
-  "dimensions": null,
-  "surface": null,
-  "dimensionSource": "unresolved",
-  "prices": [
-    {
-      "fraction": 0.5,
-      "amountMinor": 2800,
-      "currency": "EUR"
-    }
-  ],
-  "discontinued": false,
-  "errors": [
-    "нет наименования",
-    "нет однозначных физических размеров слэба",
-    "нет толщины"
-  ],
-  "warnings": [],
-  "sourceLocation": "лист QUARTZFORMS, строка данных 2"
-}
-- {
-  "row": 277,
-  "category": "quartz",
-  "brand": "Quartzforms",
-  "article": "764",
-  "materialId": "imp-97b6abffd4468744a8dcbd6303ab7dad",
-  "sourceName": "",
-  "name": "",
-  "commercialFormat": null,
-  "dimensions": null,
-  "surface": null,
-  "dimensionSource": "unresolved",
-  "prices": [
-    {
-      "fraction": 0.5,
-      "amountMinor": 2800,
-      "currency": "EUR"
-    }
-  ],
-  "discontinued": false,
-  "errors": [
-    "нет наименования",
-    "нет однозначных физических размеров слэба",
-    "нет толщины"
-  ],
-  "warnings": [],
-  "sourceLocation": "лист QUARTZFORMS, строка данных 3"
-}
-- {
-  "row": 278,
-  "category": "quartz",
-  "brand": "Quartzforms",
-  "article": "766",
-  "materialId": "imp-aeb87b1e1fa8984e5a6e74bfed36bcd5",
-  "sourceName": "",
-  "name": "",
-  "commercialFormat": null,
-  "dimensions": null,
-  "surface": null,
-  "dimensionSource": "unresolved",
-  "prices": [
-    {
-      "fraction": 0.5,
-      "amountMinor": 2800,
-      "currency": "EUR"
-    }
-  ],
-  "discontinued": false,
-  "errors": [
-    "нет наименования",
-    "нет однозначных физических размеров слэба",
-    "нет толщины"
-  ],
-  "warnings": [],
-  "sourceLocation": "лист QUARTZFORMS, строка данных 4"
-}
-- {
-  "row": 279,
-  "category": "quartz",
-  "brand": "Quartzforms",
-  "article": "768",
-  "materialId": "imp-416ab83dea54e6269c543bdb9b9e9779",
-  "sourceName": "",
-  "name": "",
-  "commercialFormat": null,
-  "dimensions": null,
-  "surface": null,
-  "dimensionSource": "unresolved",
-  "prices": [
-    {
-      "fraction": 0.5,
-      "amountMinor": 2800,
-      "currency": "EUR"
-    }
-  ],
-  "discontinued": false,
-  "errors": [
-    "нет наименования",
-    "нет однозначных физических размеров слэба",
-    "нет толщины"
-  ],
-  "warnings": [],
-  "sourceLocation": "лист QUARTZFORMS, строка данных 5"
-}
-- {
-  "row": 280,
-  "category": "quartz",
-  "brand": "Quartzforms",
-  "article": "770",
-  "materialId": "imp-a979afa1b160426ac38adfc860f95c41",
-  "sourceName": "",
-  "name": "",
-  "commercialFormat": null,
-  "dimensions": null,
-  "surface": null,
-  "dimensionSource": "unresolved",
-  "prices": [
-    {
-      "fraction": 0.5,
-      "amountMinor": 2800,
-      "currency": "EUR"
-    }
-  ],
-  "discontinued": false,
-  "errors": [
-    "нет наименования",
-    "нет однозначных физических размеров слэба",
-    "нет толщины"
-  ],
-  "warnings": [],
-  "sourceLocation": "лист QUARTZFORMS, строка данных 6"
-}
-- {
-  "row": 281,
-  "category": "quartz",
-  "brand": "Quartzforms",
-  "article": "772",
-  "materialId": "imp-5771facbee776909cacb82de710ebcdf",
-  "sourceName": "",
-  "name": "",
-  "commercialFormat": null,
-  "dimensions": null,
-  "surface": null,
-  "dimensionSource": "unresolved",
-  "prices": [
-    {
-      "fraction": 0.5,
-      "amountMinor": 2800,
-      "currency": "EUR"
-    }
-  ],
-  "discontinued": false,
-  "errors": [
-    "нет наименования",
-    "нет однозначных физических размеров слэба",
-    "нет толщины"
-  ],
-  "warnings": [],
-  "sourceLocation": "лист QUARTZFORMS, строка данных 7"
-}
-- {
-  "row": 282,
-  "category": "quartz",
-  "brand": "Quartzforms",
-  "article": "774",
-  "materialId": "imp-aff6ce5b94163c4b7872fbcd293dedf7",
-  "sourceName": "",
-  "name": "",
-  "commercialFormat": null,
-  "dimensions": null,
-  "surface": null,
-  "dimensionSource": "unresolved",
-  "prices": [
-    {
-      "fraction": 0.5,
-      "amountMinor": 2800,
-      "currency": "EUR"
-    }
-  ],
-  "discontinued": false,
-  "errors": [
-    "нет наименования",
-    "нет однозначных физических размеров слэба",
-    "нет толщины"
-  ],
-  "warnings": [],
-  "sourceLocation": "лист QUARTZFORMS, строка данных 8"
-}
-- {
-  "row": 283,
-  "category": "quartz",
-  "brand": "Quartzforms",
-  "article": "776",
-  "materialId": "imp-8292ea7fcf1d96aac3b2ee954546d6dd",
-  "sourceName": "",
-  "name": "",
-  "commercialFormat": null,
-  "dimensions": null,
-  "surface": null,
-  "dimensionSource": "unresolved",
-  "prices": [
-    {
-      "fraction": 0.5,
-      "amountMinor": 2800,
-      "currency": "EUR"
-    }
-  ],
-  "discontinued": false,
-  "errors": [
-    "нет наименования",
-    "нет однозначных физических размеров слэба",
-    "нет толщины"
-  ],
-  "warnings": [],
-  "sourceLocation": "лист QUARTZFORMS, строка данных 9"
-}
-- {
-  "row": 284,
-  "category": "quartz",
-  "brand": "Quartzforms",
-  "article": "778",
-  "materialId": "imp-3bdffbb4e735012dbbeccacd19d818bf",
-  "sourceName": "",
-  "name": "",
-  "commercialFormat": null,
-  "dimensions": null,
-  "surface": null,
-  "dimensionSource": "unresolved",
-  "prices": [
-    {
-      "fraction": 0.5,
-      "amountMinor": 2800,
-      "currency": "EUR"
-    }
-  ],
-  "discontinued": false,
-  "errors": [
-    "нет наименования",
-    "нет однозначных физических размеров слэба",
-    "нет толщины"
-  ],
-  "warnings": [],
-  "sourceLocation": "лист QUARTZFORMS, строка данных 10"
-}
-- {
-  "row": 285,
-  "category": "quartz",
-  "brand": "Quartzforms",
-  "article": "780",
-  "materialId": "imp-e7d0181ae15dd82a7c33b88befb82a61",
-  "sourceName": "",
-  "name": "",
-  "commercialFormat": null,
-  "dimensions": null,
-  "surface": null,
-  "dimensionSource": "unresolved",
-  "prices": [
-    {
-      "fraction": 0.5,
-      "amountMinor": 2800,
-      "currency": "EUR"
-    }
-  ],
-  "discontinued": false,
-  "errors": [
-    "нет наименования",
-    "нет однозначных физических размеров слэба",
-    "нет толщины"
-  ],
-  "warnings": [],
-  "sourceLocation": "лист QUARTZFORMS, строка данных 11"
-}
-- {
-  "row": 286,
-  "category": "quartz",
-  "brand": "Quartzforms",
-  "article": "782",
-  "materialId": "imp-409a97be9ce489d2302d86b55e2cb8d6",
-  "sourceName": "",
-  "name": "",
-  "commercialFormat": null,
-  "dimensions": null,
-  "surface": null,
-  "dimensionSource": "unresolved",
-  "prices": [
-    {
-      "fraction": 0.5,
-      "amountMinor": 2800,
-      "currency": "EUR"
-    }
-  ],
-  "discontinued": false,
-  "errors": [
-    "нет наименования",
-    "нет однозначных физических размеров слэба",
-    "нет толщины"
-  ],
-  "warnings": [],
-  "sourceLocation": "лист QUARTZFORMS, строка данных 12"
-}
-- {
-  "row": 287,
-  "category": "quartz",
-  "brand": "Quartzforms",
-  "article": "784",
-  "materialId": "imp-e0585b055b07e94e50c01ff844949856",
-  "sourceName": "",
-  "name": "",
-  "commercialFormat": null,
-  "dimensions": null,
-  "surface": null,
-  "dimensionSource": "unresolved",
-  "prices": [
-    {
-      "fraction": 0.5,
-      "amountMinor": 2800,
-      "currency": "EUR"
-    }
-  ],
-  "discontinued": false,
-  "errors": [
-    "нет наименования",
-    "нет однозначных физических размеров слэба",
-    "нет толщины"
-  ],
-  "warnings": [],
-  "sourceLocation": "лист QUARTZFORMS, строка данных 13"
-}
-- {
-  "row": 288,
-  "category": "quartz",
-  "brand": "Quartzforms",
-  "article": "786",
-  "materialId": "imp-55ba567d89f1ca4e5a7f68b6ddfc74f8",
-  "sourceName": "",
-  "name": "",
-  "commercialFormat": null,
-  "dimensions": null,
-  "surface": null,
-  "dimensionSource": "unresolved",
-  "prices": [
-    {
-      "fraction": 0.5,
-      "amountMinor": 2800,
-      "currency": "EUR"
-    }
-  ],
-  "discontinued": false,
-  "errors": [
-    "нет наименования",
-    "нет однозначных физических размеров слэба",
-    "нет толщины"
-  ],
-  "warnings": [],
-  "sourceLocation": "лист QUARTZFORMS, строка данных 14"
-}
-- {
-  "row": 289,
-  "category": "quartz",
-  "brand": "Quartzforms",
-  "article": "788",
-  "materialId": "imp-3d2a98ca2f3c5a74499ffd31ef2d7e26",
-  "sourceName": "",
-  "name": "",
-  "commercialFormat": null,
-  "dimensions": null,
-  "surface": null,
-  "dimensionSource": "unresolved",
-  "prices": [
-    {
-      "fraction": 0.5,
-      "amountMinor": 2800,
-      "currency": "EUR"
-    }
-  ],
-  "discontinued": false,
-  "errors": [
-    "нет наименования",
-    "нет однозначных физических размеров слэба",
-    "нет толщины"
-  ],
-  "warnings": [],
-  "sourceLocation": "лист QUARTZFORMS, строка данных 15"
-}
-- {
-  "row": 290,
-  "category": "quartz",
-  "brand": "Quartzforms",
-  "article": "790",
-  "materialId": "imp-5096b0db12e5a9de67ce0938ef63d130",
-  "sourceName": "",
-  "name": "",
-  "commercialFormat": null,
-  "dimensions": null,
-  "surface": null,
-  "dimensionSource": "unresolved",
-  "prices": [
-    {
-      "fraction": 0.5,
-      "amountMinor": 2800,
-      "currency": "EUR"
-    }
-  ],
-  "discontinued": false,
-  "errors": [
-    "нет наименования",
-    "нет однозначных физических размеров слэба",
-    "нет толщины"
-  ],
-  "warnings": [],
-  "sourceLocation": "лист QUARTZFORMS, строка данных 16"
-}
-- {
-  "row": 291,
-  "category": "quartz",
-  "brand": "Quartzforms",
-  "article": "792",
-  "materialId": "imp-79e4afee6c457f4cc71af0c9be1864c1",
-  "sourceName": "",
-  "name": "",
-  "commercialFormat": null,
-  "dimensions": null,
-  "surface": null,
-  "dimensionSource": "unresolved",
-  "prices": [
-    {
-      "fraction": 0.5,
-      "amountMinor": 2800,
-      "currency": "EUR"
-    }
-  ],
-  "discontinued": false,
-  "errors": [
-    "нет наименования",
-    "нет однозначных физических размеров слэба",
-    "нет толщины"
-  ],
-  "warnings": [],
-  "sourceLocation": "лист QUARTZFORMS, строка данных 17"
-}
-- {
-  "row": 292,
-  "category": "quartz",
-  "brand": "Quartzforms",
-  "article": "794",
-  "materialId": "imp-246bb1091e2cad6cde0b85d062a7d99f",
-  "sourceName": "",
-  "name": "",
-  "commercialFormat": null,
-  "dimensions": null,
-  "surface": null,
-  "dimensionSource": "unresolved",
-  "prices": [
-    {
-      "fraction": 0.5,
-      "amountMinor": 2800,
-      "currency": "EUR"
-    }
-  ],
-  "discontinued": false,
-  "errors": [
-    "нет наименования",
-    "нет однозначных физических размеров слэба",
-    "нет толщины"
-  ],
-  "warnings": [],
-  "sourceLocation": "лист QUARTZFORMS, строка данных 18"
-}
-- {
-  "row": 293,
-  "category": "quartz",
-  "brand": "Quartzforms",
-  "article": "796",
-  "materialId": "imp-b8f72ff10d11ecf8c45bc57bd8200067",
-  "sourceName": "",
-  "name": "",
-  "commercialFormat": null,
-  "dimensions": null,
-  "surface": null,
-  "dimensionSource": "unresolved",
-  "prices": [
-    {
-      "fraction": 0.5,
-      "amountMinor": 2800,
-      "currency": "EUR"
-    }
-  ],
-  "discontinued": false,
-  "errors": [
-    "нет наименования",
-    "нет однозначных физических размеров слэба",
-    "нет толщины"
-  ],
-  "warnings": [],
-  "sourceLocation": "лист QUARTZFORMS, строка данных 19"
-}
-- {
-  "row": 294,
-  "category": "quartz",
-  "brand": "Quartzforms",
-  "article": "798",
-  "materialId": "imp-dbe5a41df5b3005c044d0f7b2e981702",
-  "sourceName": "",
-  "name": "",
-  "commercialFormat": null,
-  "dimensions": null,
-  "surface": null,
-  "dimensionSource": "unresolved",
-  "prices": [
-    {
-      "fraction": 0.5,
-      "amountMinor": 2800,
-      "currency": "EUR"
-    }
-  ],
-  "discontinued": false,
-  "errors": [
-    "нет наименования",
-    "нет однозначных физических размеров слэба",
-    "нет толщины"
-  ],
-  "warnings": [],
-  "sourceLocation": "лист QUARTZFORMS, строка данных 20"
-}
-- {
-  "row": 295,
-  "category": "quartz",
-  "brand": "Quartzforms",
-  "article": "800",
-  "materialId": "imp-42e6f10ebf895a9140b049c8352557a4",
-  "sourceName": "",
-  "name": "",
-  "commercialFormat": null,
-  "dimensions": null,
-  "surface": null,
-  "dimensionSource": "unresolved",
-  "prices": [
-    {
-      "fraction": 0.5,
-      "amountMinor": 2800,
-      "currency": "EUR"
-    }
-  ],
-  "discontinued": false,
-  "errors": [
-    "нет наименования",
-    "нет однозначных физических размеров слэба",
-    "нет толщины"
-  ],
-  "warnings": [],
-  "sourceLocation": "лист QUARTZFORMS, строка данных 21"
-}
+Нет.
 
 ## Suspicious prices
 
-- Строка 434: Caesarstone 1141 Pure White #OUT — SHIFTED_FULL_PRICE: Цена восстановлена из смещённой колонки Поверхность; HIGH suspicious_half_price: подозрительное соотношение HALF/FULL
-- Строка 435: Caesarstone 3100 Jet Black — SHIFTED_FULL_PRICE: Цена восстановлена из смещённой колонки Поверхность; HIGH suspicious_half_price: подозрительное соотношение HALF/FULL
-- Строка 436: Caesarstone 4130 Clamshell — SHIFTED_FULL_PRICE: Цена восстановлена из смещённой колонки Поверхность; HIGH suspicious_half_price: подозрительное соотношение HALF/FULL
-- Строка 437: Caesarstone 4330 Ginger — SHIFTED_FULL_PRICE: Цена восстановлена из смещённой колонки Поверхность; HIGH suspicious_half_price: подозрительное соотношение HALF/FULL
-- Строка 438: Caesarstone 4003 Sleek Concrete # O U T — SHIFTED_FULL_PRICE: Цена восстановлена из смещённой колонки Поверхность; HIGH suspicious_half_price: подозрительное соотношение HALF/FULL
-- Строка 439: Caesarstone 5003 Piatra Grey — SHIFTED_FULL_PRICE: Цена восстановлена из смещённой колонки Поверхность; HIGH suspicious_half_price: подозрительное соотношение HALF/FULL
-- Строка 440: Caesarstone 5100 Vanilla Noir — SHIFTED_FULL_PRICE: Цена восстановлена из смещённой колонки Поверхность; HIGH suspicious_half_price: подозрительное соотношение HALF/FULL
-- Строка 441: Caesarstone 5110 Alpine Mist — SHIFTED_FULL_PRICE: Цена восстановлена из смещённой колонки Поверхность; HIGH suspicious_half_price: подозрительное соотношение HALF/FULL
-- Строка 442: Caesarstone 5133 Symphony Grey — SHIFTED_FULL_PRICE: Цена восстановлена из смещённой колонки Поверхность; HIGH suspicious_half_price: подозрительное соотношение HALF/FULL
-- Строка 443: Caesarstone 5141 Frosty Carrina — SHIFTED_FULL_PRICE: Цена восстановлена из смещённой колонки Поверхность; HIGH suspicious_half_price: подозрительное соотношение HALF/FULL
-- Строка 444: Caesarstone 5143 White Attica — SHIFTED_FULL_PRICE: Цена восстановлена из смещённой колонки Поверхность; HIGH suspicious_half_price: подозрительное соотношение HALF/FULL
-- Строка 445: Caesarstone 5211 Noble Grey — SHIFTED_FULL_PRICE: Цена восстановлена из смещённой колонки Поверхность; HIGH suspicious_half_price: подозрительное соотношение HALF/FULL
-- Строка 446: Caesarstone 5212 Taj Royale # O U T — SHIFTED_FULL_PRICE: Цена восстановлена из смещённой колонки Поверхность; HIGH suspicious_half_price: подозрительное соотношение HALF/FULL
-- Строка 447: Caesarstone 6003 Coastal Grey — SHIFTED_FULL_PRICE: Цена восстановлена из смещённой колонки Поверхность; HIGH suspicious_half_price: подозрительное соотношение HALF/FULL
-- Строка 448: Caesarstone 6046 Moorland Fog — SHIFTED_FULL_PRICE: Цена восстановлена из смещённой колонки Поверхность; HIGH suspicious_half_price: подозрительное соотношение HALF/FULL
-- Строка 449: Caesarstone 6131 Bianco Drift — SHIFTED_FULL_PRICE: Цена восстановлена из смещённой колонки Поверхность; HIGH suspicious_half_price: подозрительное соотношение HALF/FULL
-- Строка 450: Caesarstone 6338 Woodlands — SHIFTED_FULL_PRICE: Цена восстановлена из смещённой колонки Поверхность; HIGH suspicious_half_price: подозрительное соотношение HALF/FULL
-- Строка 451: Caesarstone 5141 Frosty Carrina — SHIFTED_FULL_PRICE: Цена восстановлена из смещённой колонки Поверхность; HIGH suspicious_half_price: подозрительное соотношение HALF/FULL
-- Строка 452: Caesarstone 4011 Cloudburst Concrete #Матовый! — SHIFTED_FULL_PRICE: Цена восстановлена из смещённой колонки Поверхность; HIGH suspicious_half_price: подозрительное соотношение HALF/FULL
-- Строка 453: Caesarstone 4023 Topus Concrete #Матовый! — SHIFTED_FULL_PRICE: Цена восстановлена из смещённой колонки Поверхность; HIGH suspicious_half_price: подозрительное соотношение HALF/FULL
-- Строка 454: Caesarstone 4033 Rugged Concrete #Матовый! — SHIFTED_FULL_PRICE: Цена восстановлена из смещённой колонки Поверхность; HIGH suspicious_half_price: подозрительное соотношение HALF/FULL
-- Строка 455: Caesarstone 4044 Airy Concrete #Матовый! — SHIFTED_FULL_PRICE: Цена восстановлена из смещённой колонки Поверхность; HIGH suspicious_half_price: подозрительное соотношение HALF/FULL
-- Строка 456: Caesarstone 5810 Black Tempal # O U T #Матовый! — SHIFTED_FULL_PRICE: Цена восстановлена из смещённой колонки Поверхность; HIGH suspicious_half_price: подозрительное соотношение HALF/FULL
-- Строка 457: Caesarstone 4735 Oxidian #OUT #Матовый! — SHIFTED_FULL_PRICE: Цена восстановлена из смещённой колонки Поверхность; HIGH suspicious_half_price: подозрительное соотношение HALF/FULL
-- Строка 681: Noblle Q117 Jade White — HIGH suspicious_half_price: подозрительное соотношение HALF/FULL
-- Строка 682: Noblle Q131 Black Sand — HIGH suspicious_half_price: подозрительное соотношение HALF/FULL
-- Строка 683: Noblle Q716 Carrara Sun — HIGH suspicious_half_price: подозрительное соотношение HALF/FULL
-- Строка 684: Noblle Q718 Carrara Moon — HIGH suspicious_half_price: подозрительное соотношение HALF/FULL
-- Строка 685: Noblle Q719 Carrara Black — HIGH suspicious_half_price: подозрительное соотношение HALF/FULL
-- Строка 686: Noblle Q717 Bianco Giogia OUT — HIGH suspicious_half_price: подозрительное соотношение HALF/FULL
-- Строка 687: Noblle Q735 Bianco Venato OUT — HIGH suspicious_half_price: подозрительное соотношение HALF/FULL
-- Строка 688: Noblle Q740 Calacatta Venato — HIGH suspicious_half_price: подозрительное соотношение HALF/FULL
-- Строка 689: Noblle Q744 Calacatta Bianco OUT — HIGH suspicious_half_price: подозрительное соотношение HALF/FULL
-- Строка 690: Noblle Q765 Nero Marquina — HIGH suspicious_half_price: подозрительное соотношение HALF/FULL
-- Строка 691: Noblle Q785 Calacatta Gold OUT — HIGH suspicious_half_price: подозрительное соотношение HALF/FULL
-- Строка 692: Noblle Q703 Calacatta Borghini — HIGH suspicious_half_price: подозрительное соотношение HALF/FULL
-- Строка 693: Noblle Q707 Sahara Noir — HIGH suspicious_half_price: подозрительное соотношение HALF/FULL
-- Строка 694: Noblle Q757 Calacatta Aurum — HIGH suspicious_half_price: подозрительное соотношение HALF/FULL
-- Строка 695: Noblle Q840 White Misterio OUT — HIGH suspicious_half_price: подозрительное соотношение HALF/FULL
-- Строка 696: Noblle Q850 Urban Grigio OUT — HIGH suspicious_half_price: подозрительное соотношение HALF/FULL
-- Строка 697: Noblle Q798 Calacatta Elegant — HIGH suspicious_half_price: подозрительное соотношение HALF/FULL
-- Строка 698: Noblle Q810 Grey Glow — HIGH suspicious_half_price: подозрительное соотношение HALF/FULL
-- Строка 699: Noblle Q811 Beton White — HIGH suspicious_half_price: подозрительное соотношение HALF/FULL
-- Строка 700: Noblle Q859 Beton Brass — HIGH suspicious_half_price: подозрительное соотношение HALF/FULL
-- Строка 701: Noblle Q880 Beton Grey — HIGH suspicious_half_price: подозрительное соотношение HALF/FULL
-- Строка 702: Noblle Q913 Moon White — HIGH suspicious_half_price: подозрительное соотношение HALF/FULL
-- Строка 703: Noblle Q795 Calacatta Magic Dark — HIGH suspicious_half_price: подозрительное соотношение HALF/FULL
-- Строка 704: Noblle Q796 Calacatta Magic White — HIGH suspicious_half_price: подозрительное соотношение HALF/FULL
-- Строка 705: Noblle Q797 Calacatta True Light — HIGH suspicious_half_price: подозрительное соотношение HALF/FULL
-- Строка 706: Noblle Q801 Beton Marquina — HIGH suspicious_half_price: подозрительное соотношение HALF/FULL
-- Строка 707: Noblle Q901 Patagonia Gold — HIGH suspicious_half_price: подозрительное соотношение HALF/FULL
-- Строка 708: Noblle Q902 Patagonia Platinum — HIGH suspicious_half_price: подозрительное соотношение HALF/FULL
-- Строка 709: Noblle Q921 Arabescato Black — HIGH suspicious_half_price: подозрительное соотношение HALF/FULL
-- Строка 710: Noblle Q790 Venato Royal выводится — HIGH suspicious_half_price: подозрительное соотношение HALF/FULL
+Нет.
 
 ## ARTICLE_NAME_CONFLICT
 
@@ -1148,1030 +515,18 @@
 
 ## Все строки без наименования
 
-### Строка 66
-
-Причина: значение колонки «Наименование» пусто; однозначного соседнего текстового значения нет.
-
-```json
-{
-  "Бренд": "Stratos",
-  "Категория": "Кварцевый агломерат",
-  "Артикул": "CLOUD",
-  "Наименование": "matt",
-  "Размер": "3050х1400",
-  "Толщина": "20 мм",
-  "Поверхность": 780,
-  "Цена": null,
-  "Валюта": "USD",
-  "Единица": "слэб",
-  "Цена 1/2": 400,
-  "Цена 1/4": 235,
-  "Тип цены": "ОПТ1",
-  "НДС": "с НДС 20%",
-  "Примечание": 50,
-  "Источник": null,
-  "Место в источнике": "лист STRATOS, строка данных 69"
-}
-```
-
-### Строка 67
-
-Причина: значение колонки «Наименование» пусто; однозначного соседнего текстового значения нет.
-
-```json
-{
-  "Бренд": "Stratos",
-  "Категория": "Кварцевый агломерат",
-  "Артикул": "CREAM",
-  "Наименование": "matt",
-  "Размер": "3050х1400",
-  "Толщина": "20 мм",
-  "Поверхность": 780,
-  "Цена": null,
-  "Валюта": "USD",
-  "Единица": "слэб",
-  "Цена 1/2": 400,
-  "Цена 1/4": 235,
-  "Тип цены": "ОПТ1",
-  "НДС": "с НДС 20%",
-  "Примечание": 50,
-  "Источник": null,
-  "Место в источнике": "лист STRATOS, строка данных 70"
-}
-```
-
-### Строка 68
-
-Причина: значение колонки «Наименование» пусто; однозначного соседнего текстового значения нет.
-
-```json
-{
-  "Бренд": "Stratos",
-  "Категория": "Кварцевый агломерат",
-  "Артикул": "CRUSH",
-  "Наименование": "matt",
-  "Размер": "3050х1400",
-  "Толщина": "20 мм",
-  "Поверхность": 780,
-  "Цена": null,
-  "Валюта": "USD",
-  "Единица": "слэб",
-  "Цена 1/2": 400,
-  "Цена 1/4": 235,
-  "Тип цены": "ОПТ1",
-  "НДС": "с НДС 20%",
-  "Примечание": 50,
-  "Источник": null,
-  "Место в источнике": "лист STRATOS, строка данных 71"
-}
-```
-
-### Строка 69
-
-Причина: значение колонки «Наименование» пусто; однозначного соседнего текстового значения нет.
-
-```json
-{
-  "Бренд": "Stratos",
-  "Категория": "Кварцевый агломерат",
-  "Артикул": "FLAKE",
-  "Наименование": "matt",
-  "Размер": "3050х1400",
-  "Толщина": "20 мм",
-  "Поверхность": 780,
-  "Цена": null,
-  "Валюта": "USD",
-  "Единица": "слэб",
-  "Цена 1/2": 400,
-  "Цена 1/4": 235,
-  "Тип цены": "ОПТ1",
-  "НДС": "с НДС 20%",
-  "Примечание": 50,
-  "Источник": null,
-  "Место в источнике": "лист STRATOS, строка данных 72"
-}
-```
-
-### Строка 70
-
-Причина: значение колонки «Наименование» пусто; однозначного соседнего текстового значения нет.
-
-```json
-{
-  "Бренд": "Stratos",
-  "Категория": "Кварцевый агломерат",
-  "Артикул": 250,
-  "Наименование": null,
-  "Размер": "3050х1400",
-  "Толщина": "20 мм",
-  "Поверхность": 780,
-  "Цена": null,
-  "Валюта": "USD",
-  "Единица": "слэб",
-  "Цена 1/2": 400,
-  "Цена 1/4": 235,
-  "Тип цены": "ОПТ1",
-  "НДС": "с НДС 20%",
-  "Примечание": 50,
-  "Источник": null,
-  "Место в источнике": "лист STRATOS, строка данных 73"
-}
-```
-
-### Строка 71
-
-Причина: значение колонки «Наименование» пусто; однозначного соседнего текстового значения нет.
-
-```json
-{
-  "Бренд": "Stratos",
-  "Категория": "Кварцевый агломерат",
-  "Артикул": 252,
-  "Наименование": null,
-  "Размер": "3050х1400",
-  "Толщина": "20 мм",
-  "Поверхность": 750,
-  "Цена": null,
-  "Валюта": "USD",
-  "Единица": "слэб",
-  "Цена 1/2": 385,
-  "Цена 1/4": 225,
-  "Тип цены": "ОПТ1",
-  "НДС": "с НДС 20%",
-  "Примечание": 50,
-  "Источник": null,
-  "Место в источнике": "лист STRATOS, строка данных 74"
-}
-```
-
-### Строка 276
-
-Причина: значение колонки «Наименование» пусто; однозначного соседнего текстового значения нет.
-
-```json
-{
-  "Бренд": "Quartzforms",
-  "Категория": "Кварцевый агломерат",
-  "Артикул": 760,
-  "Наименование": null,
-  "Размер": 1040,
-  "Толщина": null,
-  "Поверхность": null,
-  "Цена": null,
-  "Валюта": "EUR",
-  "Единица": "слэб",
-  "Цена 1/2": 28,
-  "Цена 1/4": null,
-  "Тип цены": null,
-  "НДС": 761,
-  "Примечание": null,
-  "Источник": "QUARTZFORMS/Рекомендуемая розница QUARTZFORMS.xlsx",
-  "Место в источнике": "лист QUARTZFORMS, строка данных 2"
-}
-```
-
-### Строка 277
-
-Причина: значение колонки «Наименование» пусто; однозначного соседнего текстового значения нет.
-
-```json
-{
-  "Бренд": "Quartzforms",
-  "Категория": "Кварцевый агломерат",
-  "Артикул": 764,
-  "Наименование": null,
-  "Размер": 1280,
-  "Толщина": null,
-  "Поверхность": null,
-  "Цена": null,
-  "Валюта": "EUR",
-  "Единица": "слэб",
-  "Цена 1/2": 28,
-  "Цена 1/4": null,
-  "Тип цены": null,
-  "НДС": 761,
-  "Примечание": null,
-  "Источник": "QUARTZFORMS/Рекомендуемая розница QUARTZFORMS.xlsx",
-  "Место в источнике": "лист QUARTZFORMS, строка данных 3"
-}
-```
-
-### Строка 278
-
-Причина: значение колонки «Наименование» пусто; однозначного соседнего текстового значения нет.
-
-```json
-{
-  "Бренд": "Quartzforms",
-  "Категория": "Кварцевый агломерат",
-  "Артикул": 766,
-  "Наименование": null,
-  "Размер": 960,
-  "Толщина": null,
-  "Поверхность": null,
-  "Цена": null,
-  "Валюта": "EUR",
-  "Единица": "слэб",
-  "Цена 1/2": 28,
-  "Цена 1/4": null,
-  "Тип цены": null,
-  "НДС": 761,
-  "Примечание": null,
-  "Источник": "QUARTZFORMS/Рекомендуемая розница QUARTZFORMS.xlsx",
-  "Место в источнике": "лист QUARTZFORMS, строка данных 4"
-}
-```
-
-### Строка 279
-
-Причина: значение колонки «Наименование» пусто; однозначного соседнего текстового значения нет.
-
-```json
-{
-  "Бренд": "Quartzforms",
-  "Категория": "Кварцевый агломерат",
-  "Артикул": 768,
-  "Наименование": null,
-  "Размер": 1020,
-  "Толщина": null,
-  "Поверхность": null,
-  "Цена": null,
-  "Валюта": "EUR",
-  "Единица": "слэб",
-  "Цена 1/2": 28,
-  "Цена 1/4": null,
-  "Тип цены": null,
-  "НДС": 761,
-  "Примечание": null,
-  "Источник": "QUARTZFORMS/Рекомендуемая розница QUARTZFORMS.xlsx",
-  "Место в источнике": "лист QUARTZFORMS, строка данных 5"
-}
-```
-
-### Строка 280
-
-Причина: значение колонки «Наименование» пусто; однозначного соседнего текстового значения нет.
-
-```json
-{
-  "Бренд": "Quartzforms",
-  "Категория": "Кварцевый агломерат",
-  "Артикул": 770,
-  "Наименование": null,
-  "Размер": 1280,
-  "Толщина": null,
-  "Поверхность": null,
-  "Цена": null,
-  "Валюта": "EUR",
-  "Единица": "слэб",
-  "Цена 1/2": 28,
-  "Цена 1/4": null,
-  "Тип цены": null,
-  "НДС": 761,
-  "Примечание": null,
-  "Источник": "QUARTZFORMS/Рекомендуемая розница QUARTZFORMS.xlsx",
-  "Место в источнике": "лист QUARTZFORMS, строка данных 6"
-}
-```
-
-### Строка 281
-
-Причина: значение колонки «Наименование» пусто; однозначного соседнего текстового значения нет.
-
-```json
-{
-  "Бренд": "Quartzforms",
-  "Категория": "Кварцевый агломерат",
-  "Артикул": 772,
-  "Наименование": null,
-  "Размер": 990,
-  "Толщина": null,
-  "Поверхность": null,
-  "Цена": null,
-  "Валюта": "EUR",
-  "Единица": "слэб",
-  "Цена 1/2": 28,
-  "Цена 1/4": null,
-  "Тип цены": null,
-  "НДС": 761,
-  "Примечание": null,
-  "Источник": "QUARTZFORMS/Рекомендуемая розница QUARTZFORMS.xlsx",
-  "Место в источнике": "лист QUARTZFORMS, строка данных 7"
-}
-```
-
-### Строка 282
-
-Причина: значение колонки «Наименование» пусто; однозначного соседнего текстового значения нет.
-
-```json
-{
-  "Бренд": "Quartzforms",
-  "Категория": "Кварцевый агломерат",
-  "Артикул": 774,
-  "Наименование": null,
-  "Размер": 1020,
-  "Толщина": null,
-  "Поверхность": null,
-  "Цена": null,
-  "Валюта": "EUR",
-  "Единица": "слэб",
-  "Цена 1/2": 28,
-  "Цена 1/4": null,
-  "Тип цены": null,
-  "НДС": 761,
-  "Примечание": null,
-  "Источник": "QUARTZFORMS/Рекомендуемая розница QUARTZFORMS.xlsx",
-  "Место в источнике": "лист QUARTZFORMS, строка данных 8"
-}
-```
-
-### Строка 283
-
-Причина: значение колонки «Наименование» пусто; однозначного соседнего текстового значения нет.
-
-```json
-{
-  "Бренд": "Quartzforms",
-  "Категория": "Кварцевый агломерат",
-  "Артикул": 776,
-  "Наименование": null,
-  "Размер": 1020,
-  "Толщина": null,
-  "Поверхность": null,
-  "Цена": null,
-  "Валюта": "EUR",
-  "Единица": "слэб",
-  "Цена 1/2": 28,
-  "Цена 1/4": null,
-  "Тип цены": null,
-  "НДС": 761,
-  "Примечание": null,
-  "Источник": "QUARTZFORMS/Рекомендуемая розница QUARTZFORMS.xlsx",
-  "Место в источнике": "лист QUARTZFORMS, строка данных 9"
-}
-```
-
-### Строка 284
-
-Причина: значение колонки «Наименование» пусто; однозначного соседнего текстового значения нет.
-
-```json
-{
-  "Бренд": "Quartzforms",
-  "Категория": "Кварцевый агломерат",
-  "Артикул": 778,
-  "Наименование": null,
-  "Размер": 1740,
-  "Толщина": null,
-  "Поверхность": null,
-  "Цена": null,
-  "Валюта": "EUR",
-  "Единица": "слэб",
-  "Цена 1/2": 28,
-  "Цена 1/4": null,
-  "Тип цены": null,
-  "НДС": 761,
-  "Примечание": null,
-  "Источник": "QUARTZFORMS/Рекомендуемая розница QUARTZFORMS.xlsx",
-  "Место в источнике": "лист QUARTZFORMS, строка данных 10"
-}
-```
-
-### Строка 285
-
-Причина: значение колонки «Наименование» пусто; однозначного соседнего текстового значения нет.
-
-```json
-{
-  "Бренд": "Quartzforms",
-  "Категория": "Кварцевый агломерат",
-  "Артикул": 780,
-  "Наименование": null,
-  "Размер": 1740,
-  "Толщина": null,
-  "Поверхность": null,
-  "Цена": null,
-  "Валюта": "EUR",
-  "Единица": "слэб",
-  "Цена 1/2": 28,
-  "Цена 1/4": null,
-  "Тип цены": null,
-  "НДС": 761,
-  "Примечание": null,
-  "Источник": "QUARTZFORMS/Рекомендуемая розница QUARTZFORMS.xlsx",
-  "Место в источнике": "лист QUARTZFORMS, строка данных 11"
-}
-```
-
-### Строка 286
-
-Причина: значение колонки «Наименование» пусто; однозначного соседнего текстового значения нет.
-
-```json
-{
-  "Бренд": "Quartzforms",
-  "Категория": "Кварцевый агломерат",
-  "Артикул": 782,
-  "Наименование": null,
-  "Размер": 1740,
-  "Толщина": null,
-  "Поверхность": null,
-  "Цена": null,
-  "Валюта": "EUR",
-  "Единица": "слэб",
-  "Цена 1/2": 28,
-  "Цена 1/4": null,
-  "Тип цены": null,
-  "НДС": 761,
-  "Примечание": null,
-  "Источник": "QUARTZFORMS/Рекомендуемая розница QUARTZFORMS.xlsx",
-  "Место в источнике": "лист QUARTZFORMS, строка данных 12"
-}
-```
-
-### Строка 287
-
-Причина: значение колонки «Наименование» пусто; однозначного соседнего текстового значения нет.
-
-```json
-{
-  "Бренд": "Quartzforms",
-  "Категория": "Кварцевый агломерат",
-  "Артикул": 784,
-  "Наименование": null,
-  "Размер": 1740,
-  "Толщина": null,
-  "Поверхность": null,
-  "Цена": null,
-  "Валюта": "EUR",
-  "Единица": "слэб",
-  "Цена 1/2": 28,
-  "Цена 1/4": null,
-  "Тип цены": null,
-  "НДС": 761,
-  "Примечание": null,
-  "Источник": "QUARTZFORMS/Рекомендуемая розница QUARTZFORMS.xlsx",
-  "Место в источнике": "лист QUARTZFORMS, строка данных 13"
-}
-```
-
-### Строка 288
-
-Причина: значение колонки «Наименование» пусто; однозначного соседнего текстового значения нет.
-
-```json
-{
-  "Бренд": "Quartzforms",
-  "Категория": "Кварцевый агломерат",
-  "Артикул": 786,
-  "Наименование": null,
-  "Размер": 1740,
-  "Толщина": null,
-  "Поверхность": null,
-  "Цена": null,
-  "Валюта": "EUR",
-  "Единица": "слэб",
-  "Цена 1/2": 28,
-  "Цена 1/4": null,
-  "Тип цены": null,
-  "НДС": 761,
-  "Примечание": null,
-  "Источник": "QUARTZFORMS/Рекомендуемая розница QUARTZFORMS.xlsx",
-  "Место в источнике": "лист QUARTZFORMS, строка данных 14"
-}
-```
-
-### Строка 289
-
-Причина: значение колонки «Наименование» пусто; однозначного соседнего текстового значения нет.
-
-```json
-{
-  "Бренд": "Quartzforms",
-  "Категория": "Кварцевый агломерат",
-  "Артикул": 788,
-  "Наименование": null,
-  "Размер": 1740,
-  "Толщина": null,
-  "Поверхность": null,
-  "Цена": null,
-  "Валюта": "EUR",
-  "Единица": "слэб",
-  "Цена 1/2": 28,
-  "Цена 1/4": null,
-  "Тип цены": null,
-  "НДС": 761,
-  "Примечание": null,
-  "Источник": "QUARTZFORMS/Рекомендуемая розница QUARTZFORMS.xlsx",
-  "Место в источнике": "лист QUARTZFORMS, строка данных 15"
-}
-```
-
-### Строка 290
-
-Причина: значение колонки «Наименование» пусто; однозначного соседнего текстового значения нет.
-
-```json
-{
-  "Бренд": "Quartzforms",
-  "Категория": "Кварцевый агломерат",
-  "Артикул": 790,
-  "Наименование": null,
-  "Размер": 1740,
-  "Толщина": null,
-  "Поверхность": null,
-  "Цена": null,
-  "Валюта": "EUR",
-  "Единица": "слэб",
-  "Цена 1/2": 28,
-  "Цена 1/4": null,
-  "Тип цены": null,
-  "НДС": 761,
-  "Примечание": null,
-  "Источник": "QUARTZFORMS/Рекомендуемая розница QUARTZFORMS.xlsx",
-  "Место в источнике": "лист QUARTZFORMS, строка данных 16"
-}
-```
-
-### Строка 291
-
-Причина: значение колонки «Наименование» пусто; однозначного соседнего текстового значения нет.
-
-```json
-{
-  "Бренд": "Quartzforms",
-  "Категория": "Кварцевый агломерат",
-  "Артикул": 792,
-  "Наименование": null,
-  "Размер": 1740,
-  "Толщина": null,
-  "Поверхность": null,
-  "Цена": null,
-  "Валюта": "EUR",
-  "Единица": "слэб",
-  "Цена 1/2": 28,
-  "Цена 1/4": null,
-  "Тип цены": null,
-  "НДС": 761,
-  "Примечание": null,
-  "Источник": "QUARTZFORMS/Рекомендуемая розница QUARTZFORMS.xlsx",
-  "Место в источнике": "лист QUARTZFORMS, строка данных 17"
-}
-```
-
-### Строка 292
-
-Причина: значение колонки «Наименование» пусто; однозначного соседнего текстового значения нет.
-
-```json
-{
-  "Бренд": "Quartzforms",
-  "Категория": "Кварцевый агломерат",
-  "Артикул": 794,
-  "Наименование": null,
-  "Размер": 1740,
-  "Толщина": null,
-  "Поверхность": null,
-  "Цена": null,
-  "Валюта": "EUR",
-  "Единица": "слэб",
-  "Цена 1/2": 28,
-  "Цена 1/4": null,
-  "Тип цены": null,
-  "НДС": 761,
-  "Примечание": null,
-  "Источник": "QUARTZFORMS/Рекомендуемая розница QUARTZFORMS.xlsx",
-  "Место в источнике": "лист QUARTZFORMS, строка данных 18"
-}
-```
-
-### Строка 293
-
-Причина: значение колонки «Наименование» пусто; однозначного соседнего текстового значения нет.
-
-```json
-{
-  "Бренд": "Quartzforms",
-  "Категория": "Кварцевый агломерат",
-  "Артикул": 796,
-  "Наименование": null,
-  "Размер": 1740,
-  "Толщина": null,
-  "Поверхность": null,
-  "Цена": null,
-  "Валюта": "EUR",
-  "Единица": "слэб",
-  "Цена 1/2": 28,
-  "Цена 1/4": null,
-  "Тип цены": null,
-  "НДС": 761,
-  "Примечание": null,
-  "Источник": "QUARTZFORMS/Рекомендуемая розница QUARTZFORMS.xlsx",
-  "Место в источнике": "лист QUARTZFORMS, строка данных 19"
-}
-```
-
-### Строка 294
-
-Причина: значение колонки «Наименование» пусто; однозначного соседнего текстового значения нет.
-
-```json
-{
-  "Бренд": "Quartzforms",
-  "Категория": "Кварцевый агломерат",
-  "Артикул": 798,
-  "Наименование": null,
-  "Размер": 1740,
-  "Толщина": null,
-  "Поверхность": null,
-  "Цена": null,
-  "Валюта": "EUR",
-  "Единица": "слэб",
-  "Цена 1/2": 28,
-  "Цена 1/4": null,
-  "Тип цены": null,
-  "НДС": 761,
-  "Примечание": null,
-  "Источник": "QUARTZFORMS/Рекомендуемая розница QUARTZFORMS.xlsx",
-  "Место в источнике": "лист QUARTZFORMS, строка данных 20"
-}
-```
-
-### Строка 295
-
-Причина: значение колонки «Наименование» пусто; однозначного соседнего текстового значения нет.
-
-```json
-{
-  "Бренд": "Quartzforms",
-  "Категория": "Кварцевый агломерат",
-  "Артикул": 800,
-  "Наименование": null,
-  "Размер": 960,
-  "Толщина": null,
-  "Поверхность": null,
-  "Цена": null,
-  "Валюта": "EUR",
-  "Единица": "слэб",
-  "Цена 1/2": 28,
-  "Цена 1/4": null,
-  "Тип цены": null,
-  "НДС": 761,
-  "Примечание": null,
-  "Источник": "QUARTZFORMS/Рекомендуемая розница QUARTZFORMS.xlsx",
-  "Место в источнике": "лист QUARTZFORMS, строка данных 21"
-}
-```
-
-### Строка 296
-
-Причина: значение колонки «Наименование» пусто; однозначного соседнего текстового значения нет.
-
-```json
-{
-  "Бренд": "Quartzforms",
-  "Категория": "Кварцевый агломерат",
-  "Артикул": 802,
-  "Наименование": null,
-  "Размер": 960,
-  "Толщина": null,
-  "Поверхность": null,
-  "Цена": null,
-  "Валюта": "EUR",
-  "Единица": "слэб",
-  "Цена 1/2": 28,
-  "Цена 1/4": null,
-  "Тип цены": null,
-  "НДС": 761,
-  "Примечание": null,
-  "Источник": "QUARTZFORMS/Рекомендуемая розница QUARTZFORMS.xlsx",
-  "Место в источнике": "лист QUARTZFORMS, строка данных 22"
-}
-```
-
-### Строка 297
-
-Причина: значение колонки «Наименование» пусто; однозначного соседнего текстового значения нет.
-
-```json
-{
-  "Бренд": "Quartzforms",
-  "Категория": "Кварцевый агломерат",
-  "Артикул": 804,
-  "Наименование": null,
-  "Размер": 1280,
-  "Толщина": null,
-  "Поверхность": null,
-  "Цена": null,
-  "Валюта": "EUR",
-  "Единица": "слэб",
-  "Цена 1/2": 28,
-  "Цена 1/4": null,
-  "Тип цены": null,
-  "НДС": 761,
-  "Примечание": null,
-  "Источник": "QUARTZFORMS/Рекомендуемая розница QUARTZFORMS.xlsx",
-  "Место в источнике": "лист QUARTZFORMS, строка данных 23"
-}
-```
-
-### Строка 298
-
-Причина: значение колонки «Наименование» пусто; однозначного соседнего текстового значения нет.
-
-```json
-{
-  "Бренд": "Quartzforms",
-  "Категория": "Кварцевый агломерат",
-  "Артикул": 806,
-  "Наименование": null,
-  "Размер": 1740,
-  "Толщина": null,
-  "Поверхность": null,
-  "Цена": null,
-  "Валюта": "EUR",
-  "Единица": "слэб",
-  "Цена 1/2": 28,
-  "Цена 1/4": null,
-  "Тип цены": null,
-  "НДС": 761,
-  "Примечание": null,
-  "Источник": "QUARTZFORMS/Рекомендуемая розница QUARTZFORMS.xlsx",
-  "Место в источнике": "лист QUARTZFORMS, строка данных 24"
-}
-```
-
-### Строка 299
-
-Причина: значение колонки «Наименование» пусто; однозначного соседнего текстового значения нет.
-
-```json
-{
-  "Бренд": "Quartzforms",
-  "Категория": "Кварцевый агломерат",
-  "Артикул": 808,
-  "Наименование": null,
-  "Размер": 1740,
-  "Толщина": null,
-  "Поверхность": null,
-  "Цена": null,
-  "Валюта": "EUR",
-  "Единица": "слэб",
-  "Цена 1/2": 28,
-  "Цена 1/4": null,
-  "Тип цены": null,
-  "НДС": 761,
-  "Примечание": null,
-  "Источник": "QUARTZFORMS/Рекомендуемая розница QUARTZFORMS.xlsx",
-  "Место в источнике": "лист QUARTZFORMS, строка данных 25"
-}
-```
-
-### Строка 300
-
-Причина: значение колонки «Наименование» пусто; однозначного соседнего текстового значения нет.
-
-```json
-{
-  "Бренд": "Quartzforms",
-  "Категория": "Кварцевый агломерат",
-  "Артикул": 810,
-  "Наименование": null,
-  "Размер": 1740,
-  "Толщина": null,
-  "Поверхность": null,
-  "Цена": null,
-  "Валюта": "EUR",
-  "Единица": "слэб",
-  "Цена 1/2": 28,
-  "Цена 1/4": null,
-  "Тип цены": null,
-  "НДС": 761,
-  "Примечание": null,
-  "Источник": "QUARTZFORMS/Рекомендуемая розница QUARTZFORMS.xlsx",
-  "Место в источнике": "лист QUARTZFORMS, строка данных 26"
-}
-```
-
-### Строка 301
-
-Причина: значение колонки «Наименование» пусто; однозначного соседнего текстового значения нет.
-
-```json
-{
-  "Бренд": "Quartzforms",
-  "Категория": "Кварцевый агломерат",
-  "Артикул": 812,
-  "Наименование": null,
-  "Размер": 1740,
-  "Толщина": null,
-  "Поверхность": null,
-  "Цена": null,
-  "Валюта": "EUR",
-  "Единица": "слэб",
-  "Цена 1/2": 28,
-  "Цена 1/4": null,
-  "Тип цены": null,
-  "НДС": 761,
-  "Примечание": null,
-  "Источник": "QUARTZFORMS/Рекомендуемая розница QUARTZFORMS.xlsx",
-  "Место в источнике": "лист QUARTZFORMS, строка данных 27"
-}
-```
-
-### Строка 302
-
-Причина: значение колонки «Наименование» пусто; однозначного соседнего текстового значения нет.
-
-```json
-{
-  "Бренд": "Quartzforms",
-  "Категория": "Кварцевый агломерат",
-  "Артикул": 814,
-  "Наименование": null,
-  "Размер": 1740,
-  "Толщина": null,
-  "Поверхность": null,
-  "Цена": null,
-  "Валюта": "EUR",
-  "Единица": "слэб",
-  "Цена 1/2": 28,
-  "Цена 1/4": null,
-  "Тип цены": null,
-  "НДС": 761,
-  "Примечание": null,
-  "Источник": "QUARTZFORMS/Рекомендуемая розница QUARTZFORMS.xlsx",
-  "Место в источнике": "лист QUARTZFORMS, строка данных 28"
-}
-```
-
-### Строка 303
-
-Причина: значение колонки «Наименование» пусто; однозначного соседнего текстового значения нет.
-
-```json
-{
-  "Бренд": "Quartzforms",
-  "Категория": "Кварцевый агломерат",
-  "Артикул": 816,
-  "Наименование": null,
-  "Размер": 960,
-  "Толщина": null,
-  "Поверхность": null,
-  "Цена": null,
-  "Валюта": "EUR",
-  "Единица": "слэб",
-  "Цена 1/2": 28,
-  "Цена 1/4": null,
-  "Тип цены": null,
-  "НДС": 761,
-  "Примечание": null,
-  "Источник": "QUARTZFORMS/Рекомендуемая розница QUARTZFORMS.xlsx",
-  "Место в источнике": "лист QUARTZFORMS, строка данных 29"
-}
-```
-
-### Строка 304
-
-Причина: значение колонки «Наименование» пусто; однозначного соседнего текстового значения нет.
-
-```json
-{
-  "Бренд": "Quartzforms",
-  "Категория": "Кварцевый агломерат",
-  "Артикул": 818,
-  "Наименование": null,
-  "Размер": 960,
-  "Толщина": null,
-  "Поверхность": null,
-  "Цена": null,
-  "Валюта": "EUR",
-  "Единица": "слэб",
-  "Цена 1/2": 28,
-  "Цена 1/4": null,
-  "Тип цены": null,
-  "НДС": 761,
-  "Примечание": null,
-  "Источник": "QUARTZFORMS/Рекомендуемая розница QUARTZFORMS.xlsx",
-  "Место в источнике": "лист QUARTZFORMS, строка данных 30"
-}
-```
-
-### Строка 305
-
-Причина: значение колонки «Наименование» пусто; однозначного соседнего текстового значения нет.
-
-```json
-{
-  "Бренд": "Quartzforms",
-  "Категория": "Кварцевый агломерат",
-  "Артикул": 820,
-  "Наименование": null,
-  "Размер": 1280,
-  "Толщина": null,
-  "Поверхность": null,
-  "Цена": null,
-  "Валюта": "EUR",
-  "Единица": "слэб",
-  "Цена 1/2": 28,
-  "Цена 1/4": null,
-  "Тип цены": null,
-  "НДС": 761,
-  "Примечание": null,
-  "Источник": "QUARTZFORMS/Рекомендуемая розница QUARTZFORMS.xlsx",
-  "Место в источнике": "лист QUARTZFORMS, строка данных 31"
-}
-```
-
-### Строка 306
-
-Причина: значение колонки «Наименование» пусто; однозначного соседнего текстового значения нет.
-
-```json
-{
-  "Бренд": "Quartzforms",
-  "Категория": "Кварцевый агломерат",
-  "Артикул": 822,
-  "Наименование": null,
-  "Размер": 1450,
-  "Толщина": null,
-  "Поверхность": null,
-  "Цена": null,
-  "Валюта": "EUR",
-  "Единица": "слэб",
-  "Цена 1/2": 28,
-  "Цена 1/4": null,
-  "Тип цены": null,
-  "НДС": 761,
-  "Примечание": null,
-  "Источник": "QUARTZFORMS/Рекомендуемая розница QUARTZFORMS.xlsx",
-  "Место в источнике": "лист QUARTZFORMS, строка данных 32"
-}
-```
-
-### Строка 307
-
-Причина: значение колонки «Наименование» пусто; однозначного соседнего текстового значения нет.
-
-```json
-{
-  "Бренд": "Quartzforms",
-  "Категория": "Кварцевый агломерат",
-  "Артикул": 824,
-  "Наименование": null,
-  "Размер": 1020,
-  "Толщина": null,
-  "Поверхность": null,
-  "Цена": null,
-  "Валюта": "EUR",
-  "Единица": "слэб",
-  "Цена 1/2": 28,
-  "Цена 1/4": null,
-  "Тип цены": null,
-  "НДС": 761,
-  "Примечание": null,
-  "Источник": "QUARTZFORMS/Рекомендуемая розница QUARTZFORMS.xlsx",
-  "Место в источнике": "лист QUARTZFORMS, строка данных 33"
-}
-```
-
-### Строка 308
-
-Причина: значение колонки «Наименование» пусто; однозначного соседнего текстового значения нет.
-
-```json
-{
-  "Бренд": "Quartzforms",
-  "Категория": "Кварцевый агломерат",
-  "Артикул": 826,
-  "Наименование": null,
-  "Размер": 1020,
-  "Толщина": null,
-  "Поверхность": null,
-  "Цена": null,
-  "Валюта": "EUR",
-  "Единица": "слэб",
-  "Цена 1/2": 28,
-  "Цена 1/4": null,
-  "Тип цены": null,
-  "НДС": 761,
-  "Примечание": null,
-  "Источник": "QUARTZFORMS/Рекомендуемая розница QUARTZFORMS.xlsx",
-  "Место в источнике": "лист QUARTZFORMS, строка данных 34"
-}
-```
+Нет.
 
 ## Оставшиеся причины reject
 
-- Нет чистого наименования: 39
+- Нет чистого наименования: 0
 - Нет однозначных физических размеров: 33
 - Нет толщины: 33
 
 ## Важные замечания
 
 - Цена 1/4 сохраняется моделью, но automatic slab calculator продолжает работать с шагом 0.5.
-- EUR не трактуется как USD. Для реального импорта и выбора EUR-цены калькулятором нужен явный `--eur-per-usd` и дата курса.
+- EUR не трактуется как USD. Исходная EUR-цена импортируется без курса, но до явной конвертации не получает calculator USD price и не делает variant calculator-ready.
 - NORMAL/НОРМАЛ, JUMBO и SUPER JUMBO нормализуются по утверждённому business mapping; явные размеры всегда имеют приоритет.
-- В исходном XLSX у части строк полная цена фактически находится в числовой ячейке «Поверхность» при пустой «Цена»; dry-run восстанавливает её с предупреждением и не выдумывает поверхность.
+- Пустые ценовые ячейки остаются пустыми: importer не восстанавливает FULL/HALF/QUARTER из соседних колонок, source location или иных значений строки.
 - Натуральный гранит отсутствует и не импортируется по словам Granite внутри названий других категорий.
