@@ -611,7 +611,10 @@ export async function renderRandomWorks() {
     document.querySelector("#worksTeaser");
   if (!container) return;
 
-  const all = await getData("works");
+  const [all, projectSlugs] = await Promise.all([
+    getData("works"),
+    fetch("/assets/data/project-slugs.json").then((response) => response.json()),
+  ]);
   if (!all.length) return;
 
   const random = [...all].sort(() => Math.random() - 0.5).slice(0, 3);
@@ -635,24 +638,37 @@ export async function renderRandomWorks() {
         : Array.isArray(work.material)
           ? work.material.map(materialLabel).join(", ")
           : materialLabel(work.material);
+    const projectUrl = projectSlugs[work.id]
+      ? `/works/${projectSlugs[work.id]}/`
+      : primaryImage || "#";
+    const isProjectPage = Boolean(projectSlugs[work.id]);
 
     return `
       <article class="work-card">
-        <a class="work-card__media" href="${escapeHTML(
-          primaryImage || "#",
-        )}" target="_blank" rel="noopener">
+        <a class="work-card__media" href="${escapeHTML(projectUrl)}"${
+          isProjectPage ? "" : ' target="_blank" rel="noopener"'
+        }>
           <img src="${escapeHTML(primaryImage || fallbackPlaceholder)}"
                alt="${escapeHTML(
                  work.title ? `Проект: ${work.title}` : "Пример работы",
                )}" loading="lazy" width="800" height="533">
         </a>
         <div class="work-card__body">
-          <h3 class="work-card__title">${escapeHTML(work.title)}</h3>
+          <h3 class="work-card__title">${
+            isProjectPage
+              ? `<a href="${escapeHTML(projectUrl)}">${escapeHTML(work.title)}</a>`
+              : escapeHTML(work.title)
+          }</h3>
           <ul class="work-card__meta">
             <li><strong>Материал:</strong> ${escapeHTML(materialText)}</li>
             <li><strong>Локация:</strong> ${escapeHTML(work.location)}</li>
           </ul>
           <p class="work-card__desc">${escapeHTML(work.desc)}</p>
+          ${
+            isProjectPage
+              ? `<a class="work-card__link" href="${escapeHTML(projectUrl)}">Открыть проект</a>`
+              : ""
+          }
         </div>
       </article>`;
   };

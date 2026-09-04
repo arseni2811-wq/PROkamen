@@ -117,7 +117,7 @@
           "addressLocality": "Бобруйск",
           "addressCountry": "BY"
         },
-        "description": "Производство и продажа изделий из гранита и кварцевого агломерата: столешницы, подоконники, барные стойки. Замер, изготовление, монтаж и доставка.",
+        "description": "Контакты PRO Камень в Бобруйске: изделия из камня, каталог материалов и портфолио выполненных работ.",
         "priceRange": "$$",
         "openingHoursSpecification": {
           "@type": "OpeningHoursSpecification",
@@ -297,6 +297,37 @@
         </section>
 
    
+
+    <!-- Заявка -->
+      <section id="request" class="section section--soft" aria-labelledby="request-title">
+        <div class="container">
+          <div class="contact-request">
+            <div>
+              <h2 id="request-title">Получить расчёт по проекту</h2>
+              <p class="muted">Оставьте контакты и, если есть, размеры, эскиз или ссылку на выбранный материал. Эти данные помогут начать предметный разговор о проекте.</p>
+            </div>
+            <form class="card contact-request__form" action="/php/send-mail.php" method="post">
+              <div class="form-row cols-2">
+                <label class="label" for="request-name">Имя *
+                  <input class="input" id="request-name" name="name" type="text" autocomplete="name" required />
+                </label>
+                <label class="label" for="request-phone">Телефон *
+                  <input class="input" id="request-phone" name="phone" type="tel" autocomplete="tel" required />
+                </label>
+              </div>
+              <label class="label" for="request-email">E-mail
+                <input class="input" id="request-email" name="email" type="email" autocomplete="email" />
+              </label>
+              <label class="label" for="request-message">Описание проекта *
+                <textarea id="request-message" name="message" rows="5" minlength="10" required placeholder="Например: размеры, тип изделия, выбранный материал или ссылка на него"></textarea>
+              </label>
+              <button class="btn btn--primary" type="submit">Отправить заявку</button>
+              <p class="muted contact-request__note">Указанные данные используются только для ответа на обращение.</p>
+            </form>
+          </div>
+        </div>
+      </section>
+    </main>
 
     <!-- Футер -->
     <footer class="footer" role="contentinfo"></footer>
