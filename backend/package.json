@@ -11,6 +11,8 @@
     "migrate:adopt-baseline": "node scripts/adopt-baseline.js",
     "import:calculator-catalog": "node scripts/import-calculator-catalog.js",
     "db:import:materials": "node scripts/import-quartzbel-materials.js",
+    "db:import:portfolio": "node scripts/import-portfolio.js",
+    "generate:portfolio": "node scripts/export-portfolio.js",
     "test": "node --test test/*.test.js",
     "check:syntax": "node scripts/check-syntax.js",
     "test:migrations": "node scripts/test-migrations.js",

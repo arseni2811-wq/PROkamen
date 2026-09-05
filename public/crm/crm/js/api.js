@@ -388,6 +388,35 @@ const api = {
   deleteMaterial: (id) =>
     apiFetch(`/api/materials/${id}`, { method: "DELETE" }),
 
+  // --- ВЫПОЛНЕННЫЕ РАБОТЫ ---
+  getPortfolio: (includeArchived = false) =>
+    apiFetch(`/api/admin/portfolio${includeArchived ? "?archived=1" : ""}`),
+
+  getPortfolioProject: (id) => apiFetch(`/api/admin/portfolio/${id}`),
+
+  createPortfolioProject: (data) =>
+    apiFetch("/api/admin/portfolio", { method: "POST", body: JSON.stringify(data) }),
+
+  updatePortfolioProject: (id, data) =>
+    apiFetch(`/api/admin/portfolio/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+
+  archivePortfolioProject: (id) =>
+    apiFetch(`/api/admin/portfolio/${id}`, { method: "DELETE" }),
+
+  uploadPortfolioImages: (id, files) => {
+    const body = new FormData();
+    Array.from(files).forEach((file) => body.append("images", file));
+    return apiFetch(`/api/admin/portfolio/${id}/images`, { method: "POST", body });
+  },
+
+  savePortfolioImageOrder: (id, images) =>
+    apiFetch(`/api/admin/portfolio/${id}/images/order`, {
+      method: "PUT", body: JSON.stringify({ images }),
+    }),
+
+  deletePortfolioImage: (id, imageId) =>
+    apiFetch(`/api/admin/portfolio/${id}/images/${imageId}`, { method: "DELETE" }),
+
   // --- УСЛУГИ (ПРАЙС) ---
   getServices: () => apiFetch("/api/services"),
 

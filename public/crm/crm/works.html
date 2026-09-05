@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Выполненные работы — PRO-Management</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-[#F8F9FA] text-gray-800 min-h-screen">
+  <header class="bg-[#212529] text-white shadow-md">
+    <div class="max-w-[1600px] mx-auto px-6 py-4 flex flex-wrap items-center justify-between gap-4">
+      <div><div class="text-xl font-bold text-[#D4AF37]">PRO-Management</div><div class="text-xs text-gray-300">Выполненные работы</div></div>
+      <nav class="flex flex-wrap gap-2" aria-label="Административные разделы">
+        <a href="dashboard.html" class="px-4 py-2 rounded-lg bg-gray-700 hover:bg-gray-600 text-sm">Заказы</a>
+        <a href="admin.html" class="px-4 py-2 rounded-lg bg-gray-700 hover:bg-gray-600 text-sm">Материалы</a>
+        <span class="px-4 py-2 rounded-lg bg-[#D4AF37] text-gray-900 text-sm font-bold">Выполненные работы</span>
+        <button id="logoutBtn" class="px-4 py-2 text-sm text-gray-300 hover:text-white">Выйти</button>
+      </nav>
+    </div>
+  </header>
+
+  <main class="max-w-[1600px] mx-auto p-6">
+    <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
+      <div><h1 class="text-2xl font-black">Выполненные работы</h1><p class="text-sm text-gray-500">Управление портфолио и подготовка статической публикации</p></div>
+      <button id="addBtn" class="bg-[#D4AF37] hover:bg-[#C49F2F] px-5 py-2.5 rounded-lg font-bold shadow-sm">+ Добавить работу</button>
+    </div>
+    <section class="bg-white border border-gray-200 rounded-xl shadow-sm p-4 mb-5">
+      <div class="grid md:grid-cols-3 gap-3">
+        <input id="searchInput" class="border rounded-lg px-3 py-2" placeholder="Поиск по названию или локации">
+        <select id="statusFilter" class="border rounded-lg px-3 py-2"><option value="">Все статусы</option><option value="published">Опубликованные</option><option value="draft">Черновики</option></select>
+        <select id="materialFilter" class="border rounded-lg px-3 py-2"><option value="">Все материалы</option></select>
+      </div>
+    </section>
+    <div id="emptyState" class="hidden bg-white border rounded-xl p-10 text-center text-gray-500">Работы не найдены</div>
+    <div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-x-auto">
+      <table class="w-full text-sm min-w-[1100px]">
+        <thead class="bg-gray-100 text-left"><tr><th class="p-3">Обложка</th><th class="p-3">Название</th><th class="p-3">Материал</th><th class="p-3">Что сделано</th><th class="p-3">Локация</th><th class="p-3">Статус</th><th class="p-3">Порядок</th><th class="p-3">Изменено</th><th class="p-3">Действия</th></tr></thead>
+        <tbody id="worksBody" class="divide-y"></tbody>
+      </table>
+    </div>
+  </main>
+
+  <dialog id="editor" class="backdrop:bg-black/50 rounded-xl p-0 w-[min(1100px,95vw)] max-h-[92vh]">
+    <form id="workForm" class="bg-white" method="dialog">
+      <div class="sticky top-0 z-10 bg-white border-b px-6 py-4 flex justify-between items-center"><h2 id="editorTitle" class="text-xl font-black">Новая работа</h2><button type="button" id="closeEditor" class="text-2xl text-gray-500" aria-label="Закрыть">×</button></div>
+      <div class="p-6 overflow-y-auto max-h-[75vh] space-y-6">
+        <div class="grid md:grid-cols-2 gap-4">
+          <label class="md:col-span-2 text-sm font-semibold">Название проекта *<input name="title" required maxlength="180" class="mt-1 w-full border rounded-lg px-3 py-2 font-normal"></label>
+          <label class="text-sm font-semibold">Что сделано *<input name="work_type" required maxlength="120" list="workTypes" class="mt-1 w-full border rounded-lg px-3 py-2 font-normal"></label>
+          <label class="text-sm font-semibold">Категория работы<input name="work_category" maxlength="80" class="mt-1 w-full border rounded-lg px-3 py-2 font-normal" placeholder="Например: Столешница для кухни"></label>
+          <label class="text-sm font-semibold">Материал<select name="material_id" class="mt-1 w-full border rounded-lg px-3 py-2 font-normal"><option value="">Другой / отсутствует в базе</option></select></label>
+          <label class="text-sm font-semibold">Название материала вручную<input name="material_name_snapshot" maxlength="255" class="mt-1 w-full border rounded-lg px-3 py-2 font-normal"></label>
+          <label class="text-sm font-semibold">Категория материала<input name="material_category" maxlength="80" class="mt-1 w-full border rounded-lg px-3 py-2 font-normal" placeholder="quartz, granite, marble…"></label>
+          <label class="text-sm font-semibold">Локация<input name="location" maxlength="255" class="mt-1 w-full border rounded-lg px-3 py-2 font-normal"></label>
+          <label class="md:col-span-2 text-sm font-semibold">Уточнение по работе<textarea name="work_details" maxlength="500" rows="2" class="mt-1 w-full border rounded-lg px-3 py-2 font-normal"></textarea></label>
+          <label class="md:col-span-2 text-sm font-semibold">Описание *<textarea name="description" required minlength="10" maxlength="20000" rows="5" class="mt-1 w-full border rounded-lg px-3 py-2 font-normal"></textarea></label>
+          <label class="md:col-span-2 text-sm font-semibold">Краткое описание<textarea name="short_description" maxlength="500" rows="2" class="mt-1 w-full border rounded-lg px-3 py-2 font-normal"></textarea></label>
+          <label class="text-sm font-semibold">Slug<input name="slug" maxlength="180" pattern="[a-z0-9]+(?:-[a-z0-9]+)*" class="mt-1 w-full border rounded-lg px-3 py-2 font-mono font-normal"><span class="block text-xs text-gray-500 mt-1">После публикации изменение slug меняет URL.</span></label>
+          <label class="text-sm font-semibold">Порядок отображения<input name="public_sort_order" type="number" min="-100000" max="100000" value="0" class="mt-1 w-full border rounded-lg px-3 py-2 font-normal"></label>
+          <label class="md:col-span-2 flex items-center gap-2 font-semibold"><input name="published" type="checkbox" class="size-5 accent-[#D4AF37]"> Показывать на сайте</label>
+        </div>
+        <details class="border rounded-lg p-4"><summary class="font-bold cursor-pointer">SEO (необязательно)</summary><div class="grid md:grid-cols-2 gap-4 mt-4"><label class="text-sm font-semibold">SEO title<input name="seo_title" maxlength="180" class="mt-1 w-full border rounded-lg px-3 py-2 font-normal"></label><label class="text-sm font-semibold">SEO description<textarea name="seo_description" maxlength="320" rows="2" class="mt-1 w-full border rounded-lg px-3 py-2 font-normal"></textarea></label></div></details>
+        <section><div class="flex flex-wrap items-center justify-between gap-3 mb-3"><div><h3 class="font-black">Фотографии</h3><p class="text-xs text-gray-500">JPG, PNG или WebP, до 15 МБ. Первая фотография станет обложкой.</p></div><input id="imageInput" type="file" accept="image/jpeg,image/png,image/webp" multiple class="text-sm"></div><div id="imageGrid" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-3"></div></section>
+      </div>
+      <div class="sticky bottom-0 bg-white border-t px-6 py-4 flex justify-end gap-3"><button type="button" id="cancelEditor" class="border px-5 py-2 rounded-lg">Отмена</button><button type="submit" id="saveBtn" class="bg-[#D4AF37] px-5 py-2 rounded-lg font-bold">Сохранить</button></div>
+    </form>
+  </dialog>
+  <datalist id="workTypes"><option value="Столешница"><option value="Столешница для кухни"><option value="Столешница для ванной"><option value="Подоконник"><option value="Скинали"><option value="Остров"><option value="Барная стойка"><option value="Каминная полка"><option value="Уличный комплекс"><option value="Другое"></datalist>
+  <div id="toast" class="hidden fixed right-5 bottom-5 z-50 px-5 py-3 rounded-lg shadow-xl text-white"></div>
+  <script src="js/api.js"></script><script src="js/store.js"></script><script src="js/works.js"></script>
+</body>
+</html>

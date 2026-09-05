@@ -4,6 +4,7 @@ const path = require("path");
 require("dotenv").config({ quiet: true });
 const { runMigrations } = require("./migrate");
 const { adoptBaseline } = require("./adopt-baseline");
+const { importPortfolio } = require("./import-portfolio");
 
 async function main() {
   const database = `prokamen_migration_test_${Date.now()}`;
@@ -83,10 +84,22 @@ async function main() {
            AND INDEX_NAME = 'idx_material_variants_public'`,
         [database],
       );
+      const [portfolioTables] = await check.query("SHOW TABLES LIKE 'portfolio_projects'");
+      const [portfolioImageTables] = await check.query("SHOW TABLES LIKE 'portfolio_project_images'");
+      const [portfolioSlugIndex] = await check.query(
+        `SELECT COUNT(*) AS count FROM information_schema.STATISTICS
+         WHERE TABLE_SCHEMA=? AND TABLE_NAME='portfolio_projects'
+           AND INDEX_NAME='uq_portfolio_projects_slug' AND NON_UNIQUE=0`, [database],
+      );
+      const [portfolioForeignKeys] = await check.query(
+        `SELECT COUNT(*) AS count FROM information_schema.REFERENTIAL_CONSTRAINTS
+         WHERE CONSTRAINT_SCHEMA=? AND CONSTRAINT_NAME IN
+           ('fk_portfolio_projects_material', 'fk_portfolio_images_project')`, [database],
+      );
       if (
         statusRows[0].count !== 1 ||
         uniqueRows[0].count !== 1 ||
-        migrationRows[0].count !== 9 ||
+        migrationRows[0].count !== 10 ||
         versionRows.length !== 1 ||
         Number(versionRows[0].COLUMN_DEFAULT) !== 1 ||
         versionRows[0].IS_NULLABLE !== "NO" ||
@@ -95,7 +108,9 @@ async function main() {
         calculatorTables.length !== 1 ||
         Number(calculatorRates[0].count) < 30 ||
         publicationColumns.length !== 2 ||
-        publicationIndex[0].count !== 4
+        publicationIndex[0].count !== 4 ||
+        portfolioTables.length !== 1 || portfolioImageTables.length !== 1 ||
+        Number(portfolioSlugIndex[0].count) !== 1 || Number(portfolioForeignKeys[0].count) !== 2
       ) {
         throw new Error(
           `Migration verification failed: ${JSON.stringify({
@@ -106,9 +121,22 @@ async function main() {
             idempotency_unique: idempotencyRows[0],
             calculator_rates: calculatorRates[0],
             material_variant_publication_columns: publicationColumns,
-            material_variant_publication_index_columns: publicationIndex[0],
+          material_variant_publication_index_columns: publicationIndex[0],
+          portfolio_tables: portfolioTables.length + portfolioImageTables.length,
+          portfolio_slug_unique: portfolioSlugIndex[0], portfolio_foreign_keys: portfolioForeignKeys[0],
           })}`,
         );
+      }
+      const firstPortfolioImport = await importPortfolio(check);
+      const secondPortfolioImport = await importPortfolio(check);
+      const [portfolioProjectCount] = await check.query("SELECT COUNT(*) AS count FROM portfolio_projects");
+      const [portfolioImageCount] = await check.query("SELECT COUNT(*) AS count FROM portfolio_project_images");
+      if (
+        firstPortfolioImport.source !== 16 || firstPortfolioImport.inserted !== 16 ||
+        secondPortfolioImport.inserted !== 0 || Number(portfolioProjectCount[0].count) !== 16 ||
+        Number(portfolioImageCount[0].count) < 16
+      ) {
+        throw new Error("Portfolio import verification failed");
       }
       console.log(
         JSON.stringify({
@@ -121,6 +149,8 @@ async function main() {
           idempotency_unique: true,
           calculator_pricebook: true,
           material_variant_publication: true,
+          portfolio_schema: true,
+          portfolio_import: { projects: 16, images: Number(portfolioImageCount[0].count), duplicate_inserted: 0 },
           rerun_idempotent: true,
         }),
       );
@@ -166,7 +196,7 @@ async function main() {
         "SHOW TABLES LIKE 'order_idempotency_keys'",
       );
       if (
-        legacyMigrations[0].count !== 9 ||
+        legacyMigrations[0].count !== 10 ||
         legacyVersion.length !== 1 ||
         legacyIdempotency.length !== 1
       ) {
@@ -177,7 +207,7 @@ async function main() {
           success: true,
           database: legacyDatabase,
           baseline_adoption: true,
-          incremental_migrations: 8,
+          incremental_migrations: 9,
         }),
       );
     } finally {

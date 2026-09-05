@@ -2,18 +2,18 @@ const fs = require("fs");
 const path = require("path");
 
 const projectRoot = path.resolve(__dirname, "..", "..");
-const publicDir = path.join(projectRoot, "public");
-const works = JSON.parse(
+let publicDir = path.join(projectRoot, "public");
+let works = JSON.parse(
   fs.readFileSync(path.join(publicDir, "assets", "data", "works.json"), "utf8"),
 );
-const slugs = JSON.parse(
+let slugs = JSON.parse(
   fs.readFileSync(
     path.join(publicDir, "assets", "data", "project-slugs.json"),
     "utf8",
   ),
 );
-const outputDir = path.join(publicDir, "pages", "works");
-const sitemapPath = path.join(publicDir, "sitemap.xml");
+let outputDir = path.join(publicDir, "pages", "works");
+let sitemapPath = path.join(publicDir, "sitemap.xml");
 
 const landingByWork = {
   "w-001": "/podokonniki/",
@@ -71,32 +71,44 @@ function escapeHtml(value) {
     .replace(/'/g, "&#39;");
 }
 
-function jpegSize(file) {
+function imageSize(file) {
   const data = fs.readFileSync(file);
-  if (data[0] !== 0xff || data[1] !== 0xd8) throw new Error(`Not a JPEG: ${file}`);
-  let offset = 2;
-  while (offset < data.length) {
-    if (data[offset] !== 0xff) {
-      offset += 1;
-      continue;
-    }
-    const marker = data[offset + 1];
-    const length = data.readUInt16BE(offset + 2);
-    if ([0xc0, 0xc1, 0xc2, 0xc3, 0xc5, 0xc6, 0xc7, 0xc9, 0xca, 0xcb, 0xcd, 0xce, 0xcf].includes(marker)) {
-      return { height: data.readUInt16BE(offset + 5), width: data.readUInt16BE(offset + 7) };
-    }
-    offset += 2 + length;
+  if (data[0] === 0x89 && data.toString("ascii", 1, 4) === "PNG") {
+    return { width: data.readUInt32BE(16), height: data.readUInt32BE(20) };
   }
-  throw new Error(`JPEG dimensions not found: ${file}`);
+  if (data.toString("ascii", 0, 4) === "RIFF" && data.toString("ascii", 8, 12) === "WEBP") {
+    const kind = data.toString("ascii", 12, 16);
+    if (kind === "VP8X") return { width: data.readUIntLE(24, 3) + 1, height: data.readUIntLE(27, 3) + 1 };
+    if (kind === "VP8L") return {
+      width: 1 + (((data[22] & 0x3f) << 8) | data[21]),
+      height: 1 + (((data[24] & 0x0f) << 10) | (data[23] << 2) | ((data[22] & 0xc0) >> 6)),
+    };
+    const marker = data.indexOf(Buffer.from([0x9d, 0x01, 0x2a]));
+    if (marker >= 0) return { width: data.readUInt16LE(marker + 3) & 0x3fff, height: data.readUInt16LE(marker + 5) & 0x3fff };
+  }
+  if (data[0] === 0xff && data[1] === 0xd8) {
+    let offset = 2;
+    while (offset < data.length) {
+      if (data[offset] !== 0xff) { offset += 1; continue; }
+      const marker = data[offset + 1];
+      const length = data.readUInt16BE(offset + 2);
+      if ([0xc0, 0xc1, 0xc2, 0xc3, 0xc5, 0xc6, 0xc7, 0xc9, 0xca, 0xcb, 0xcd, 0xce, 0xcf].includes(marker)) {
+        return { height: data.readUInt16BE(offset + 5), width: data.readUInt16BE(offset + 7) };
+      }
+      offset += 2 + length;
+    }
+  }
+  throw new Error(`Unsupported or invalid project image: ${file}`);
 }
 
 function imageMarkup(work, index) {
   const imageUrl = work.images[index];
   const imagePath = path.join(publicDir, imageUrl.replace(/^\//, ""));
-  const { width, height } = jpegSize(imagePath);
+  const dimensions = imageSize(imagePath);
   const attributes = index === 0 ? 'fetchpriority="high"' : 'loading="lazy" decoding="async"';
-  const alt = `${work.title} — фото ${index + 1}`;
-  return `<figure class="project-gallery__item${index === 0 ? " project-gallery__item--hero" : ""}"><img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(alt)}" width="${width}" height="${height}" ${attributes}></figure>`;
+  const alt = work.imageAlts?.[index] || `${work.title} — фото ${index + 1}`;
+  const sizeAttributes = `width="${dimensions.width}" height="${dimensions.height}"`;
+  return `<figure class="project-gallery__item${index === 0 ? " project-gallery__item--hero" : ""}"><img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(alt)}" ${sizeAttributes} ${attributes}></figure>`;
 }
 
 function relatedWorks(work, indexableWorks) {
@@ -113,7 +125,7 @@ function relatedWorks(work, indexableWorks) {
 }
 
 function linkedSection(work) {
-  const landing = landingByWork[work.id];
+  const landing = landingByWork[work.id] || "/works/";
   const links = [
     `<a class="btn btn-primary" href="${landing}">Подобрать изделие</a>`,
     `<a class="btn btn-outline" href="/calculator/">Рассчитать изделие</a>`,
@@ -128,11 +140,11 @@ function linkedSection(work) {
 
 function renderPage(work, indexableWorks) {
   const slug = slugs[work.id];
-  const pageName = pageNameByWork[work.id] || `${work.title} — ${work.location}`;
-  const metaTitle = metaTitleByWork[work.id] || pageName;
+  const pageName = pageNameByWork[work.id] || [work.title, work.location].filter(Boolean).join(" — ");
+  const metaTitle = work.seoTitle || metaTitleByWork[work.id] || pageName;
   const canonicalPath = `/works/${slug}/`;
   const canonical = `https://prokamen.by${canonicalPath}`;
-  const description = `${pageName}. Реализованный проект PRO Камень: ${work.materialRu}.`;
+  const description = work.seoDescription || `${pageName}. Реализованный проект PRO Камень: ${work.materialRu}.`;
   const related = relatedWorks(work, indexableWorks);
   const breadcrumbs = [
     { name: "Главная", item: "https://prokamen.by/" },
@@ -188,7 +200,7 @@ function renderPage(work, indexableWorks) {
   <link rel="stylesheet" href="/css/layout.css">
   <link rel="stylesheet" href="/css/components.css">
   <link rel="icon" href="/assets/images/ui/favicon.ico">
-  <script type="application/ld+json">${JSON.stringify(jsonLd)}</script>
+  <script type="application/ld+json">${JSON.stringify(jsonLd).replace(/</g, "\\u003c").replace(/>/g, "\\u003e")}</script>
 </head>
 <body class="page page-project">
   <a class="skip-link" href="#main">Перейти к содержимому</a>
@@ -198,7 +210,7 @@ function renderPage(work, indexableWorks) {
     <section class="section section-hero project-hero"><div class="container">
       <p class="eyebrow">Реализованный проект</p>
       <h1 class="section-title">${escapeHtml(pageName)}</h1>
-      <dl class="project-facts"><div><dt>Тип изделия</dt><dd>${escapeHtml(productTypeByWork[work.id])}</dd></div><div><dt>Материал</dt><dd>${escapeHtml(work.materialRu)}</dd></div><div><dt>Локация</dt><dd>${escapeHtml(work.location)}</dd></div></dl>
+      <dl class="project-facts">${work.workType || productTypeByWork[work.id] ? `<div><dt>Тип изделия</dt><dd>${escapeHtml(work.workType || productTypeByWork[work.id])}</dd></div>` : ""}${work.materialRu ? `<div><dt>Материал</dt><dd>${escapeHtml(work.materialRu)}</dd></div>` : ""}${work.location ? `<div><dt>Локация</dt><dd>${escapeHtml(work.location)}</dd></div>` : ""}</dl>
       <p class="section-subtitle project-description">${escapeHtml(work.desc)}</p>
     </div></section>
     <section class="section" aria-labelledby="gallery-title"><div class="container"><h2 id="gallery-title" class="section-title section-title--small">Фотографии проекта</h2><div class="gallery project-gallery">${work.images.map((_, index) => imageMarkup(work, index)).join("\n")}</div></div></section>
@@ -212,6 +224,14 @@ function renderPage(work, indexableWorks) {
 </html>`;
 }
 
+function generateProjectPages(options = {}) {
+  const previous = { publicDir, works, slugs, outputDir, sitemapPath };
+  publicDir = options.publicDir || publicDir;
+  works = options.works || works;
+  slugs = options.slugs || slugs;
+  outputDir = options.outputDir || path.join(publicDir, "pages", "works");
+  sitemapPath = options.sitemapPath || path.join(publicDir, "sitemap.xml");
+  try {
 const indexableWorks = works.filter((work) => slugs[work.id]);
 if (indexableWorks.length !== Object.keys(slugs).length) {
   throw new Error("Each stable project slug must reference an existing work");
@@ -223,6 +243,11 @@ if (new Set(Object.values(slugs)).size !== indexableWorks.length) {
 fs.mkdirSync(outputDir, { recursive: true });
 for (const work of indexableWorks) {
   fs.writeFileSync(path.join(outputDir, `${slugs[work.id]}.html`), renderPage(work, indexableWorks), "utf8");
+}
+for (const entry of fs.readdirSync(outputDir, { withFileTypes: true })) {
+  if (entry.isFile() && entry.name.endsWith(".html") && !indexableWorks.some((work) => `${slugs[work.id]}.html` === entry.name)) {
+    fs.unlinkSync(path.join(outputDir, entry.name));
+  }
 }
 
 const sitemap = fs.readFileSync(sitemapPath, "utf8");
@@ -240,4 +265,14 @@ const updatedSitemap = sitemap.replace(
 );
 fs.writeFileSync(sitemapPath, updatedSitemap, "utf8");
 
-console.log(`Generated ${indexableWorks.length} static project pages.`);
+  return { pages: indexableWorks.length, slugs: indexableWorks.map((work) => slugs[work.id]) };
+  } finally {
+    ({ publicDir, works, slugs, outputDir, sitemapPath } = previous);
+  }
+}
+
+if (require.main === module) {
+  const result = generateProjectPages();
+  console.log(`Generated ${result.pages} static project pages.`);
+}
+module.exports = { generateProjectPages, escapeHtml };

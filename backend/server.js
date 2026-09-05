@@ -75,6 +75,7 @@ const materialsRoutes = require("./routes/materials.routes");
 const settingsRoutes = require("./routes/settings.routes");
 const clientsRoutes = require("./routes/clients.routes");
 const calculatorRoutes = require("./routes/calculator.routes");
+const portfolioRoutes = require("./routes/portfolio.routes");
 
 // =========================================================
 // HEALTH-CHECK (JSON)
@@ -111,6 +112,7 @@ app.use("/api/clients", clientsRoutes);
 app.use("/api", materialsRoutes);
 app.use("/api", settingsRoutes);
 app.use("/api", calculatorRoutes);
+app.use("/api/admin/portfolio", portfolioRoutes);
 
 // =========================================================
 // РАЗДАЧА СТАТИКИ ФРОНТЕНДА
@@ -152,7 +154,7 @@ app.get(
 // Страница входа и ресурсы CRM остаются доступными, но рабочие HTML-экраны
 // сервер отдаёт только после проверки JWT из httpOnly cookie/Bearer header.
 app.get(
-  "/crm/crm/admin.html",
+  ["/crm/crm/admin.html", "/crm/crm/works.html"],
   authenticateJWT,
   authorize(ROLES.ADMIN),
 );
